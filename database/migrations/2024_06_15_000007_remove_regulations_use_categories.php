@@ -9,6 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('review_findings', function (Blueprint $table) {
+            $table->dropForeign(['review_id']);
+            $table->dropForeign(['regulation_id']);
             $table->dropUnique(['review_id', 'regulation_id']);
             $table->renameColumn('regulation_id', 'category_id');
             $table->foreign('review_id')->references('id')->on('reviews')->cascadeOnDelete();

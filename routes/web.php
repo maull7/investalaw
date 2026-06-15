@@ -1,0 +1,42 @@
+<?php
+
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RegulationCategoryController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\ReviewDocumentController;
+use App\Http\Controllers\ReviewReportController;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    return view('index');
+});
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [LoginController::class, 'create'])->name('login');
+    Route::post('/login', [LoginController::class, 'store']);
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::resource('regulation-categories', RegulationCategoryController::class);
+    Route::post('/regulation-categories/{regulationCategory}/upload', [RegulationCategoryController::class, 'uploadFile'])->name('regulation-categories.upload-file');
+    Route::delete('/regulation-categories/file/{file}', [RegulationCategoryController::class, 'deleteFile'])->name('regulation-categories.delete-file');
+    Route::get('/regulation-categories/file/{file}/view', [RegulationCategoryController::class, 'viewFile'])->name('regulation-categories.view-file');
+
+    Route::resource('review-documents', ReviewDocumentController::class);
+    Route::post('/review-documents/{reviewDocument}/submit', [ReviewDocumentController::class, 'submit'])->name('review-documents.submit');
+    Route::get('/review-documents/{reviewDocument}/file', [ReviewDocumentController::class, 'viewFile'])->name('review-documents.view-file');
+
+    Route::get('/reviews/{reviewDocument}/create', [ReviewController::class, 'create'])->name('reviews.create');
+    Route::resource('reviews', ReviewController::class)->except(['create']);
+    Route::post('/reviews/{review}/complete', [ReviewController::class, 'complete'])->name('reviews.complete');
+    Route::post('/reviews/{review}/request-revision', [ReviewController::class, 'requestRevision'])->name('reviews.request-revision');
+    Route::post('/reviews/{review}/reject', [ReviewController::class, 'reject'])->name('reviews.reject');
+
+    Route::get('/reports/{review}', [ReviewReportController::class, 'show'])->name('reports.show');
+    Route::get('/reports/{review}/pdf', [ReviewReportController::class, 'exportPdf'])->name('reports.pdf');
+});

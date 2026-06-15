@@ -1,0 +1,81 @@
+<?php
+
+namespace App\Services;
+
+use App\Enums\ReviewStatus;
+use App\Models\ReviewDocument;
+use App\Repositories\ReviewDocumentRepository;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+class ReviewDocumentService
+{
+    public function __construct(
+        private readonly ReviewDocumentRepository $reviewDocumentRepository
+    ) {}
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $categoryIds
+     */
+    public function createReviewDocument(array $data, array $categoryIds, UploadedFile $file, int $userId): ReviewDocument
+    {
+        $data['user_id'] = $userId;
+        $data['file_path'] = $this->uploadFile($file);
+
+        $document = $this->reviewDocumentRepository->create($data);
+        $document->categories()->attach($categoryIds);
+
+        return $document;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<int, int>  $categoryIds
+     */
+    public function updateReviewDocument(ReviewDocument $document, array $data, array $categoryIds, ?UploadedFile $file = null): ReviewDocument
+    {
+        if ($file) {
+            $this->deleteFile($document->file_path);
+            $data['file_path'] = $this->uploadFile($file);
+        }
+
+        $document = $this->reviewDocumentRepository->update($document, $data);
+        $document->categories()->sync($categoryIds);
+
+        return $document->fresh(['user', 'categories']);
+    }
+
+    public function deleteReviewDocument(ReviewDocument $document): bool
+    {
+        $this->deleteFile($document->file_path);
+
+        return $this->reviewDocumentRepository->delete($document);
+    }
+
+    public function submitForReview(ReviewDocument $document): ReviewDocument
+    {
+        return $this->reviewDocumentRepository->updateStatus(
+            $document,
+            ReviewStatus::Submitted->value,
+            now()
+        );
+    }
+
+    public function updateStatus(ReviewDocument $document, ReviewStatus $status): ReviewDocument
+    {
+        return $this->reviewDocumentRepository->updateStatus($document, $status->value);
+    }
+
+    private function uploadFile(UploadedFile $file): string
+    {
+        return $file->store('review-documents', 'public');
+    }
+
+    private function deleteFile(?string $path): void
+    {
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
+        }
+    }
+}

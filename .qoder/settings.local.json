@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /home/maul/projects/webdev/laravel-projects/investalaw/app -type f -name \"*.php\" | head -50)",
+      "Bash(find /home/maul/projects/webdev/laravel-projects/investalaw -maxdepth 1 -type f -name \"*.php\" | head -10)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && php artisan route:list --no-interaction 2>&1 | head -80)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && php artisan route:list 2>&1)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && php artisan make:controller DashboardController --no-interaction 2>&1)",
+      "Bash(mkdir:*)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && php artisan make:controller DashboardController 2>&1)",
+      "Bash(echo \"test\" && which php)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && npm install --save alpinejs 2>&1; echo \"EXIT: $?\")",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && npm install alpinejs --save 2>&1)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && vendor/bin/pint --dirty --format agent 2>&1)"
+    ]
+  }
+}

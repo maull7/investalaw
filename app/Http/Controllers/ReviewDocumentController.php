@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Enums\ReviewStatus;
+use App\Http\Requests\ReviewDocument\StoreReviewDocumentRequest;
+use App\Http\Requests\ReviewDocument\UpdateReviewDocumentRequest;
+use App\Models\ReviewDocument;
+use App\Repositories\RegulationCategoryRepository;
+use App\Repositories\ReviewDocumentRepository;
+use App\Services\ReviewDocumentService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+class ReviewDocumentController extends Controller
+{
+    public function __construct(
+        private readonly ReviewDocumentRepository $reviewDocumentRepository,
+        private readonly RegulationCategoryRepository $categoryRepository,
+        private readonly ReviewDocumentService $reviewDocumentService
+    ) {}
+
+    public function index(Request $request): View
+    {
+        $filters = $request->only(['status', 'search']);
+        $documents = $this->reviewDocumentRepository->search($filters);
+        $statuses = ReviewStatus::cases();
+
+        return view('review-documents.index', compact('documents', 'statuses'));
+    }
+
+    public function create(): View
+    {
+        $categories = $this->categoryRepository->allWithFiles();
+
+        return view('review-documents.create', compact('categories'));
+    }
+
+    public function store(StoreReviewDocumentRequest $request): RedirectResponse
+    {
+        $this->reviewDocumentService->createReviewDocument(
+            $request->safe()->only(['title', 'description']),
+            $request->validated('category_ids'),
+            $request->file('file'),
+            $request->user()->id
+        );
+
+        return redirect()->route('review-documents.index')
+            ->with('success', 'Document uploaded successfully.');
+    }
+
+    public function show(ReviewDocument $reviewDocument): View
+    {
+        $document = $this->reviewDocumentRepository->findById($reviewDocument->id);
+
+        return view('review-documents.show', compact('document'));
+    }
+
+    public function edit(ReviewDocument $reviewDocument): View
+    {
+        $categories = $this->categoryRepository->allWithFiles();
+
+        return view('review-documents.edit', compact('reviewDocument', 'categories'));
+    }
+
+    public function update(UpdateReviewDocumentRequest $request, ReviewDocument $reviewDocument): RedirectResponse
+    {
+        $this->reviewDocumentService->updateReviewDocument(
+            $reviewDocument,
+            $request->safe()->only(['title', 'description']),
+            $request->validated('category_ids'),
+            $request->file('file')
+        );
+
+        return redirect()->route('review-documents.show', $reviewDocument)
+            ->with('success', 'Document updated successfully.');
+    }
+
+    public function destroy(ReviewDocument $reviewDocument): RedirectResponse
+    {
+        $this->reviewDocumentService->deleteReviewDocument($reviewDocument);
+
+        return redirect()->route('review-documents.index')
+            ->with('success', 'Document deleted successfully.');
+    }
+
+    public function submit(ReviewDocument $reviewDocument): RedirectResponse
+    {
+        $this->reviewDocumentService->submitForReview($reviewDocument);
+
+        return redirect()->route('review-documents.show', $reviewDocument)
+            ->with('success', 'Document submitted for review.');
+    }
+
+    public function viewFile(ReviewDocument $reviewDocument): StreamedResponse
+    {
+        return Storage::disk('public')->response($reviewDocument->file_path, null, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+}

@@ -18,8 +18,8 @@ class UpdateReviewDocumentRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'file' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:10240'],
-            'category_ids' => ['required', 'array', 'min:1'],
-            'category_ids.*' => ['exists:regulation_categories,id'],
+            'regulation_ids' => ['required', 'array', 'min:1'],
+            'regulation_ids.*' => ['exists:regulations,id'],
         ];
     }
 }

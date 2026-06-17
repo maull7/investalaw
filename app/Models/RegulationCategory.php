@@ -18,4 +18,16 @@ class RegulationCategory extends Model
     {
         return $this->hasMany(CategoryFile::class, 'category_id');
     }
+
+    /** @return HasMany<SubCategory> */
+    public function subCategories(): HasMany
+    {
+        return $this->hasMany(SubCategory::class, 'category_id');
+    }
+
+    /** @return HasMany<Regulation> */
+    public function regulations(): HasMany
+    {
+        return $this->hasMany(Regulation::class, 'category_id');
+    }
 }

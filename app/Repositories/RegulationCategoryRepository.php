@@ -24,6 +24,12 @@ class RegulationCategoryRepository
         return RegulationCategory::with('files')->get();
     }
 
+    /** @return Collection<int, RegulationCategory> */
+    public function allWithRegulations(): Collection
+    {
+        return RegulationCategory::with('regulations.type')->orderBy('name')->get();
+    }
+
     /** @param array<string, mixed> $data */
     public function create(array $data): RegulationCategory
     {

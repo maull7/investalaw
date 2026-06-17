@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -29,10 +30,23 @@ class ReviewDocument extends Model
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<Regulation> */
+    public function regulations(): BelongsToMany
+    {
+        return $this->belongsToMany(Regulation::class, 'review_document_regulation')
+            ->withTimestamps();
+    }
+
     /** @return HasOne<Review> */
     public function review(): HasOne
     {
         return $this->hasOne(Review::class);
+    }
+
+    /** @return HasMany<AiSummary> */
+    public function aiSummaries(): HasMany
+    {
+        return $this->hasMany(AiSummary::class);
     }
 
     protected function casts(): array

@@ -15,6 +15,7 @@ class ReviewReportController extends Controller
 
     public function show(Review $review): View
     {
+        abort_if(auth()->user()->isSubAdmin(), 403);
         $this->authorize('view', $review);
 
         $reportData = $this->reportService->generateReportData($review);
@@ -24,6 +25,7 @@ class ReviewReportController extends Controller
 
     public function exportPdf(Review $review): Response
     {
+        abort_if(auth()->user()->isSubAdmin(), 403);
         $this->authorize('view', $review);
 
         $pdfContent = $this->reportService->generatePdf($review);

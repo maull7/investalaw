@@ -19,12 +19,12 @@ class RegulationCategoryPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermission('manage_categories');
     }
 
     public function update(User $user, RegulationCategory $regulationCategory): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermission('manage_categories');
     }
 
     public function delete(User $user, RegulationCategory $regulationCategory): bool

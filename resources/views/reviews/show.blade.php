@@ -116,9 +116,25 @@
                             <article class="rounded-2xl border border-[#e7eaf0] p-5 hover:border-[#c99a3e]/40 transition">
                                 <header class="flex items-start justify-between gap-4 mb-3">
                                     <div class="min-w-0">
-                                        <p class="text-sm font-bold text-[#071833]">{{ $finding->category->name }}</p>
-                                        @if($finding->category->description)
-                                            <p class="text-xs text-[#667085] mt-0.5">{{ $finding->category->description }}</p>
+                                        @if($finding->regulation)
+                                            <p class="text-sm font-bold text-[#071833]">
+                                                <a href="{{ route('regulations.show', $finding->regulation) }}" class="hover:text-[#c99a3e] transition">{{ $finding->regulation->regulation_number }}</a>
+                                            </p>
+                                            <p class="text-xs text-[#667085] mt-0.5 line-clamp-1">{{ $finding->regulation->title }}</p>
+                                            <div class="flex items-center gap-2 mt-1.5">
+                                                @if($finding->regulation->type)
+                                                    <x-badge :color="$finding->regulation->type->levelBadgeColor()">{{ $finding->regulation->type->name }} Lv{{ $finding->regulation->type->level }}</x-badge>
+                                                @endif
+                                                <span class="text-xs text-[#667085]">{{ $finding->regulation->year }}</span>
+                                                @if($finding->category)
+                                                    <span class="text-xs text-[#667085]">&middot; {{ $finding->category->name }}</span>
+                                                @endif
+                                            </div>
+                                        @elseif($finding->category)
+                                            <p class="text-sm font-bold text-[#071833]">{{ $finding->category->name }}</p>
+                                            @if($finding->category->description)
+                                                <p class="text-xs text-[#667085] mt-0.5">{{ $finding->category->description }}</p>
+                                            @endif
                                         @endif
                                     </div>
                                     <x-badge :color="$finding->compliance_status->color()">{{ $finding->compliance_status->label() }}</x-badge>

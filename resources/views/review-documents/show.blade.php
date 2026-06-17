@@ -86,28 +86,35 @@
                 @endif
             </x-card>
 
-            {{-- Categories --}}
+            {{-- Regulations --}}
             <x-card>
                 <x-slot name="header">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-bold text-[#071833]">Linked Regulation Categories</h3>
-                        <span class="px-2.5 py-0.5 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $document->categories->count() }}</span>
+                        <h3 class="text-lg font-bold text-[#071833]">Regulasi Terkait</h3>
+                        <span class="px-2.5 py-0.5 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $document->regulations->count() }}</span>
                     </div>
                 </x-slot>
-                @if($document->categories->isEmpty())
-                    <p class="text-sm text-[#667085]">No categories selected.</p>
+                @if($document->regulations->isEmpty())
+                    <p class="text-sm text-[#667085]">Belum ada regulasi yang dipilih.</p>
                 @else
-                    <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        @foreach($document->categories as $category)
+                    <ul class="space-y-3">
+                        @foreach($document->regulations as $regulation)
                             <li class="flex items-start gap-3 p-4 rounded-2xl bg-[#f6f8fb] ring-1 ring-[#e7eaf0]">
                                 <div class="w-9 h-9 rounded-xl bg-white ring-1 ring-[#e7eaf0] flex items-center justify-center text-[#c99a3e] shrink-0">
-                                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/></svg>
+                                    <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
                                 </div>
-                                <div class="min-w-0">
-                                    <p class="text-sm font-semibold text-[#071833]">{{ $category->name }}</p>
-                                    @if($category->description)
-                                        <p class="text-xs text-[#667085] mt-0.5">{{ Str::limit($category->description, 80) }}</p>
-                                    @endif
+                                <div class="min-w-0 flex-1">
+                                    <a href="{{ route('regulations.show', $regulation) }}" class="text-sm font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $regulation->regulation_number }}</a>
+                                    <p class="text-xs text-[#667085] mt-0.5 line-clamp-1">{{ $regulation->title }}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        @if($regulation->type)
+                                            <x-badge :color="$regulation->type->levelBadgeColor()">{{ $regulation->type->name }} Lv{{ $regulation->type->level }}</x-badge>
+                                        @endif
+                                        <span class="text-[10px] text-[#667085]">{{ $regulation->year }}</span>
+                                        @if($regulation->category)
+                                            <span class="text-[10px] text-[#667085]">&middot; {{ $regulation->category->name }}</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </li>
                         @endforeach
@@ -180,6 +187,10 @@
                             </x-button>
                         </form>
                     @endcan
+                    <a href="{{ route('ai-summaries.index', $document) }}" class="inline-flex items-center gap-2 w-full px-4 py-2.5 rounded-full text-sm font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-[#e7eaf0] transition justify-start">
+                        <svg class="w-4 h-4 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z"/></svg>
+                        AI Summary
+                    </a>
                 </div>
             </x-card>
 

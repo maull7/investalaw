@@ -57,7 +57,7 @@
                         </div>
                     </div>
                     <div class="space-y-2">
-                        <p class="text-xs text-white/65"><span class="font-bold text-white">{{ $summary['compliant'] }}</span> of {{ $summary['total_categories'] }} categories</p>
+                        <p class="text-xs text-white/65"><span class="font-bold text-white">{{ $summary['compliant'] }}</span> of {{ $summary['total_regulations'] }} regulations</p>
                         <p class="text-xs text-white/65"><span class="font-bold text-emerald-300">{{ $summary['compliant'] }}</span> compliant</p>
                         <p class="text-xs text-white/65"><span class="font-bold text-amber-300">{{ $summary['partially_compliant'] }}</span> partial</p>
                         <p class="text-xs text-white/65"><span class="font-bold text-rose-300">{{ $summary['non_compliant'] }}</span> non-compliant</p>
@@ -69,7 +69,7 @@
 
     {{-- Summary stats --}}
     <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-        <x-stat-card title="Total Categories" :value="$summary['total_categories']" color="navy" subtitle="Reviewed regulations">
+        <x-stat-card title="Total Regulasi" :value="$summary['total_regulations']" color="navy" subtitle="Reviewed regulations">
             <x-slot name="icon">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/></svg>
             </x-slot>
@@ -100,7 +100,7 @@
             </div>
         </x-slot>
         @php
-            $totalCat = max($summary['total_categories'], 1);
+            $totalCat = max($summary['total_regulations'], 1);
             $compPct = round($summary['compliant'] / $totalCat * 100);
             $partPct = round($summary['partially_compliant'] / $totalCat * 100);
             $nonPct = round($summary['non_compliant'] / $totalCat * 100);
@@ -178,9 +178,14 @@
                     <article class="rounded-2xl border border-[#e7eaf0] p-5 hover:border-[#c99a3e]/40 transition">
                         <header class="flex items-start justify-between gap-4 mb-3">
                             <div class="min-w-0">
-                                <p class="text-sm font-bold text-[#071833]">{{ $finding->category->name }}</p>
-                                @if($finding->category->description)
-                                    <p class="text-xs text-[#667085] mt-0.5">{{ $finding->category->description }}</p>
+                                @if($finding->regulation)
+                                    <p class="text-sm font-bold text-[#071833]">{{ $finding->regulation->regulation_number }}</p>
+                                    <p class="text-xs text-[#667085] mt-0.5 line-clamp-1">{{ $finding->regulation->title }}</p>
+                                @elseif($finding->category)
+                                    <p class="text-sm font-bold text-[#071833]">{{ $finding->category->name }}</p>
+                                    @if($finding->category->description)
+                                        <p class="text-xs text-[#667085] mt-0.5">{{ $finding->category->description }}</p>
+                                    @endif
                                 @endif
                             </div>
                             <x-badge :color="$finding->compliance_status->color()">{{ $finding->compliance_status->label() }}</x-badge>

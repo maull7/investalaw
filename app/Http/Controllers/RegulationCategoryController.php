@@ -34,10 +34,24 @@ class RegulationCategoryController extends Controller
 
     public function store(StoreRegulationCategoryRequest $request): RedirectResponse
     {
-        $this->categoryRepository->create($request->validated());
+        $validated = $request->validated();
+        $category = $this->categoryRepository->create([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
 
-        return redirect()->route('regulation-categories.index')
-            ->with('success', 'Category created successfully.');
+        if (! empty($validated['sub_categories'])) {
+            $subNames = array_filter($validated['sub_categories'], fn ($name) => ! empty(trim($name)));
+            foreach ($subNames as $name) {
+                SubCategory::create([
+                    'category_id' => $category->id,
+                    'name' => trim($name),
+                ]);
+            }
+        }
+
+        return redirect()->route('regulation-categories.show', $category)
+            ->with('success', 'Category berhasil ditambahkan.');
     }
 
     public function show(RegulationCategory $regulationCategory): View

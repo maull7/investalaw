@@ -64,7 +64,7 @@
 
                     <li>
                         <a href="{{ route('regulation-categories.index') }}"
-                            class="nav-item {{ request()->routeIs('regulation-categories.*') || request()->routeIs('sub-categories.*') ? 'is-active' : '' }}">
+                            class="nav-item {{ request()->routeIs('regulation-categories.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -72,6 +72,17 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
                             </svg>
                             <span>Kategori</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ route('sub-categories.index') }}"
+                            class="nav-item {{ request()->routeIs('sub-categories.index') ? 'is-active' : '' }}">
+                            <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A2 2 0 0 1 3 12V7a4 4 0 0 1 4-4Z" />
+                            </svg>
+                            <span>Sub Category</span>
                         </a>
                     </li>
                     <li>
@@ -85,6 +96,7 @@
                             <span>Jenis Regulasi</span>
                         </a>
                     </li>
+
                     <li>
                         <a href="{{ route('regulations.index') }}"
                             class="nav-item {{ request()->routeIs('regulations.*') ? 'is-active' : '' }}">
@@ -131,8 +143,8 @@
                 class="mt-6 rounded-2xl border border-[#c99a3e]/25 bg-gradient-to-br from-[#c99a3e]/15 to-transparent p-4">
                 <div class="flex items-start gap-3">
                     <div class="w-9 h-9 rounded-xl bg-[#c99a3e] flex items-center justify-center shrink-0">
-                        <svg class="w-4.5 h-4.5 text-[#071b3a]" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <svg class="w-4.5 h-4.5 text-[#071b3a]" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3Z" />
                         </svg>
                     </div>

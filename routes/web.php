@@ -8,6 +8,7 @@ use App\Http\Controllers\RegulationTypeController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewDocumentController;
 use App\Http\Controllers\ReviewReportController;
+use App\Http\Controllers\SubCategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -34,6 +35,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'updateSubCategory'])->name('sub-categories.update');
     Route::patch('/sub-categories/{subCategory}/toggle', [RegulationCategoryController::class, 'toggleSubCategory'])->name('sub-categories.toggle');
     Route::delete('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'destroySubCategory'])->name('sub-categories.destroy');
+
+    // Sub Category index page
+    Route::get('/sub-categories', [SubCategoryController::class, 'index'])->name('sub-categories.index');
+    Route::post('/sub-categories', [SubCategoryController::class, 'store'])->name('sub-categories.create');
 
     // Regulation Types
     Route::resource('regulation-types', RegulationTypeController::class);

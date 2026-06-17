@@ -16,7 +16,7 @@ class DashboardController extends Controller
         $documentsQuery = ReviewDocument::query();
         $reviewsQuery = Review::query();
 
-        if (! $user->isAdmin() && ! $user->isReviewer()) {
+        if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
             $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }

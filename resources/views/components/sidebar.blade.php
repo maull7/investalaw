@@ -43,6 +43,15 @@
 
             {{-- Navigation --}}
             <nav class="mt-7 flex-1">
+                @php
+                    $user = auth()->user();
+                    $canManageCategories = $user->hasPermission('manage_categories');
+                    $canManageSubCategories = $user->hasPermission('manage_sub_categories');
+                    $canManageTypes = $user->hasPermission('manage_types');
+                    $canUploadRegulations = $user->hasPermission('upload_regulations');
+                    $showMasterData = $canManageCategories || $canManageSubCategories || $canManageTypes || $canUploadRegulations;
+                @endphp
+
                 <p class="px-3 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Overview</p>
                 <ul class="space-y-1.5">
                     <li>
@@ -58,10 +67,27 @@
                     </li>
                 </ul>
 
+                @if($user->isAdmin())
+                <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Administration</p>
+                <ul class="space-y-1.5">
+                    <li>
+                        <a href="{{ route('users.index') }}"
+                            class="nav-item {{ request()->routeIs('users.*') ? 'is-active' : '' }}">
+                            <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
+                            </svg>
+                            <span>Manage Users</span>
+                        </a>
+                    </li>
+                </ul>
+                @endif
+
+                @if($showMasterData)
                 <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Master
                     Data</p>
                 <ul class="space-y-1.5">
 
+                    @if($canManageCategories)
                     <li>
                         <a href="{{ route('regulation-categories.index') }}"
                             class="nav-item {{ request()->routeIs('regulation-categories.*') ? 'is-active' : '' }}">
@@ -74,6 +100,8 @@
                             <span>Kategori</span>
                         </a>
                     </li>
+                    @endif
+                    @if($canManageSubCategories)
                     <li>
                         <a href="{{ route('sub-categories.index') }}"
                             class="nav-item {{ request()->routeIs('sub-categories.index') ? 'is-active' : '' }}">
@@ -85,6 +113,8 @@
                             <span>Sub Category</span>
                         </a>
                     </li>
+                    @endif
+                    @if($canManageTypes)
                     <li>
                         <a href="{{ route('regulation-types.index') }}"
                             class="nav-item {{ request()->routeIs('regulation-types.*') ? 'is-active' : '' }}">
@@ -96,7 +126,8 @@
                             <span>Jenis Regulasi</span>
                         </a>
                     </li>
-
+                    @endif
+                    @if($canUploadRegulations)
                     <li>
                         <a href="{{ route('regulations.index') }}"
                             class="nav-item {{ request()->routeIs('regulations.*') ? 'is-active' : '' }}">
@@ -108,8 +139,11 @@
                             <span>Regulasi</span>
                         </a>
                     </li>
+                    @endif
                 </ul>
+                @endif
 
+                @if(! $user->isSubAdmin())
                 <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">
                     Compliance</p>
                 <ul class="space-y-1.5">
@@ -136,6 +170,7 @@
                         </a>
                     </li>
                 </ul>
+                @endif
             </nav>
 
             {{-- Footer --}}

@@ -12,6 +12,8 @@ class RegulationTypeController extends Controller
 {
     public function index(): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_types'), 403);
+
         $types = RegulationType::withCount('regulations')->orderBy('level')->get();
 
         return view('regulation-types.index', compact('types'));
@@ -19,6 +21,8 @@ class RegulationTypeController extends Controller
 
     public function create(): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_types'), 403);
+
         return view('regulation-types.create');
     }
 
@@ -32,6 +36,8 @@ class RegulationTypeController extends Controller
 
     public function edit(RegulationType $regulationType): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_types'), 403);
+
         return view('regulation-types.edit', compact('regulationType'));
     }
 
@@ -45,6 +51,8 @@ class RegulationTypeController extends Controller
 
     public function destroy(RegulationType $regulationType): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('manage_types'), 403);
+
         if ($regulationType->regulations()->exists()) {
             return redirect()->route('regulation-types.index')
                 ->with('error', 'Tidak dapat menghapus jenis regulasi yang masih digunakan oleh regulasi.');

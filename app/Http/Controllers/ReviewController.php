@@ -24,6 +24,7 @@ class ReviewController extends Controller
 
     public function index(Request $request): View
     {
+        abort_if($request->user()->isSubAdmin(), 403);
         $user = $request->user();
         $filters = $request->only(['review_document_id']);
 
@@ -39,6 +40,7 @@ class ReviewController extends Controller
 
     public function create(ReviewDocument $reviewDocument): View
     {
+        abort_if(auth()->user()->isSubAdmin(), 403);
         $this->authorize('review', $reviewDocument);
 
         $document = $this->reviewDocumentRepository->findById($reviewDocument->id);
@@ -49,6 +51,7 @@ class ReviewController extends Controller
 
     public function store(StoreReviewRequest $request): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin(), 403);
         $validated = $request->validated();
 
         $review = $this->reviewService->createReview(
@@ -63,6 +66,7 @@ class ReviewController extends Controller
 
     public function show(Review $review): View
     {
+        abort_if(auth()->user()->isSubAdmin(), 403);
         $this->authorize('view', $review);
 
         $review = $this->reviewRepository->findById($review->id);
@@ -72,6 +76,7 @@ class ReviewController extends Controller
 
     public function edit(Review $review): View
     {
+        abort_if(auth()->user()->isSubAdmin(), 403);
         $this->authorize('update', $review);
 
         $review = $this->reviewRepository->findById($review->id);
@@ -82,6 +87,7 @@ class ReviewController extends Controller
 
     public function update(UpdateReviewRequest $request, Review $review): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin(), 403);
         $validated = $request->validated();
 
         $this->reviewService->updateReview(
@@ -96,6 +102,7 @@ class ReviewController extends Controller
 
     public function complete(Review $review): RedirectResponse
     {
+        abort_if(request()->user()->isSubAdmin(), 403);
         $this->authorize('update', $review);
 
         $this->reviewService->completeReview($review);
@@ -106,6 +113,7 @@ class ReviewController extends Controller
 
     public function requestRevision(Request $request, Review $review): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin(), 403);
         $this->authorize('update', $review);
 
         $request->validate(['notes' => 'required|string']);
@@ -118,6 +126,7 @@ class ReviewController extends Controller
 
     public function reject(Request $request, Review $review): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin(), 403);
         $this->authorize('update', $review);
 
         $request->validate(['notes' => 'required|string']);

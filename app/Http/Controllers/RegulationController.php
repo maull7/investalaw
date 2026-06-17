@@ -31,6 +31,8 @@ class RegulationController extends Controller
 
     public function create(): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('upload_regulations'), 403);
+
         $options = $this->regulationRepository->getFormOptions();
 
         return view('regulations.create', $options);
@@ -72,6 +74,8 @@ class RegulationController extends Controller
 
     public function edit(Regulation $regulation): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('upload_regulations'), 403);
+
         $options = $this->regulationRepository->getFormOptions();
         $regulation->load(['subCategories', 'relatedRegulations.type']);
 
@@ -105,6 +109,8 @@ class RegulationController extends Controller
 
     public function destroy(Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
         Storage::disk('public')->delete($regulation->file_path);
 
         foreach ($regulation->documents as $document) {
@@ -139,6 +145,8 @@ class RegulationController extends Controller
 
     public function uploadDocument(Request $request, Regulation $regulation): RedirectResponse
     {
+        abort_unless($request->user()->hasPermission('upload_regulations'), 403);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'document_type' => ['required', 'string', 'max:255'],
@@ -160,6 +168,8 @@ class RegulationController extends Controller
 
     public function deleteDocument(RegulationDocument $document): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
         $regulation = $document->regulation;
 
         Storage::disk('public')->delete($document->file_path);

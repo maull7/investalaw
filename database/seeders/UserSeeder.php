@@ -28,5 +28,34 @@ class UserSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+
+        User::updateOrCreate(
+            ['email' => 'subadmin@example.com'],
+            [
+                'name' => 'Sub Admin',
+                'password' => bcrypt('12345678'),
+                'role' => 'sub_admin',
+                'permissions' => [
+                    'upload_regulations',
+                    'manage_categories',
+                    'manage_types',
+                    'manage_sub_categories',
+                ],
+                'email_verified_at' => now(),
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'subadmin1@mail.com'],
+            [
+                'name' => 'Sub Admin 1',
+                'password' => bcrypt('12345678'),
+                'role' => 'sub_admin',
+                'permissions' => [
+                    'upload_regulations',
+                ],
+                'email_verified_at' => now(),
+            ]
+        );
     }
 }

@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Http\Requests\User;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+
+class StoreUserRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()->isAdmin();
+    }
+
+    /** @return array<string, array<int, mixed>> */
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'role' => ['required', Rule::in(['admin', 'sub_admin', 'reviewer', 'user'])],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', Rule::in([
+                'upload_regulations',
+                'manage_categories',
+                'manage_types',
+                'manage_sub_categories',
+            ])],
+        ];
+    }
+}

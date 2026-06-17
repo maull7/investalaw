@@ -9,6 +9,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewDocumentController;
 use App\Http\Controllers\ReviewReportController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -62,4 +63,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reports/{review}', [ReviewReportController::class, 'show'])->name('reports.show');
     Route::get('/reports/{review}/pdf', [ReviewReportController::class, 'exportPdf'])->name('reports.pdf');
+
+    // User management
+    Route::resource('users', UserController::class);
 });

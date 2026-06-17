@@ -3,10 +3,10 @@
 namespace App\Repositories;
 
 use App\Models\Regulation;
-use App\Models\RegulationType;
 use App\Models\RegulationCategory;
-use App\Models\SubCategory;
+use App\Models\RegulationType;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class RegulationRepository
@@ -51,7 +51,7 @@ class RegulationRepository
         ])->findOrFail($id);
     }
 
-    public function search(string $query, ?int $excludeId = null): \Illuminate\Database\Eloquent\Collection
+    public function search(string $query, ?int $excludeId = null): Collection
     {
         return Regulation::where(function (Builder $q) use ($query) {
             $q->where('regulation_number', 'like', "%{$query}%")

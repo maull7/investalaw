@@ -8,7 +8,7 @@ class StoreRegulationCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->isAdmin();
+        return $this->user()->hasPermission('manage_categories');
     }
 
     /** @return array<string, array<int, mixed>> */

@@ -8,7 +8,7 @@ class StoreRegulationRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()->isAdmin();
+        return $this->user()->hasPermission('upload_regulations');
     }
 
     /** @return array<string, array<int, mixed>> */

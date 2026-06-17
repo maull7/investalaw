@@ -22,6 +22,8 @@ class RegulationCategoryController extends Controller
 
     public function index(): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
+
         $categories = $this->categoryRepository->all();
 
         return view('regulation-categories.index', compact('categories'));
@@ -29,6 +31,8 @@ class RegulationCategoryController extends Controller
 
     public function create(): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
+
         return view('regulation-categories.create');
     }
 
@@ -56,6 +60,8 @@ class RegulationCategoryController extends Controller
 
     public function show(RegulationCategory $regulationCategory): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
+
         $regulationCategory->load(['files', 'subCategories', 'regulations.type', 'regulations.documents']);
         $category = $regulationCategory;
 
@@ -64,6 +70,8 @@ class RegulationCategoryController extends Controller
 
     public function edit(RegulationCategory $regulationCategory): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
+
         return view('regulation-categories.edit', compact('regulationCategory'));
     }
 
@@ -77,6 +85,8 @@ class RegulationCategoryController extends Controller
 
     public function destroy(RegulationCategory $regulationCategory): RedirectResponse
     {
+        abort_unless(request()->user()->isAdmin(), 403);
+
         foreach ($regulationCategory->files as $file) {
             Storage::disk('public')->delete($file->file_path);
         }
@@ -89,6 +99,8 @@ class RegulationCategoryController extends Controller
 
     public function uploadFile(Request $request, RegulationCategory $regulationCategory): RedirectResponse
     {
+        abort_unless($request->user()->hasPermission('manage_categories'), 403);
+
         $request->validate([
             'files' => ['required', 'array'],
             'files.*' => ['file', 'mimes:pdf', 'max:10240'],
@@ -110,6 +122,8 @@ class RegulationCategoryController extends Controller
 
     public function deleteFile(CategoryFile $file): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('manage_categories'), 403);
+
         $category = $file->category;
 
         Storage::disk('public')->delete($file->file_path);
@@ -121,6 +135,8 @@ class RegulationCategoryController extends Controller
 
     public function viewFile(CategoryFile $file): StreamedResponse
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
+
         return Storage::disk('public')->response($file->file_path, null, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline',
@@ -129,6 +145,8 @@ class RegulationCategoryController extends Controller
 
     public function storeSubCategory(Request $request, RegulationCategory $regulationCategory): RedirectResponse
     {
+        abort_unless($request->user()->hasPermission('manage_sub_categories'), 403);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -144,6 +162,8 @@ class RegulationCategoryController extends Controller
 
     public function updateSubCategory(Request $request, SubCategory $subCategory): RedirectResponse
     {
+        abort_unless($request->user()->hasPermission('manage_sub_categories'), 403);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -156,6 +176,8 @@ class RegulationCategoryController extends Controller
 
     public function toggleSubCategory(SubCategory $subCategory): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('manage_sub_categories'), 403);
+
         $subCategory->update(['is_active' => ! $subCategory->is_active]);
 
         return redirect()->route('regulation-categories.show', $subCategory->category)
@@ -164,6 +186,8 @@ class RegulationCategoryController extends Controller
 
     public function destroySubCategory(SubCategory $subCategory): RedirectResponse
     {
+        abort_unless(request()->user()->isAdmin(), 403);
+
         $category = $subCategory->category;
         $subCategory->delete();
 

@@ -12,6 +12,8 @@ class SubCategoryController extends Controller
 {
     public function index(Request $request): View
     {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_sub_categories'), 403);
+
         $query = SubCategory::with('category')->orderBy('name');
 
         if ($request->filled('category_id')) {
@@ -30,6 +32,8 @@ class SubCategoryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin() && ! $request->user()->hasPermission('manage_sub_categories'), 403);
+
         $request->validate([
             'category_id' => ['required', 'exists:regulation_categories,id'],
             'name' => ['required', 'string', 'max:255'],
@@ -46,6 +50,8 @@ class SubCategoryController extends Controller
 
     public function update(Request $request, SubCategory $subCategory): RedirectResponse
     {
+        abort_if($request->user()->isSubAdmin() && ! $request->user()->hasPermission('manage_sub_categories'), 403);
+
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -58,6 +64,8 @@ class SubCategoryController extends Controller
 
     public function toggle(SubCategory $subCategory): RedirectResponse
     {
+        abort_if(request()->user()->isSubAdmin() && ! request()->user()->hasPermission('manage_sub_categories'), 403);
+
         $subCategory->update(['is_active' => ! $subCategory->is_active]);
 
         return redirect()->route('sub-categories.index')
@@ -66,6 +74,8 @@ class SubCategoryController extends Controller
 
     public function destroy(SubCategory $subCategory): RedirectResponse
     {
+        abort_if(request()->user()->isSubAdmin() && ! request()->user()->hasPermission('manage_sub_categories'), 403);
+
         $subCategory->delete();
 
         return redirect()->route('sub-categories.index')

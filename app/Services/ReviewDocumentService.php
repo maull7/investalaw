@@ -16,24 +16,24 @@ class ReviewDocumentService
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array<int, int>  $categoryIds
+     * @param  array<int, int>  $regulationIds
      */
-    public function createReviewDocument(array $data, array $categoryIds, UploadedFile $file, int $userId): ReviewDocument
+    public function createReviewDocument(array $data, array $regulationIds, UploadedFile $file, int $userId): ReviewDocument
     {
         $data['user_id'] = $userId;
         $data['file_path'] = $this->uploadFile($file);
 
         $document = $this->reviewDocumentRepository->create($data);
-        $document->categories()->attach($categoryIds);
+        $document->regulations()->attach($regulationIds);
 
         return $document;
     }
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array<int, int>  $categoryIds
+     * @param  array<int, int>  $regulationIds
      */
-    public function updateReviewDocument(ReviewDocument $document, array $data, array $categoryIds, ?UploadedFile $file = null): ReviewDocument
+    public function updateReviewDocument(ReviewDocument $document, array $data, array $regulationIds, ?UploadedFile $file = null): ReviewDocument
     {
         if ($file) {
             $this->deleteFile($document->file_path);
@@ -41,9 +41,9 @@ class ReviewDocumentService
         }
 
         $document = $this->reviewDocumentRepository->update($document, $data);
-        $document->categories()->sync($categoryIds);
+        $document->regulations()->sync($regulationIds);
 
-        return $document->fresh(['user', 'categories']);
+        return $document->fresh(['user', 'regulations.type', 'regulations.category']);
     }
 
     public function deleteReviewDocument(ReviewDocument $document): bool

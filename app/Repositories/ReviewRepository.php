@@ -12,7 +12,7 @@ class ReviewRepository
      */
     public function search(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Review::with(['reviewDocument.user', 'reviewer', 'findings']);
+        $query = Review::with(['reviewDocument.user', 'reviewer', 'findings.regulation.type']);
 
         if (! empty($filters['reviewer_id'])) {
             $query->where('reviewer_id', $filters['reviewer_id']);
@@ -27,7 +27,7 @@ class ReviewRepository
 
     public function findById(int $id): Review
     {
-        return Review::with(['reviewDocument.categories', 'reviewer', 'findings.category'])->findOrFail($id);
+        return Review::with(['reviewDocument.regulations.type', 'reviewDocument.regulations.category', 'reviewer', 'findings.category', 'findings.regulation.type'])->findOrFail($id);
     }
 
     /** @param array<string, mixed> $data */

@@ -60,27 +60,34 @@
             <x-slot name="header">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="text-lg font-bold text-[#071833]">Findings per Regulation</h3>
-                        <p class="text-xs text-[#667085] mt-0.5">Evaluate each linked regulation independently.</p>
+                        <h3 class="text-lg font-bold text-[#071833]">Findings per Regulasi</h3>
+                        <p class="text-xs text-[#667085] mt-0.5">Evaluasi kepatuhan untuk setiap regulasi yang dipilih.</p>
                     </div>
-                    <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $document->categories->count() }} categories</span>
+                    <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $document->regulations->count() }} regulasi</span>
                 </div>
             </x-slot>
 
-            @if($document->categories->isEmpty())
-                <p class="text-sm text-[#667085]">No categories associated with this document.</p>
+            @if($document->regulations->isEmpty())
+                <p class="text-sm text-[#667085]">Belum ada regulasi yang terkait dengan dokumen ini.</p>
             @else
                 <div class="space-y-5">
-                    @foreach($document->categories as $index => $category)
+                    @foreach($document->regulations as $index => $regulation)
                         <article class="rounded-2xl border border-[#e7eaf0] bg-[#f6f8fb]/40 p-5">
                             <header class="flex items-start justify-between gap-4 mb-4">
                                 <div class="min-w-0">
-                                    <input type="hidden" name="findings[{{ $index }}][category_id]" value="{{ $category->id }}">
-                                    <p class="text-[11px] font-bold uppercase tracking-wider text-[#c99a3e]">Regulation #{{ $index + 1 }}</p>
-                                    <h4 class="mt-1 text-base font-bold text-[#071833]">{{ $category->name }}</h4>
-                                    @if($category->description)
-                                        <p class="mt-1 text-xs text-[#667085]">{{ $category->description }}</p>
-                                    @endif
+                                    <input type="hidden" name="findings[{{ $index }}][regulation_id]" value="{{ $regulation->id }}">
+                                    <input type="hidden" name="findings[{{ $index }}][category_id]" value="{{ $regulation->category_id }}">
+                                    <p class="text-sm font-bold text-[#071833]">{{ $regulation->regulation_number }}</p>
+                                    <p class="text-xs text-[#667085] mt-0.5 line-clamp-2">{{ $regulation->title }}</p>
+                                    <div class="flex items-center gap-2 mt-1.5">
+                                        @if($regulation->type)
+                                            <x-badge :color="$regulation->type->levelBadgeColor()">{{ $regulation->type->name }} Lv{{ $regulation->type->level }}</x-badge>
+                                        @endif
+                                        <span class="text-xs text-[#667085]">{{ $regulation->year }}</span>
+                                        @if($regulation->category)
+                                            <span class="text-xs text-[#667085]">&middot; {{ $regulation->category->name }}</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </header>
 
@@ -88,7 +95,7 @@
                                 <div class="md:col-span-2">
                                     <label class="block text-sm font-semibold text-[#071833] mb-2">Compliance Status</label>
                                     <select name="findings[{{ $index }}][compliance_status]" class="select-premium">
-                                        <option value="">Select status…</option>
+                                        <option value="">Select status...</option>
                                         @foreach($complianceStatuses as $status)
                                             <option value="{{ $status->value }}" {{ old("findings.$index.compliance_status") === $status->value ? 'selected' : '' }}>{{ $status->label() }}</option>
                                         @endforeach
@@ -102,7 +109,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold text-[#071833] mb-2">Recommendations</label>
-                                    <textarea name="findings[{{ $index }}][recommendations]" rows="3" class="input-premium input-textarea" placeholder="Suggested remediation or next steps…">{{ old("findings.$index.recommendations") }}</textarea>
+                                    <textarea name="findings[{{ $index }}][recommendations]" rows="3" class="input-premium input-textarea" placeholder="Suggested remediation or next steps...">{{ old("findings.$index.recommendations") }}</textarea>
                                     @error("findings.$index.recommendations")<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                                 </div>
                             </div>

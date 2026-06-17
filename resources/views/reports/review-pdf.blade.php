@@ -243,8 +243,8 @@
     <table class="summary-grid">
         <tr>
             <td>
-                <span class="number">{{ $summary['total_categories'] }}</span>
-                <span class="label">Total Categories</span>
+                <span class="number">{{ $summary['total_regulations'] }}</span>
+                <span class="label">Total Regulasi</span>
             </td>
             <td>
                 <span class="number compliant">{{ $summary['compliant'] }}</span>
@@ -295,9 +295,14 @@
                     <tr>
                         <td style="text-align: center; font-weight: 700;">{{ $index + 1 }}</td>
                         <td>
-                            <strong>{{ $finding->category->name }}</strong>
-                            @if($finding->category->description)
-                                <br><span style="color: #667085; font-size: 9.5px;">{{ $finding->category->description }}</span>
+                            @if($finding->regulation)
+                                <strong>{{ $finding->regulation->regulation_number }}</strong>
+                                <br><span style="color: #667085; font-size: 9.5px;">{{ $finding->regulation->title }}</span>
+                            @elseif($finding->category)
+                                <strong>{{ $finding->category->name }}</strong>
+                                @if($finding->category->description)
+                                    <br><span style="color: #667085; font-size: 9.5px;">{{ $finding->category->description }}</span>
+                                @endif
                             @endif
                         </td>
                         <td>

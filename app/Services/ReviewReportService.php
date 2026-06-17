@@ -10,7 +10,7 @@ class ReviewReportService
     /** @return array<string, mixed> */
     public function generateReportData(Review $review): array
     {
-        $review->load(['reviewDocument.categories', 'reviewer', 'findings.category']);
+        $review->load(['reviewDocument.regulations', 'reviewer', 'findings.category', 'findings.regulation.type']);
 
         $findings = $review->findings;
         $compliantCount = $findings->where('compliance_status', 'compliant')->count();
@@ -23,7 +23,7 @@ class ReviewReportService
             'reviewer' => $review->reviewer,
             'findings' => $findings,
             'summary' => [
-                'total_categories' => $findings->count(),
+                'total_regulations' => $findings->count(),
                 'compliant' => $compliantCount,
                 'partially_compliant' => $partiallyCompliantCount,
                 'non_compliant' => $nonCompliantCount,

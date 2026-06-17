@@ -34,7 +34,7 @@ class ReviewDocumentController extends Controller
 
     public function create(): View
     {
-        $categories = $this->categoryRepository->allWithFiles();
+        $categories = $this->categoryRepository->allWithRegulations();
 
         return view('review-documents.create', compact('categories'));
     }
@@ -43,7 +43,7 @@ class ReviewDocumentController extends Controller
     {
         $this->reviewDocumentService->createReviewDocument(
             $request->safe()->only(['title', 'description']),
-            $request->validated('category_ids'),
+            $request->validated('regulation_ids'),
             $request->file('file'),
             $request->user()->id
         );
@@ -61,7 +61,7 @@ class ReviewDocumentController extends Controller
 
     public function edit(ReviewDocument $reviewDocument): View
     {
-        $categories = $this->categoryRepository->allWithFiles();
+        $categories = $this->categoryRepository->allWithRegulations();
 
         return view('review-documents.edit', compact('reviewDocument', 'categories'));
     }
@@ -71,7 +71,7 @@ class ReviewDocumentController extends Controller
         $this->reviewDocumentService->updateReviewDocument(
             $reviewDocument,
             $request->safe()->only(['title', 'description']),
-            $request->validated('category_ids'),
+            $request->validated('regulation_ids'),
             $request->file('file')
         );
 

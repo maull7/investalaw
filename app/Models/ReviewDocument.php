@@ -29,6 +29,13 @@ class ReviewDocument extends Model
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<Regulation> */
+    public function regulations(): BelongsToMany
+    {
+        return $this->belongsToMany(Regulation::class, 'review_document_regulation')
+            ->withTimestamps();
+    }
+
     /** @return HasOne<Review> */
     public function review(): HasOne
     {

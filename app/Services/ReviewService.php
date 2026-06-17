@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ReviewStatus;
+use App\Models\Regulation;
 use App\Models\Review;
 use App\Models\ReviewFinding;
 use App\Repositories\ReviewDocumentRepository;
@@ -28,6 +29,9 @@ class ReviewService
 
             foreach ($findings as $finding) {
                 $finding['review_id'] = $review->id;
+                if (empty($finding['category_id']) && ! empty($finding['regulation_id'])) {
+                    $finding['category_id'] = Regulation::find($finding['regulation_id'])?->category_id;
+                }
                 ReviewFinding::create($finding);
             }
 
@@ -53,10 +57,13 @@ class ReviewService
 
             foreach ($findings as $finding) {
                 $finding['review_id'] = $review->id;
+                if (empty($finding['category_id']) && ! empty($finding['regulation_id'])) {
+                    $finding['category_id'] = Regulation::find($finding['regulation_id'])?->category_id;
+                }
                 ReviewFinding::create($finding);
             }
 
-            return $review->fresh(['findings.category']);
+            return $review->fresh(['findings.category', 'findings.regulation.type']);
         });
     }
 

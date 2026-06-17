@@ -6,6 +6,7 @@ use App\Http\Requests\RegulationCategory\StoreRegulationCategoryRequest;
 use App\Http\Requests\RegulationCategory\UpdateRegulationCategoryRequest;
 use App\Models\CategoryFile;
 use App\Models\RegulationCategory;
+use App\Models\SubCategory;
 use App\Repositories\RegulationCategoryRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,7 +42,8 @@ class RegulationCategoryController extends Controller
 
     public function show(RegulationCategory $regulationCategory): View
     {
-        $category = $this->categoryRepository->findById($regulationCategory->id);
+        $regulationCategory->load(['files', 'subCategories', 'regulations.type', 'regulations.documents']);
+        $category = $regulationCategory;
 
         return view('regulation-categories.show', compact('category'));
     }
@@ -109,5 +111,49 @@ class RegulationCategoryController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline',
         ]);
+    }
+
+    public function storeSubCategory(Request $request, RegulationCategory $regulationCategory): RedirectResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        SubCategory::create([
+            'category_id' => $regulationCategory->id,
+            'name' => $request->input('name'),
+        ]);
+
+        return redirect()->route('regulation-categories.show', $regulationCategory)
+            ->with('success', 'Sub category berhasil ditambahkan.');
+    }
+
+    public function updateSubCategory(Request $request, SubCategory $subCategory): RedirectResponse
+    {
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $subCategory->update(['name' => $request->input('name')]);
+
+        return redirect()->route('regulation-categories.show', $subCategory->category)
+            ->with('success', 'Sub category berhasil diperbarui.');
+    }
+
+    public function toggleSubCategory(SubCategory $subCategory): RedirectResponse
+    {
+        $subCategory->update(['is_active' => ! $subCategory->is_active]);
+
+        return redirect()->route('regulation-categories.show', $subCategory->category)
+            ->with('success', 'Status sub category berhasil diperbarui.');
+    }
+
+    public function destroySubCategory(SubCategory $subCategory): RedirectResponse
+    {
+        $category = $subCategory->category;
+        $subCategory->delete();
+
+        return redirect()->route('regulation-categories.show', $category)
+            ->with('success', 'Sub category berhasil dihapus.');
     }
 }

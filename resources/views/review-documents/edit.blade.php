@@ -48,22 +48,35 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-[#071833] mb-2">Regulation Categories</label>
-                        <div class="rounded-2xl border border-[#e7eaf0] bg-[#f6f8fb]/40 p-4 max-h-72 overflow-y-auto space-y-2">
-                            @php $selectedIds = old('category_ids', $reviewDocument->categories->pluck('id')->toArray()); @endphp
+                        <label class="block text-sm font-semibold text-[#071833] mb-2">Regulasi yang Berlaku</label>
+                        <div class="rounded-2xl border border-[#e7eaf0] bg-[#f6f8fb]/40 p-4 max-h-96 overflow-y-auto space-y-4">
+                            @php $selectedIds = old('regulation_ids', $reviewDocument->regulations->pluck('id')->toArray()); @endphp
                             @foreach($categories as $category)
-                                <label class="flex items-start gap-3 p-3 rounded-xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#c99a3e]/40 cursor-pointer transition">
-                                    <input type="checkbox" name="category_ids[]" value="{{ $category->id }}" {{ in_array($category->id, $selectedIds) ? 'checked' : '' }} class="checkbox-premium mt-0.5">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-sm font-semibold text-[#071833]">{{ $category->name }}</p>
-                                        @if($category->description)
-                                            <p class="text-xs text-[#667085] mt-0.5">{{ $category->description }}</p>
-                                        @endif
+                                @if($category->regulations->isNotEmpty())
+                                    <div>
+                                        <p class="text-[11px] font-bold uppercase tracking-wider text-[#c99a3e] mb-2">{{ $category->name }}</p>
+                                        <div class="space-y-2">
+                                            @foreach($category->regulations as $regulation)
+                                                <label class="flex items-start gap-3 p-3 rounded-xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#c99a3e]/40 cursor-pointer transition">
+                                                    <input type="checkbox" name="regulation_ids[]" value="{{ $regulation->id }}" {{ in_array($regulation->id, $selectedIds) ? 'checked' : '' }} class="checkbox-premium mt-0.5">
+                                                    <div class="min-w-0 flex-1">
+                                                        <p class="text-sm font-semibold text-[#071833]">{{ $regulation->regulation_number }}</p>
+                                                        <p class="text-xs text-[#667085] mt-0.5 line-clamp-1">{{ $regulation->title }}</p>
+                                                        <div class="flex items-center gap-2 mt-1">
+                                                            @if($regulation->type)
+                                                                <x-badge :color="$regulation->type->levelBadgeColor()">Lv{{ $regulation->type->level }}</x-badge>
+                                                            @endif
+                                                            <span class="text-[10px] text-[#667085]">{{ $regulation->year }}</span>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            @endforeach
+                                        </div>
                                     </div>
-                                </label>
+                                @endif
                             @endforeach
                         </div>
-                        @error('category_ids')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        @error('regulation_ids')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3 pt-3 border-t border-[#e7eaf0]">

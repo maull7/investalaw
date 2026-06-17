@@ -26,6 +26,7 @@ class UpdateUserRequest extends FormRequest
                 'manage_categories',
                 'manage_types',
                 'manage_sub_categories',
+                'manage_prompts',
             ])],
         ];
     }

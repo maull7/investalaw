@@ -40,6 +40,7 @@ class UserSeeder extends Seeder
                     'manage_categories',
                     'manage_types',
                     'manage_sub_categories',
+                    'manage_prompts',
                 ],
                 'email_verified_at' => now(),
             ]

@@ -20,31 +20,47 @@
                     @method('PUT')
 
                     <div>
-                        <label for="type" class="block text-sm font-semibold text-[#071833] mb-2">Type <span class="text-[#c99a3e]">*</span></label>
+                        <label for="type" class="block text-sm font-semibold text-[#071833] mb-2">Type <span
+                                class="text-[#c99a3e]">*</span></label>
                         <select name="type" id="type" required class="select-premium">
                             <option value="">-- Pilih Type --</option>
-                            <option value="analisa" {{ old('type', $aiPrompt->type) === 'analisa' ? 'selected' : '' }}>Analisa</option>
-                            <option value="review" {{ old('type', $aiPrompt->type) === 'review' ? 'selected' : '' }}>Review</option>
-                            <option value="rekomendasi" {{ old('type', $aiPrompt->type) === 'rekomendasi' ? 'selected' : '' }}>Rekomendasi</option>
-                            <option value="validitas" {{ old('type', $aiPrompt->type) === 'validitas' ? 'selected' : '' }}>Validitas</option>
+                            <option value="analisa" {{ old('type', $aiPrompt->type) === 'analisa' ? 'selected' : '' }}>
+                                Analisa</option>
+                            <option value="review" {{ old('type', $aiPrompt->type) === 'review' ? 'selected' : '' }}>Review
+                            </option>
+                            <option value="rekomendasi"
+                                {{ old('type', $aiPrompt->type) === 'rekomendasi' ? 'selected' : '' }}>Rekomendasi</option>
+                            <option value="validitas" {{ old('type', $aiPrompt->type) === 'validitas' ? 'selected' : '' }}>
+                                Validitas</option>
                         </select>
-                        @error('type')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        @error('type')
+                            <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
                         <label for="title" class="block text-sm font-semibold text-[#071833] mb-2">Title</label>
-                        <input type="text" name="title" id="title" value="{{ old('title', $aiPrompt->title) }}" class="input-premium" placeholder="Contoh: Prompt Analisa Dokumen">
-                        @error('title')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        <input type="text" name="title" id="title" value="{{ old('title', $aiPrompt->title) }}"
+                            class="input-premium" placeholder="Contoh: Prompt Analisa Dokumen">
+                        @error('title')
+                            <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div>
-                        <label for="prompt_text" class="block text-sm font-semibold text-[#071833] mb-2">Prompt Text <span class="text-[#c99a3e]">*</span></label>
-                        <textarea name="prompt_text" id="prompt_text" rows="10" required class="input-premium" placeholder="Masukkan prompt untuk AI...">{{ old('prompt_text', $aiPrompt->prompt_text) }}</textarea>
-                        @error('prompt_text')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        <label for="prompt_text" class="block text-sm font-semibold text-[#071833] mb-2">Prompt Text <span
+                                class="text-[#c99a3e]">*</span></label>
+                        <textarea name="prompt_text" id="prompt_text" rows="7" required class="input-premium input-textarea w-full"
+                            placeholder="Masukkan prompt untuk AI...">{{ old('prompt_text', $aiPrompt->prompt_text) }}</textarea>
+                        @error('prompt_text')
+                            <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <input type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $aiPrompt->is_active) ? 'checked' : '' }} class="w-4 h-4 rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
+                        <input type="checkbox" name="is_active" id="is_active" value="1"
+                            {{ old('is_active', $aiPrompt->is_active) ? 'checked' : '' }}
+                            class="w-4 h-4 rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
                         <label for="is_active" class="text-sm font-semibold text-[#071833]">Active</label>
                     </div>
 

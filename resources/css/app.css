@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -9,9 +9,12 @@
    ========================================================================== */
 
 @theme {
-    --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-    --font-display: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-sans:
+        "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif,
+        "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+        "Noto Color Emoji";
+    --font-display:
+        "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
     /* Brand palette */
     --color-navy: #071b3a;
@@ -26,7 +29,7 @@
     --color-soft: #f6f8fb;
 
     /* Premium shadows */
-    --shadow-luxury: 0 18px 50px rgba(7, 27, 58, 0.10);
+    --shadow-luxury: 0 18px 50px rgba(7, 27, 58, 0.1);
     --shadow-luxury-lg: 0 30px 80px rgba(7, 27, 58, 0.14);
     --shadow-gold: 0 12px 28px rgba(201, 154, 62, 0.28);
 
@@ -35,12 +38,12 @@
 }
 
 @font-face {
-    font-family: 'Plus Jakarta Sans';
+    font-family: "Plus Jakarta Sans";
     font-style: normal;
     font-weight: 400 800;
     font-display: swap;
-    src: url('https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4Ko20yp1IkAffXdf0nKmISGn8YGzh4Aj4lc.woff2')
-        format('woff2');
+    src: url("https://fonts.gstatic.com/s/plusjakartasans/v8/LDIbaomQNQcsA88c7O9yZ4KMCoOg4Ko20yp1IkAffXdf0nKmISGn8YGzh4Aj4lc.woff2")
+        format("woff2");
 }
 
 /* ==========================================================================
@@ -54,7 +57,8 @@ html {
 }
 
 body {
-    font-family: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-family:
+        "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
     color: #071833;
     background: linear-gradient(180deg, #f6f8fb 0%, #eef2f8 100%);
     background-attachment: fixed;
@@ -104,7 +108,9 @@ body {
     border: 1px solid #e7eaf0;
     border-radius: 24px;
     box-shadow: 0 18px 50px rgba(7, 27, 58, 0.08);
-    transition: transform 300ms ease, box-shadow 300ms ease;
+    transition:
+        transform 300ms ease,
+        box-shadow 300ms ease;
 }
 
 .card-premium-hover:hover {
@@ -122,8 +128,16 @@ body {
 /* Navy gradient backdrop for hero / login */
 .bg-navy-gradient {
     background:
-        radial-gradient(ellipse 80% 60% at 20% 0%, rgba(201, 154, 62, 0.18) 0%, transparent 60%),
-        radial-gradient(ellipse 70% 50% at 80% 100%, rgba(201, 154, 62, 0.12) 0%, transparent 60%),
+        radial-gradient(
+            ellipse 80% 60% at 20% 0%,
+            rgba(201, 154, 62, 0.18) 0%,
+            transparent 60%
+        ),
+        radial-gradient(
+            ellipse 70% 50% at 80% 100%,
+            rgba(201, 154, 62, 0.12) 0%,
+            transparent 60%
+        ),
         linear-gradient(135deg, #071b3a 0%, #0b2a55 100%);
 }
 
@@ -137,7 +151,7 @@ body {
 
 /* Subtle gold underline accent */
 .heading-accent::after {
-    content: '';
+    content: "";
     display: block;
     width: 40px;
     height: 3px;
@@ -148,12 +162,14 @@ body {
 
 /* Button glow */
 .btn-gold-glow {
-    box-shadow: 0 10px 24px rgba(201, 154, 62, 0.32),
+    box-shadow:
+        0 10px 24px rgba(201, 154, 62, 0.32),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .btn-navy-glow {
-    box-shadow: 0 10px 24px rgba(7, 27, 58, 0.25),
+    box-shadow:
+        0 10px 24px rgba(7, 27, 58, 0.25),
         inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -167,7 +183,10 @@ body {
     background: #ffffff;
     color: #071833;
     font-size: 0.9375rem;
-    transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+    transition:
+        border-color 200ms ease,
+        box-shadow 200ms ease,
+        background 200ms ease;
 }
 .input-premium::placeholder {
     color: #667085;
@@ -200,7 +219,9 @@ body {
     font-size: 0.9375rem;
     appearance: none;
     -webkit-appearance: none;
-    transition: border-color 200ms ease, box-shadow 200ms ease;
+    transition:
+        border-color 200ms ease,
+        box-shadow 200ms ease;
 }
 .select-premium:focus {
     outline: none;
@@ -331,8 +352,12 @@ nav[role="navigation"] span {
 
 /* Premium skeleton shimmer */
 @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
 }
 .skeleton {
     background: linear-gradient(90deg, #eef2f8 0%, #f6f8fb 50%, #eef2f8 100%);
@@ -370,14 +395,18 @@ nav[role="navigation"] span {
 }
 .nav-item.is-active {
     color: #ffffff;
-    background: linear-gradient(135deg, rgba(201, 154, 62, 0.18), rgba(201, 154, 62, 0.08));
+    background: linear-gradient(
+        135deg,
+        rgba(201, 154, 62, 0.18),
+        rgba(201, 154, 62, 0.08)
+    );
     border: 1px solid rgba(201, 154, 62, 0.28);
 }
 .nav-item.is-active .nav-icon {
     color: #e6c06a;
 }
 .nav-item.is-active::before {
-    content: '';
+    content: "";
     position: absolute;
     left: -16px;
     top: 50%;
@@ -391,16 +420,27 @@ nav[role="navigation"] span {
 
 /* Animations */
 @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 .animate-fade-up {
     animation: fadeUp 400ms ease both;
 }
 
 @keyframes floatSlow {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-6px);
+    }
 }
 .animate-float-slow {
     animation: floatSlow 6s ease-in-out infinite;

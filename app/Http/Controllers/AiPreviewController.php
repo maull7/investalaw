@@ -23,16 +23,21 @@ class AiPreviewController extends Controller
         $selectedType = $request->query('type', 'analisa');
         $prompts = AiPrompt::active()->get();
 
+        $reviewDocument->load(['regulations.documents', 'regulations.type']);
+
         $summary = AiSummary::where('review_document_id', $reviewDocument->id)
             ->where('type', $selectedType)
             ->latest()
             ->first();
+
+        $activePrompt = AiPrompt::active()->where('type', $selectedType)->first();
 
         return view('ai-preview.show', [
             'document' => $reviewDocument,
             'prompts' => $prompts,
             'selectedType' => $selectedType,
             'summary' => $summary,
+            'activePrompt' => $activePrompt,
         ]);
     }
 

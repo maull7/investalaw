@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AiPrompt;
 use App\Models\AiSummary;
+use App\Models\Regulation;
 use App\Models\ReviewDocument;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,10 @@ use OpenAI;
 
 class AiService
 {
+    public function __construct(
+        private readonly DocumentParser $documentParser
+    ) {}
+
     public function generateSummary(ReviewDocument $document, string $type): AiSummary
     {
         $prompt = AiPrompt::active()->where('type', $type)->firstOrFail();
@@ -37,17 +42,53 @@ class AiService
 
     private function buildContext(ReviewDocument $document): string
     {
-        $document->loadMissing('regulations');
+        $document->loadMissing('regulations.documents');
 
-        $context = "Dokumen: {$document->title}\n";
+        $context = "=== DOKUMEN YANG DI-REVIEW ===\n";
+        $context .= "Judul: {$document->title}\n";
         $context .= "Deskripsi: {$document->description}\n\n";
-        $context .= "Daftar Regulasi Acuan:\n";
+
+        $documentText = $this->documentParser->extractFromStoragePath($document->file_path);
+        if ($documentText) {
+            $context .= "--- Konten Dokumen ---\n{$documentText}\n\n";
+        }
+
+        $context .= "=== REGULASI ACUAN ===\n";
 
         foreach ($document->regulations as $i => $reg) {
-            $context .= ($i + 1).". {$reg->regulation_number} - {$reg->title} (Tahun {$reg->year})\n";
+            $context .= "\n--- Regulasi #".($i + 1)." ---\n";
+            $context .= "Nomor: {$reg->regulation_number}\n";
+            $context .= "Judul: {$reg->title}\n";
+            $context .= "Tahun: {$reg->year}\n";
+
+            $regText = $this->extractRegulationText($reg);
+            if ($regText) {
+                $context .= "--- Konten Regulasi ---\n{$regText}\n";
+            }
         }
 
         return $context;
+    }
+
+    private function extractRegulationText(Regulation $regulation): string
+    {
+        $texts = [];
+
+        if ($regulation->file_path) {
+            $text = $this->documentParser->extractFromStoragePath($regulation->file_path);
+            if ($text) {
+                $texts[] = $text;
+            }
+        }
+
+        foreach ($regulation->documents as $doc) {
+            $text = $this->documentParser->extractFromStoragePath($doc->file_path);
+            if ($text) {
+                $texts[] = "[{$doc->name}] {$text}";
+            }
+        }
+
+        return implode("\n\n", $texts);
     }
 
     private function callAi(array $messages): array

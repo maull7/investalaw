@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'file_path'])]
+#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path'])]
 class Regulation extends Model
 {
     use HasFactory, SoftDeletes;
@@ -54,6 +54,7 @@ class Regulation extends Model
     {
         return [
             'year' => 'integer',
+            'effective_date' => 'date',
         ];
     }
 }

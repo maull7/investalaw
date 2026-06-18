@@ -53,6 +53,10 @@
                         <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulation->year }}</dd>
                     </div>
                     <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Berlaku</dt>
+                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulation->effective_date?->format('d F Y') ?? '-' }}</dd>
+                    </div>
+                    <div>
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Jenis Regulasi</dt>
                         <dd class="mt-1.5">
                             @if($regulation->type)

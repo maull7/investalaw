@@ -30,8 +30,14 @@ class ReviewDocumentController extends Controller
         $filters = $request->only(['status', 'search']);
         $documents = $this->reviewDocumentRepository->search($filters);
         $statuses = ReviewStatus::cases();
+        $aiTypes = [
+            'analisa' => 'Analisa',
+            'review' => 'Review',
+            'rekomendasi' => 'Rekomendasi',
+            'validitas' => 'Validitas',
+        ];
 
-        return view('review-documents.index', compact('documents', 'statuses'));
+        return view('review-documents.index', compact('documents', 'statuses', 'aiTypes'));
     }
 
     public function create(): View

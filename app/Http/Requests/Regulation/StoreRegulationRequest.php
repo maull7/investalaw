@@ -20,6 +20,7 @@ class StoreRegulationRequest extends FormRequest
             'regulation_type_id' => ['required', 'exists:regulation_types,id'],
             'category_id' => ['required', 'exists:regulation_categories,id'],
             'year' => ['required', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
+            'effective_date' => ['nullable', 'date'],
             'file' => ['required', 'file', 'mimes:pdf', 'max:20480'],
             'sub_categories' => ['nullable', 'array'],
             'sub_categories.*' => ['exists:sub_categories,id'],

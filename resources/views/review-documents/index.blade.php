@@ -55,6 +55,7 @@
                         <th>Uploaded By</th>
                         <th>Status</th>
                         <th>Submitted</th>
+                        <th>AI Preview</th>
                         <th class="text-right">Actions</th>
                     </tr>
                 </thead>
@@ -83,6 +84,20 @@
                             <td><x-badge :color="$document->status->color()">{{ $document->status->label() }}</x-badge></td>
                             <td class="text-[#667085]">{{ $document->submitted_at ? $document->submitted_at->format('d M Y') : '—' }}</td>
                             <td>
+                                <div x-data="{ aiType: 'analisa' }" class="flex items-center gap-1.5">
+                                    <select x-model="aiType" class="select-premium !py-1.5 !text-xs !min-w-[110px]">
+                                        @foreach($aiTypes as $key => $label)
+                                            <option value="{{ $key }}">{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    <a :href="'{{ route('ai-preview.show', $document) }}?type=' + aiType"
+                                       class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[#c99a3e] hover:bg-[#c99a3e]/10 transition"
+                                       title="AI Preview">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z"/></svg>
+                                    </a>
+                                </div>
+                            </td>
+                            <td>
                                 <div class="flex items-center justify-end gap-1.5">
                                     <a href="{{ route('review-documents.show', $document) }}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[#667085] hover:bg-[#f6f8fb] hover:text-[#071833] transition" title="View">
                                         <svg class="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
@@ -106,7 +121,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center py-16">
+                            <td colspan="6" class="text-center py-16">
                                 <div class="flex flex-col items-center gap-3 text-[#667085]">
                                     <div class="w-16 h-16 rounded-2xl bg-[#f6f8fb] flex items-center justify-center">
                                         <svg class="w-8 h-8 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>

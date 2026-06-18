@@ -30,16 +30,22 @@
                     @csrf
                     @method('PUT')
 
+                    <div>
+                        <label for="regulation_number" class="block text-sm font-semibold text-[#071833] mb-2">Nomor Regulasi <span class="text-[#c99a3e]">*</span></label>
+                        <input type="text" name="regulation_number" id="regulation_number" value="{{ old('regulation_number', $regulation->regulation_number) }}" required class="input-premium">
+                        @error('regulation_number')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label for="regulation_number" class="block text-sm font-semibold text-[#071833] mb-2">Nomor Regulasi <span class="text-[#c99a3e]">*</span></label>
-                            <input type="text" name="regulation_number" id="regulation_number" value="{{ old('regulation_number', $regulation->regulation_number) }}" required class="input-premium">
-                            @error('regulation_number')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
-                        </div>
                         <div>
                             <label for="year" class="block text-sm font-semibold text-[#071833] mb-2">Tahun Regulasi <span class="text-[#c99a3e]">*</span></label>
                             <input type="number" name="year" id="year" value="{{ old('year', $regulation->year) }}" required min="1900" max="{{ date('Y') + 1 }}" class="input-premium">
                             @error('year')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="effective_date" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal Berlaku</label>
+                            <input type="date" name="effective_date" id="effective_date" value="{{ old('effective_date', $regulation->effective_date?->format('Y-m-d')) }}" class="input-premium">
+                            @error('effective_date')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                         </div>
                     </div>
 
@@ -76,7 +82,7 @@
 
                     <div>
                         <label for="file" class="block text-sm font-semibold text-[#071833] mb-2">File Regulasi (PDF)</label>
-                        <input type="file" name="file" id="file" accept=".pdf" class="file-premium">
+                        <input type="file" name="file" id="file" accept=".pdf" class="file-premium" @change="previewFile($event)">
                         <p class="mt-1.5 text-xs text-[#667085]">Kosongkan jika tidak ingin mengganti file. Format: PDF (maks. 20MB)</p>
                         @error('file')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                     </div>
@@ -205,6 +211,15 @@
                     </div>
                 </dl>
             </x-card>
+
+            <x-card x-show="pdfPreviewUrl" x-cloak>
+                <x-slot name="header">
+                    <h3 class="text-base font-bold text-[#071833]">Preview PDF</h3>
+                </x-slot>
+                <div class="aspect-[3/4] rounded-xl overflow-hidden border border-[#e7eaf0]">
+                    <iframe :src="pdfPreviewUrl" class="w-full h-full" frameborder="0"></iframe>
+                </div>
+            </x-card>
         </aside>
 
         {{-- Related Regulations Modal --}}
@@ -301,6 +316,17 @@ function regulationEditForm(subCategoriesMap, selectedSubIds, selectedRelated) {
         searchQuery: '',
         searchResults: [],
         searchLoading: false,
+        pdfPreviewUrl: '{{ Storage::disk('public')->url($regulation->file_path) }}',
+
+        previewFile(event) {
+            if (this.pdfPreviewUrl && !this.pdfPreviewUrl.startsWith('http')) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+            }
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                this.pdfPreviewUrl = URL.createObjectURL(file);
+            }
+        },
 
         init() {
             const catSelect = document.getElementById('category_id');

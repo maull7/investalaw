@@ -18,16 +18,22 @@
                 <form method="POST" action="{{ route('regulations.store') }}" enctype="multipart/form-data" class="space-y-6">
                     @csrf
 
+                    <div>
+                        <label for="regulation_number" class="block text-sm font-semibold text-[#071833] mb-2">Nomor Regulasi <span class="text-[#c99a3e]">*</span></label>
+                        <input type="text" name="regulation_number" id="regulation_number" value="{{ old('regulation_number') }}" required class="input-premium" placeholder="Contoh: No. 33/POJK.04/2014">
+                        @error('regulation_number')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <div>
-                            <label for="regulation_number" class="block text-sm font-semibold text-[#071833] mb-2">Nomor Regulasi <span class="text-[#c99a3e]">*</span></label>
-                            <input type="text" name="regulation_number" id="regulation_number" value="{{ old('regulation_number') }}" required class="input-premium" placeholder="Contoh: No. 33/POJK.04/2014">
-                            @error('regulation_number')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
-                        </div>
                         <div>
                             <label for="year" class="block text-sm font-semibold text-[#071833] mb-2">Tahun Regulasi <span class="text-[#c99a3e]">*</span></label>
                             <input type="number" name="year" id="year" value="{{ old('year', date('Y')) }}" required min="1900" max="{{ date('Y') + 1 }}" class="input-premium">
                             @error('year')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="effective_date" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal Berlaku</label>
+                            <input type="date" name="effective_date" id="effective_date" value="{{ old('effective_date') }}" class="input-premium">
+                            @error('effective_date')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                         </div>
                     </div>
 
@@ -64,7 +70,7 @@
 
                     <div>
                         <label for="file" class="block text-sm font-semibold text-[#071833] mb-2">File Regulasi (PDF) <span class="text-[#c99a3e]">*</span></label>
-                        <input type="file" name="file" id="file" accept=".pdf" required class="file-premium">
+                        <input type="file" name="file" id="file" accept=".pdf" required class="file-premium" @change="previewFile($event)">
                         <p class="mt-1.5 text-xs text-[#667085]">Format yang didukung: PDF (maks. 20MB)</p>
                         @error('file')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
                     </div>
@@ -142,6 +148,15 @@
                     <p><strong class="text-[#071833]">Peraturan Terkait</strong> — Hubungkan regulasi yang saling berkaitan untuk analisis hierarki.</p>
                 </div>
             </x-card>
+
+            <x-card x-show="pdfPreviewUrl" x-cloak>
+                <x-slot name="header">
+                    <h3 class="text-base font-bold text-[#071833]">Preview PDF</h3>
+                </x-slot>
+                <div class="aspect-[3/4] rounded-xl overflow-hidden border border-[#e7eaf0]">
+                    <iframe :src="pdfPreviewUrl" class="w-full h-full" frameborder="0"></iframe>
+                </div>
+            </x-card>
         </aside>
 
         {{-- Related Regulations Modal --}}
@@ -208,6 +223,19 @@ function regulationForm(subCategoriesMap) {
         searchQuery: '',
         searchResults: [],
         searchLoading: false,
+        pdfPreviewUrl: null,
+
+        previewFile(event) {
+            if (this.pdfPreviewUrl) {
+                URL.revokeObjectURL(this.pdfPreviewUrl);
+            }
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                this.pdfPreviewUrl = URL.createObjectURL(file);
+            } else {
+                this.pdfPreviewUrl = null;
+            }
+        },
 
         updateSubCategories(categoryId) {
             this.subCategories = subCategoriesMap[categoryId] || [];

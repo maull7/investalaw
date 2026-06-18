@@ -50,6 +50,7 @@ class RegulationController extends Controller
             'regulation_type_id' => $data['regulation_type_id'],
             'category_id' => $data['category_id'],
             'year' => $data['year'],
+            'effective_date' => $data['effective_date'] ?? null,
             'file_path' => $filePath,
         ]);
 
@@ -92,6 +93,7 @@ class RegulationController extends Controller
             'regulation_type_id' => $data['regulation_type_id'],
             'category_id' => $data['category_id'],
             'year' => $data['year'],
+            'effective_date' => $data['effective_date'] ?? null,
         ];
 
         if ($request->hasFile('file')) {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiPreviewController;
 use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\Auth\LoginController;
@@ -74,6 +75,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/review-documents/{reviewDocument}/ai-summaries/{aiSummary}/prompt', [AiSummaryController::class, 'checkPrompt'])->name('ai-summaries.check-prompt');
     Route::get('/review-documents/{reviewDocument}/ai-summaries', [AiSummaryController::class, 'index'])->name('ai-summaries.index');
     Route::get('/review-documents/{reviewDocument}/ai-summaries/{aiSummary}', [AiSummaryController::class, 'show'])->name('ai-summaries.show');
+
+    // AI Preview
+    Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate');
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);

@@ -11,7 +11,8 @@
       "Bash(echo \"test\" && which php)",
       "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && npm install --save alpinejs 2>&1; echo \"EXIT: $?\")",
       "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && npm install alpinejs --save 2>&1)",
-      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && vendor/bin/pint --dirty --format agent 2>&1)"
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && vendor/bin/pint --dirty --format agent 2>&1)",
+      "Bash(cd /home/maul/projects/webdev/laravel-projects/investalaw && cat composer.json | head -50)"
     ]
   }
 }

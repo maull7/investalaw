@@ -5,6 +5,7 @@ use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentPartitionController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\RegulationController;
 use App\Http\Controllers\RegulationTypeController;
@@ -18,12 +19,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('index');
 });
-////
+// //
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
 });
-////
+// //
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
@@ -79,6 +80,13 @@ Route::middleware('auth')->group(function () {
     // AI Preview
     Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
     Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate');
+
+    // Document Partitions
+    Route::get('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'index'])->name('partitions.index');
+    Route::post('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'store'])->name('partitions.store');
+    Route::get('/review-documents/{reviewDocument}/partitions/parsed-text', [DocumentPartitionController::class, 'showParsedText'])->name('partitions.parsed-text');
+    Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse');
+    Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\ReviewStatus;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,10 +11,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['user_id', 'title', 'description', 'file_path', 'status', 'submitted_at'])]
 class ReviewDocument extends Model
 {
     use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'user_id',
+        'title',
+        'description',
+        'file_path',
+        'total_pages',
+        'status',
+        'submitted_at',
+    ];
 
     /** @return BelongsTo<User> */
     public function user(): BelongsTo
@@ -47,6 +55,24 @@ class ReviewDocument extends Model
     public function aiSummaries(): HasMany
     {
         return $this->hasMany(AiSummary::class);
+    }
+
+    /** @return HasMany<DocumentPartition> */
+    public function partitions(): HasMany
+    {
+        return $this->hasMany(DocumentPartition::class);
+    }
+
+    /** @return HasMany<PartitionAnalysis> */
+    public function partitionAnalyses(): HasMany
+    {
+        return $this->hasMany(PartitionAnalysis::class);
+    }
+
+    /** @return HasMany<DocumentParsedText> */
+    public function parsedTexts(): HasMany
+    {
+        return $this->hasMany(DocumentParsedText::class);
     }
 
     protected function casts(): array

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AiPrompt;
 use App\Models\AiSummary;
+use App\Models\DocumentParsedText;
 use App\Models\ReviewDocument;
 use App\Services\AiService;
 use Illuminate\Http\RedirectResponse;
@@ -23,7 +24,12 @@ class AiPreviewController extends Controller
         $selectedType = $request->query('type', 'analisa');
         $prompts = AiPrompt::active()->get();
 
-        $reviewDocument->load(['regulations.documents', 'regulations.type']);
+        $reviewDocument->load([
+            'regulations.documents',
+            'regulations.type',
+            'partitions' => fn ($q) => $q->ordered(),
+            'partitions.analysis' => fn ($q) => $q->where('type', $selectedType),
+        ]);
 
         $summary = AiSummary::where('review_document_id', $reviewDocument->id)
             ->where('type', $selectedType)
@@ -32,12 +38,19 @@ class AiPreviewController extends Controller
 
         $activePrompt = AiPrompt::active()->where('type', $selectedType)->first();
 
+        // Load parsed texts from DB (saved during generate)
+        $parsedTexts = DocumentParsedText::where('review_document_id', $reviewDocument->id)
+            ->orderBy('source_type')
+            ->orderBy('page')
+            ->get();
+
         return view('ai-preview.show', [
             'document' => $reviewDocument,
             'prompts' => $prompts,
             'selectedType' => $selectedType,
             'summary' => $summary,
             'activePrompt' => $activePrompt,
+            'parsedTexts' => $parsedTexts,
         ]);
     }
 
@@ -45,18 +58,26 @@ class AiPreviewController extends Controller
     {
         abort_if($request->user()->isSubAdmin(), 403);
 
+        set_time_limit(300);
+
         $request->validate([
             'type' => ['required', 'string', 'in:analisa,review,rekomendasi,validitas'],
         ]);
 
-        try {
-            $this->aiService->generateSummary($reviewDocument, $request->input('type'));
+        $type = $request->input('type');
 
-            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $request->input('type')])
-                ->with('success', 'AI Preview berhasil digenerate.');
+        try {
+            $this->aiService->generateSummary($reviewDocument, $type);
+
+            if ($reviewDocument->partitions()->exists()) {
+                $this->aiService->generateAllPartitionAnalyses($reviewDocument, $type);
+            }
+
+            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
+                ->with('success', 'AI Preview dan analisa per-partisi berhasil digenerate.');
         } catch (\Exception $e) {
-            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $request->input('type')])
-                ->with('error', 'Gagal generate AI Preview: '.$e->getMessage());
+            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
+                ->with('error', 'Gagal generate AI: '.$e->getMessage());
         }
     }
 }

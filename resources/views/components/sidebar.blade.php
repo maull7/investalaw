@@ -163,7 +163,7 @@
                 <ul class="space-y-1.5">
                     <li>
                         <a href="{{ route('review-documents.index') }}"
-                            class="nav-item {{ request()->routeIs('review-documents.*') ? 'is-active' : '' }}">
+                            class="nav-item {{ request()->routeIs('review-documents.*') || request()->routeIs('partitions.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
                                 <path stroke-linecap="round" stroke-linejoin="round"

@@ -13,7 +13,8 @@
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
         "openai-php/client": "*",
-        "smalot/pdfparser": "*"
+        "smalot/pdfparser": "*",
+        "thiagoalessio/tesseract_ocr": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

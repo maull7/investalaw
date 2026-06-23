@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\DocumentPage;
+use App\Models\ReviewDocument;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Smalot\PdfParser\Document;
@@ -137,6 +139,77 @@ class DocumentParser
         }
 
         return 0;
+    }
+
+    public function extractAndCachePages(ReviewDocument $document): void
+    {
+        set_time_limit(300);
+
+        $fullPath = Storage::disk('public')->path($document->file_path);
+
+        if (! file_exists($fullPath)) {
+            Log::warning("Document file not found: {$document->file_path}");
+
+            return;
+        }
+
+        $document->pages()->delete();
+
+        try {
+            $tocPartitions = $document->partitions()
+                ->where('has_toc', true)
+                ->whereNull('parent_id')
+                ->get(['end_page']);
+
+            $startPage = 1;
+            if ($tocPartitions->isNotEmpty()) {
+                $startPage = $tocPartitions->max('end_page') + 1;
+            }
+
+            $pdf = $this->parsePdf($fullPath);
+            $pdfPages = $pdf->getPages();
+            $needsOcr = true;
+
+            $batch = [];
+            for ($i = $startPage - 1; $i < count($pdfPages); $i++) {
+                $page = $pdfPages[$i];
+                $pageNumber = $i + 1;
+                $text = preg_replace('/\s+/', ' ', $page->getText());
+                $text = trim($text);
+                if (mb_strlen($text) > 10) {
+                    $needsOcr = false;
+                }
+                $batch[] = [
+                    'review_document_id' => $document->id,
+                    'page_number' => $pageNumber,
+                    'content' => $text,
+                    'char_count' => mb_strlen($text),
+                ];
+            }
+
+            if ($needsOcr) {
+                $ocrPages = $this->ocrAllPages($fullPath);
+                $batch = [];
+                foreach ($ocrPages as $page) {
+                    if ($page['page'] >= $startPage) {
+                        $batch[] = [
+                            'review_document_id' => $document->id,
+                            'page_number' => $page['page'],
+                            'content' => $page['text'],
+                            'char_count' => $page['char_count'],
+                        ];
+                    }
+                }
+            }
+
+            foreach (array_chunk($batch, 50) as $chunk) {
+                DocumentPage::insert($chunk);
+            }
+
+            $document->update(['parsed_at' => now()]);
+        } catch (\Exception $e) {
+            Log::warning("Failed to cache pages for {$document->file_path}: {$e->getMessage()}");
+        }
     }
 
     private function ocrFallback(string $fullPath, ?int $startPage, ?int $endPage, int $maxChars): string

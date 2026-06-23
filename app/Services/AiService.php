@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\AiPrompt;
 use App\Models\AiSummary;
+use App\Models\DocumentBabStructure;
+use App\Models\DocumentPage;
 use App\Models\DocumentParsedText;
 use App\Models\DocumentPartition;
 use App\Models\PartitionAnalysis;
@@ -53,11 +55,19 @@ class AiService
         $document = $partition->reviewDocument;
         $document->loadMissing('regulations.documents');
 
-        $partitionText = $this->documentParser->extractPagesFromStoragePath(
-            $document->file_path,
-            $partition->start_page,
-            $partition->end_page
-        );
+        $partitionText = DocumentPage::where('review_document_id', $document->id)
+            ->whereBetween('page_number', [$partition->start_page, $partition->end_page])
+            ->orderBy('page_number')
+            ->pluck('content')
+            ->implode("\n");
+
+        if (! $partitionText) {
+            $partitionText = $this->documentParser->extractPagesFromStoragePath(
+                $document->file_path,
+                $partition->start_page,
+                $partition->end_page
+            );
+        }
 
         $systemPrompt = $this->buildPartitionSystemPrompt($type);
         $userPrompt = $this->buildPartitionUserPrompt($document, $partition, $partitionText);
@@ -90,11 +100,15 @@ class AiService
     }
 
     /** @return array<PartitionAnalysis> */
-    public function generateAllPartitionAnalyses(ReviewDocument $document, string $type): array
+    public function generateAllPartitionAnalyses(ReviewDocument $document, string $type, ?array $partitionIds = null): array
     {
         set_time_limit(300);
 
-        $partitions = $document->partitions()->ordered()->get();
+        $partitions = $document->partitions()
+            ->when($partitionIds, fn ($q) => $q->whereIn('id', $partitionIds))
+            ->ordered()
+            ->get();
+
         $results = [];
 
         foreach ($partitions as $partition) {
@@ -212,8 +226,20 @@ PROMPT;
         if ($document->partitions->isNotEmpty()) {
             foreach ($document->partitions as $partition) {
                 $cached = $cachedDoc->where('source_id', $partition->id)->first();
-                $partitionText = $cached?->parsed_text
-                    ?? $this->documentParser->extractPagesFromStoragePath($document->file_path, $partition->start_page, $partition->end_page);
+                $partitionText = $cached?->parsed_text;
+
+                if (! $partitionText) {
+                    $partitionText = DocumentPage::where('review_document_id', $document->id)
+                        ->whereBetween('page_number', [$partition->start_page, $partition->end_page])
+                        ->orderBy('page_number')
+                        ->pluck('content')
+                        ->implode("\n");
+                }
+
+                if (! $partitionText) {
+                    $partitionText = $this->documentParser->extractPagesFromStoragePath($document->file_path, $partition->start_page, $partition->end_page);
+                }
+
                 $context .= "--- Partisi: {$partition->name} (h.{$partition->start_page}-{$partition->end_page}) ---\n";
                 $context .= "{$partitionText}\n\n";
             }
@@ -332,6 +358,88 @@ PROMPT;
         }
     }
 
+    public function detectContentStructure(DocumentBabStructure $bab): array
+    {
+        if ($bab->level !== 0) {
+            throw new \InvalidArgumentException('Hanya BAB level (level=0) yang didukung.');
+        }
+
+        $document = $bab->reviewDocument;
+
+        if ($document->relationLoaded('pages') || $document->isParsed()) {
+            $pages = $document->pages()
+                ->whereBetween('page_number', [$bab->start_page, $bab->end_page])
+                ->orderBy('page_number')
+                ->get();
+            $text = $pages->pluck('content')->implode(' ');
+        } else {
+            $text = $this->documentParser->extractPagesFromStoragePath(
+                $document->file_path,
+                $bab->start_page,
+                $bab->end_page
+            );
+        }
+
+        $text = mb_substr($text, 0, 8000);
+
+        $systemPrompt = <<<'PROMPT'
+Anda adalah asisten yang mengidentifikasi struktur sub-bab dalam dokumen hukum/peraturan.
+
+Teks yang diberikan adalah konten dari satu BAB dokumen. Tugas Anda adalah:
+1. Identifikasi sub-bab (seperti 1.1, 1.2, A., B., Bagian, Paragraf, Pasal, dll.)
+2. Identifikasi isi/konten di dalam setiap sub-bab (paragraf, ayat, poin-poin penting)
+3. Perkirakan halaman awal dan akhir setiap sub-bab dan isi
+
+PENTING: Jangan sertakan judul BAB itu sendiri sebagai sub-bab. Hanya identifikasi sub-bab di dalamnya.
+
+Return JSON format:
+{
+  "subsections": [
+    {
+      "title": "judul sub-bab",
+      "start_page": nomor_halaman_awal,
+      "end_page": nomor_halaman_akhir,
+      "items": [
+        {"title": "judul isi", "start_page": nomor_halaman_awal, "end_page": nomor_halaman_akhir}
+      ]
+    }
+  ]
+}
+
+Jika tidak ada sub-bab yang teridentifikasi, return {"subsections": []}.
+PROMPT;
+
+        $userPrompt = "=== DOKUMEN ===\n";
+        $userPrompt .= "Judul: {$document->title}\n";
+        $userPrompt .= "BAB: {$bab->name}\n";
+        $userPrompt .= "Halaman: {$bab->start_page} - {$bab->end_page}\n\n";
+        $userPrompt .= "--- Konten ---\n{$text}\n";
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user', 'content' => $userPrompt],
+        ];
+
+        $result = $this->callAi($messages, 2048);
+
+        return $this->parseStructureResponse($result['content']);
+    }
+
+    private function parseStructureResponse(string $content): array
+    {
+        $cleanContent = preg_replace('/```json\s*/', '', $content);
+        $cleanContent = preg_replace('/```\s*$/', '', $cleanContent);
+        $cleanContent = trim($cleanContent);
+
+        $decoded = json_decode($cleanContent, true);
+
+        if ($decoded && isset($decoded['subsections']) && is_array($decoded['subsections'])) {
+            return $decoded['subsections'];
+        }
+
+        return [];
+    }
+
     private function callAi(array $messages, int $maxTokens = 4096): array
     {
         $providers = [
@@ -376,6 +484,7 @@ PROMPT;
             } catch (Exception $e) {
                 $lastException = $e;
                 Log::warning("AI provider {$name} failed: {$e->getMessage()}");
+                usleep(500_000);
             }
         }
 

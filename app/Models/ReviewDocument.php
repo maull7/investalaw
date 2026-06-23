@@ -23,6 +23,7 @@ class ReviewDocument extends Model
         'total_pages',
         'status',
         'submitted_at',
+        'parsed_at',
     ];
 
     /** @return BelongsTo<User> */
@@ -75,11 +76,29 @@ class ReviewDocument extends Model
         return $this->hasMany(DocumentParsedText::class);
     }
 
+    /** @return HasMany<DocumentBabStructure> */
+    public function babStructures(): HasMany
+    {
+        return $this->hasMany(DocumentBabStructure::class);
+    }
+
+    /** @return HasMany<DocumentPage> */
+    public function pages(): HasMany
+    {
+        return $this->hasMany(DocumentPage::class);
+    }
+
+    public function isParsed(): bool
+    {
+        return $this->parsed_at !== null;
+    }
+
     protected function casts(): array
     {
         return [
             'status' => ReviewStatus::class,
             'submitted_at' => 'datetime',
+            'parsed_at' => 'datetime',
         ];
     }
 

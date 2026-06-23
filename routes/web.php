@@ -84,9 +84,14 @@ Route::middleware('auth')->group(function () {
     // Document Partitions
     Route::get('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'index'])->name('partitions.index');
     Route::post('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'store'])->name('partitions.store');
+    Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/extract-toc', [DocumentPartitionController::class, 'extractToc'])->name('partitions.extract-toc');
+    Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/debug-toc', [DocumentPartitionController::class, 'debugToc'])->name('partitions.debug-toc');
     Route::get('/review-documents/{reviewDocument}/partitions/parsed-text', [DocumentPartitionController::class, 'showParsedText'])->name('partitions.parsed-text');
     Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
+    Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect', [DocumentPartitionController::class, 'detectStructure'])->name('bab-structures.detect');
+    Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf');
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);

@@ -27,7 +27,7 @@ class AiPreviewController extends Controller
         $reviewDocument->load([
             'regulations.documents',
             'regulations.type',
-            'partitions' => fn ($q) => $q->ordered(),
+            'partitions' => fn ($q) => $q->roots(),
             'partitions.analysis' => fn ($q) => $q->where('type', $selectedType),
         ]);
 
@@ -62,19 +62,29 @@ class AiPreviewController extends Controller
 
         $request->validate([
             'type' => ['required', 'string', 'in:analisa,review,rekomendasi,validitas'],
+            'partition_ids' => ['nullable', 'array'],
+            'partition_ids.*' => ['integer', 'exists:document_partitions,id'],
         ]);
 
         $type = $request->input('type');
+        $partitionIds = $request->input('partition_ids');
 
         try {
             $this->aiService->generateSummary($reviewDocument, $type);
 
-            if ($reviewDocument->partitions()->exists()) {
-                $this->aiService->generateAllPartitionAnalyses($reviewDocument, $type);
+            $selectedPartitions = $reviewDocument->partitions()
+                ->when($partitionIds, fn ($q) => $q->whereIn('id', $partitionIds))
+                ->count();
+
+            if ($selectedPartitions > 0) {
+                $this->aiService->generateAllPartitionAnalyses($reviewDocument, $type, $partitionIds);
             }
 
+            $count = $partitionIds ? count($partitionIds) : $reviewDocument->partitions()->count();
+            $msg = 'AI Preview berhasil digenerate'.($count > 0 ? " ({$count} partisi dianalisa)" : '');
+
             return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
-                ->with('success', 'AI Preview dan analisa per-partisi berhasil digenerate.');
+                ->with('success', $msg);
         } catch (\Exception $e) {
             return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
                 ->with('error', 'Gagal generate AI: '.$e->getMessage());

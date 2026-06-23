@@ -217,29 +217,52 @@
             {{-- Controls --}}
             <x-card>
                 <x-slot name="header">
-                    <h3 class="text-lg font-bold text-[#071833]">Generate AI Preview</h3>
-                </x-slot>
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <select x-model="selectedType" @change="window.location.href = '{{ route('ai-preview.show', $document) }}?type=' + $event.target.value" class="select-premium flex-1">
-                        @foreach($prompts as $prompt)
-                            <option value="{{ $prompt->type }}">{{ $prompt->title ?? ucfirst($prompt->type) }}</option>
-                        @endforeach
-                        @if($prompts->isEmpty())
-                            <option value="analisa" {{ $selectedType === 'analisa' ? 'selected' : '' }}>Analisa Perbandingan</option>
-                            <option value="review" {{ $selectedType === 'review' ? 'selected' : '' }}>Review Kesesuaian</option>
-                            <option value="rekomendasi" {{ $selectedType === 'rekomendasi' ? 'selected' : '' }}>Rekomendasi</option>
-                            <option value="validitas" {{ $selectedType === 'validitas' ? 'selected' : '' }}>Validitas</option>
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-[#071833]">Generate AI Preview</h3>
+                        @if($document->partitions->isNotEmpty())
+                            <span class="text-[10px] text-[#667085]">Pilih partisi yang dianalisa</span>
                         @endif
-                    </select>
-                    <form method="POST" action="{{ route('ai-preview.generate', $document) }}">
-                        @csrf
+                    </div>
+                </x-slot>
+                <form method="POST" action="{{ route('ai-preview.generate', $document) }}">
+                    @csrf
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                        <select x-model="selectedType" @change="window.location.href = '{{ route('ai-preview.show', $document) }}?type=' + $event.target.value" class="select-premium flex-1">
+                            @foreach($prompts as $prompt)
+                                <option value="{{ $prompt->type }}">{{ $prompt->title ?? ucfirst($prompt->type) }}</option>
+                            @endforeach
+                            @if($prompts->isEmpty())
+                                <option value="analisa" {{ $selectedType === 'analisa' ? 'selected' : '' }}>Analisa Perbandingan</option>
+                                <option value="review" {{ $selectedType === 'review' ? 'selected' : '' }}>Review Kesesuaian</option>
+                                <option value="rekomendasi" {{ $selectedType === 'rekomendasi' ? 'selected' : '' }}>Rekomendasi</option>
+                                <option value="validitas" {{ $selectedType === 'validitas' ? 'selected' : '' }}>Validitas</option>
+                            @endif
+                        </select>
                         <input type="hidden" name="type" x-bind:value="selectedType">
                         <x-button type="submit" variant="primary" size="lg" class="w-full sm:w-auto whitespace-nowrap">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z"/></svg>
                             Generate AI
                         </x-button>
-                    </form>
-                </div>
+                    </div>
+
+                    @if($document->partitions->isNotEmpty())
+                        <div class="flex flex-wrap gap-2 pt-3 border-t border-[#e7eaf0]">
+                            <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] cursor-pointer hover:bg-white transition text-sm">
+                                <input type="checkbox" onchange="
+                                    document.querySelectorAll('.partition-checkbox').forEach(cb => cb.checked = this.checked);
+                                " class="rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
+                                <span class="text-xs font-semibold text-[#071833]">Semua</span>
+                            </label>
+                            @foreach($document->partitions as $partition)
+                                <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] cursor-pointer hover:bg-white transition">
+                                    <input type="checkbox" name="partition_ids[]" value="{{ $partition->id }}" checked class="partition-checkbox rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
+                                    <span class="text-xs font-semibold text-[#071833]">{{ $partition->name }}</span>
+                                    <span class="text-[10px] text-[#667085]">(hlm.{{ $partition->start_page }}–{{ $partition->end_page }})</span>
+                                </label>
+                            @endforeach
+                        </div>
+                    @endif
+                </form>
             </x-card>
 
             {{-- Result --}}

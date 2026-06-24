@@ -23,9 +23,8 @@
                 <p class="mt-3 text-white/70 max-w-3xl leading-relaxed">Buat partisi, tentukan halaman Daftar Isi, lalu ekstrak otomatis Bab → Subbab → Isi.</p>
             </div>
             <div class="shrink-0 flex flex-wrap gap-2">
-                <a @if($allParsed) href="{{ route('partitions.parsed-text', $document) }}" @else href="#" @endif
-                   @if(!$allParsed) @click.prevent="alert('Semua BAB harus diparse dulu di tab Daftar Isi.')" @endif
-                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 backdrop-blur transition {{ $allParsed ? 'bg-white/5 hover:bg-white/10' : 'bg-white/5 opacity-40 cursor-not-allowed' }}">
+                <a href="{{ route('partitions.parsed-text', $document) }}"
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 bg-white/5 hover:bg-white/10 backdrop-blur transition">
                     Hasil Parser PDF
                 </a>
                 <a href="{{ route('ai-preview.show', $document) }}?type={{ request('type', 'analisa') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-[#c99a3e]/30 bg-[#c99a3e]/15 hover:bg-[#c99a3e]/25 backdrop-blur transition">
@@ -60,9 +59,8 @@
                     @endif
                 </span>
             </button>
-            <a @if($allParsed) href="{{ route('partitions.parsed-text', $document) }}" @else href="#" @endif
-               @if(!$allParsed) @click.prevent="alert('Semua BAB harus diparse dulu di tab Daftar Isi.')" @endif
-               class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition text-center {{ $allParsed ? 'text-[#667085] hover:text-[#071833]' : 'text-[#b0b8c5] cursor-not-allowed' }}">
+            <a href="{{ route('partitions.parsed-text', $document) }}"
+               class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition text-center text-[#667085] hover:text-[#071833]">
                 <span class="flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
                     Parse PDF
@@ -198,7 +196,7 @@
                                                 <button @click="openPart = openPart === {{ $pIdx }} ? null : {{ $pIdx }}" class="flex items-center gap-2 min-w-0 flex-1 text-left">
                                                     <svg class="w-3.5 h-3.5 text-[#c99a3e] shrink-0 transition-transform" :class="openPart === {{ $pIdx }} ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
                                                     <span class="w-2 h-2 rounded-full bg-[#c99a3e] shrink-0"></span>
-                                                    <span class="font-bold text-[#071833] text-sm truncate">{{ $part->name }}</span>
+                                                    <a href="{{ route('review-documents.view-file', $document) }}#page={{ $part->start_page }}" target="_blank" class="font-bold text-[#071833] text-sm truncate hover:text-[#c99a3e] transition">{{ $part->name }}</a>
                                                     <span class="text-[10px] text-[#667085] font-normal shrink-0">h.{{ $part->start_page }}–{{ $part->end_page }}</span>
                                                 </button>
                                             </div>

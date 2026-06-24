@@ -260,47 +260,12 @@ class DocumentPartitionController extends Controller
 
         set_time_limit(300);
 
-        try {
+        if (! $reviewDocument->isParsed()) {
             $this->documentParser->extractAndCachePages($reviewDocument);
-
-            return redirect()->route('partitions.parsed-text', $reviewDocument)
-                ->with('success', 'PDF berhasil diparse dan disimpan ke database ('.number_format($reviewDocument->pages()->count()).' halaman).');
-        } catch (\Exception $e) {
-            return redirect()->route('partitions.parsed-text', $reviewDocument)
-                ->with('error', 'Gagal parse PDF: '.$e->getMessage());
-        }
-    }
-
-    public function detectStructure(Request $request, ReviewDocument $reviewDocument, DocumentBabStructure $documentBabStructure): RedirectResponse
-    {
-        abort_if($request->user()->isSubAdmin(), 403);
-
-        if ($documentBabStructure->level !== 0) {
-            return redirect()->route('partitions.parsed-text', $reviewDocument)
-                ->with('error', 'Deteksi struktur hanya untuk BAB level (level=0).');
         }
 
-        set_time_limit(300);
-
-        try {
-            $subsections = $this->aiService->detectContentStructure($documentBabStructure);
-
-            if (empty($subsections)) {
-                return redirect()->route('partitions.parsed-text', $reviewDocument)
-                    ->with('error', 'AI tidak dapat mendeteksi struktur sub-bab pada "'.$documentBabStructure->name.'". Mungkin format konten tidak dikenali.');
-            }
-
-            $subsections = $this->babStructureService->resolveChildPages($documentBabStructure, $subsections);
-            $this->babStructureService->saveStructureChildren($documentBabStructure, $subsections, 1);
-
-            $totalItems = collect($subsections)->sum(fn ($s) => count($s['items'] ?? []));
-
-            return redirect()->route('partitions.parsed-text', $reviewDocument)
-                ->with('success', 'Struktur terdeteksi: '.count($subsections).' Subbab, '.$totalItems.' Isi pada "'.$documentBabStructure->name.'".');
-        } catch (\Exception $e) {
-            return redirect()->route('partitions.parsed-text', $reviewDocument)
-                ->with('error', 'Gagal deteksi struktur AI: '.$e->getMessage());
-        }
+        return redirect()->route('partitions.parsed-text', $reviewDocument)
+            ->with('success', 'Parser PDF berhasil dijalankan.');
     }
 
     public function batchDetectStructure(Request $request, ReviewDocument $reviewDocument): RedirectResponse
@@ -323,6 +288,10 @@ class DocumentPartitionController extends Controller
         if ($babs->isEmpty()) {
             return redirect()->back()
                 ->with('error', 'Tidak ada BAB valid yang dipilih.');
+        }
+
+        if (! $reviewDocument->isParsed()) {
+            $this->documentParser->extractAndCachePages($reviewDocument);
         }
 
         $success = [];
@@ -364,6 +333,48 @@ class DocumentPartitionController extends Controller
         );
     }
 
+    public function detectStructure(Request $request, ReviewDocument $reviewDocument, DocumentBabStructure $documentBabStructure): RedirectResponse
+    {
+        abort_if($request->user()->isSubAdmin(), 403);
+
+        if ($documentBabStructure->level !== 0) {
+            return redirect()->back()->with('error', 'Deteksi struktur hanya untuk BAB level (level=0).');
+        }
+
+        set_time_limit(300);
+
+        if (! $reviewDocument->isParsed()) {
+            $this->documentParser->extractAndCachePages($reviewDocument);
+        }
+
+        try {
+            $subsections = $this->aiService->detectContentStructure($documentBabStructure);
+
+            if (empty($subsections)) {
+                DocumentBabStructure::create([
+                    'review_document_id' => $documentBabStructure->review_document_id,
+                    'parent_id' => $documentBabStructure->id,
+                    'name' => '—',
+                    'start_page' => $documentBabStructure->start_page,
+                    'end_page' => $documentBabStructure->end_page,
+                    'sort_order' => 1,
+                    'level' => 1,
+                ]);
+
+                return redirect()->back()->with('error', 'Sub-bab tidak terdeteksi pada "'.$documentBabStructure->name.'".');
+            }
+
+            $subsections = $this->babStructureService->resolveChildPages($documentBabStructure, $subsections);
+            $this->babStructureService->saveStructureChildren($documentBabStructure, $subsections, 1);
+
+            $totalItems = collect($subsections)->sum(fn ($s) => count($s['items'] ?? []));
+
+            return redirect()->back()->with('success', count($subsections).' Subbab, '.$totalItems.' Isi pada "'.$documentBabStructure->name.'".');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal deteksi struktur AI: '.$e->getMessage());
+        }
+    }
+
     public function detectStructureAjax(Request $request, ReviewDocument $reviewDocument, DocumentBabStructure $documentBabStructure): JsonResponse
     {
         abort_if($request->user()->isSubAdmin(), 403);
@@ -376,6 +387,10 @@ class DocumentPartitionController extends Controller
         }
 
         set_time_limit(300);
+
+        if (! $reviewDocument->isParsed()) {
+            $this->documentParser->extractAndCachePages($reviewDocument);
+        }
 
         try {
             $subsections = $this->aiService->detectContentStructure($documentBabStructure);
@@ -430,21 +445,8 @@ class DocumentPartitionController extends Controller
 
         $isParsed = $reviewDocument->isParsed();
 
-        if (! $isParsed) {
-            $allBabsHaveStructure = DocumentBabStructure::query()
-                ->where('review_document_id', $reviewDocument->id)
-                ->whereNull('parent_id')
-                ->whereDoesntHave('children')
-                ->doesntExist();
-
-            if ($allBabsHaveStructure) {
-                $this->documentParser->extractAndCachePages($reviewDocument);
-                $isParsed = true;
-            }
-        }
-
-        if ($isParsed) {
-            $docPages = $reviewDocument->pages()
+        $docPages = $isParsed
+            ? $reviewDocument->pages()
                 ->orderBy('page_number')
                 ->get()
                 ->map(fn ($p) => [
@@ -452,11 +454,8 @@ class DocumentPartitionController extends Controller
                     'text' => $p->content,
                     'char_count' => $p->char_count,
                 ])
-                ->toArray();
-        } else {
-            set_time_limit(300);
-            $docPages = $this->documentParser->extractAllPagesText($reviewDocument->file_path);
-        }
+                ->toArray()
+            : [];
 
         $docTotalChars = array_sum(array_column($docPages, 'char_count'));
 
@@ -489,27 +488,35 @@ class DocumentPartitionController extends Controller
 
         $regulations = [];
         foreach ($reviewDocument->regulations as $reg) {
+            $hasFile = (bool) $reg->file_path;
+            $regParsed = $reg->isParsed();
+            $hasText = $regParsed && $reg->parsed_text && mb_strlen(trim($reg->parsed_text)) > 0;
+
             $regData = [
                 'regulation_number' => $reg->regulation_number,
                 'title' => $reg->title,
                 'year' => $reg->year,
-                'main_text' => '',
-                'main_chars' => 0,
+                'has_file' => $hasFile,
+                'is_parsed' => $regParsed,
+                'has_text' => $hasText,
+                'main_text' => $hasText ? $reg->parsed_text : '',
+                'main_chars' => $hasText ? mb_strlen($reg->parsed_text) : 0,
+                'main_parsed' => $hasText,
                 'documents' => [],
             ];
 
-            if ($reg->file_path) {
-                $text = $this->documentParser->extractFromStoragePath($reg->file_path);
-                $regData['main_text'] = $text;
-                $regData['main_chars'] = mb_strlen($text);
-            }
-
             foreach ($reg->documents as $doc) {
-                $text = $this->documentParser->extractFromStoragePath($doc->file_path);
+                $docParsed = $doc->isParsed();
+                $docText = $docParsed && $doc->parsed_text && mb_strlen(trim($doc->parsed_text)) > 0;
+
                 $regData['documents'][] = [
                     'name' => $doc->name,
-                    'text' => $text,
-                    'chars' => mb_strlen($text),
+                    'has_file' => (bool) $doc->file_path,
+                    'is_parsed' => $docParsed,
+                    'has_text' => $docText,
+                    'text' => $docText ? $doc->parsed_text : '',
+                    'chars' => $docText ? mb_strlen($doc->parsed_text) : 0,
+                    'parsed' => $docText,
                 ];
             }
 
@@ -525,6 +532,53 @@ class DocumentPartitionController extends Controller
             'unassignedPages' => $unassignedPages,
             'regulations' => $regulations,
             'isParsed' => $isParsed,
+        ]);
+    }
+
+    public function showRegulations(ReviewDocument $reviewDocument): View
+    {
+        $reviewDocument->loadMissing(['regulations.documents']);
+
+        $regulations = [];
+        foreach ($reviewDocument->regulations as $reg) {
+            $hasFile = (bool) $reg->file_path;
+            $regParsed = $reg->isParsed();
+            $hasText = $regParsed && $reg->parsed_text && mb_strlen(trim($reg->parsed_text)) > 0;
+
+            $regData = [
+                'regulation_number' => $reg->regulation_number,
+                'title' => $reg->title,
+                'year' => $reg->year,
+                'has_file' => $hasFile,
+                'is_parsed' => $regParsed,
+                'has_text' => $hasText,
+                'main_text' => $hasText ? $reg->parsed_text : '',
+                'main_chars' => $hasText ? mb_strlen($reg->parsed_text) : 0,
+                'main_parsed' => $hasText,
+                'documents' => [],
+            ];
+
+            foreach ($reg->documents as $doc) {
+                $docParsed = $doc->isParsed();
+                $docText = $docParsed && $doc->parsed_text && mb_strlen(trim($doc->parsed_text)) > 0;
+
+                $regData['documents'][] = [
+                    'name' => $doc->name,
+                    'has_file' => (bool) $doc->file_path,
+                    'is_parsed' => $docParsed,
+                    'has_text' => $docText,
+                    'text' => $docText ? $doc->parsed_text : '',
+                    'chars' => $docText ? mb_strlen($doc->parsed_text) : 0,
+                    'parsed' => $docText,
+                ];
+            }
+
+            $regulations[] = $regData;
+        }
+
+        return view('partitions.regulations', [
+            'document' => $reviewDocument,
+            'regulations' => $regulations,
         ]);
     }
 }

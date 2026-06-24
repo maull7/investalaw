@@ -336,7 +336,7 @@ function regulationEditForm(subCategoriesMap, selectedSubIds, selectedRelated) {
         },
 
         updateSubCategories(categoryId) {
-            this.subCategories = subCategoriesMap[categoryId] || [];
+            this.subCategories = Object.values(subCategoriesMap).flat();
         },
 
         async searchRegulations() {

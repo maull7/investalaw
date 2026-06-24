@@ -238,7 +238,11 @@ function regulationForm(subCategoriesMap) {
         },
 
         updateSubCategories(categoryId) {
-            this.subCategories = subCategoriesMap[categoryId] || [];
+            this.subCategories = Object.values(subCategoriesMap).flat();
+        },
+
+        init() {
+            this.updateSubCategories();
         },
 
         async searchRegulations() {

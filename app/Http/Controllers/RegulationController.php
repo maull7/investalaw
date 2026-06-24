@@ -6,7 +6,10 @@ use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
+use App\Models\UserActivityLog;
 use App\Repositories\RegulationRepository;
+use App\Services\RegulationAnalysisService;
+use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +20,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class RegulationController extends Controller
 {
     public function __construct(
-        private readonly RegulationRepository $regulationRepository
+        private readonly RegulationRepository $regulationRepository,
+        private readonly RegulationParserService $regulationParserService,
+        private readonly RegulationAnalysisService $regulationAnalysisService,
     ) {}
 
     public function index(Request $request): View
@@ -62,6 +67,8 @@ class RegulationController extends Controller
             $regulation->relatedRegulations()->sync($data['related_regulations']);
         }
 
+        UserActivityLog::log('created', Regulation::class, $regulation->id, "Menambahkan regulasi {$regulation->regulation_number} - {$regulation->title}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Regulasi berhasil ditambahkan.');
     }
@@ -105,8 +112,29 @@ class RegulationController extends Controller
         $regulation->subCategories()->sync($data['sub_categories'] ?? []);
         $regulation->relatedRegulations()->sync($data['related_regulations'] ?? []);
 
+        UserActivityLog::log('updated', Regulation::class, $regulation->id, "Memperbarui regulasi {$regulation->regulation_number} - {$regulation->title}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Regulasi berhasil diperbarui.');
+    }
+
+    public function analyze(Regulation $regulation): View
+    {
+        $regulation = $this->regulationRepository->findByIdWithRelations($regulation->id);
+
+        $analysis = $this->regulationAnalysisService->analyze($regulation);
+
+        return view('regulations.analyze', compact('regulation', 'analysis'));
+    }
+
+    public function reanalyze(Regulation $regulation): RedirectResponse
+    {
+        $this->regulationAnalysisService->regenerate($regulation);
+
+        UserActivityLog::log('reanalyzed', Regulation::class, $regulation->id, "Melakukan re-analisis AI untuk regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.analyze', $regulation)
+            ->with('success', 'Analisis berhasil diperbarui.');
     }
 
     public function destroy(Regulation $regulation): RedirectResponse
@@ -119,7 +147,10 @@ class RegulationController extends Controller
             Storage::disk('public')->delete($document->file_path);
         }
 
+        $number = $regulation->regulation_number;
         $regulation->delete();
+
+        UserActivityLog::log('deleted', Regulation::class, $regulation->id, "Menghapus regulasi {$number}");
 
         return redirect()->route('regulations.index')
             ->with('success', 'Regulasi berhasil dihapus.');
@@ -164,6 +195,8 @@ class RegulationController extends Controller
             'file_path' => $filePath,
         ]);
 
+        UserActivityLog::log('uploaded', Regulation::class, $regulation->id, "Mengunggah dokumen {$request->input('name')} ke regulasi {$regulation->regulation_number}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Dokumen tambahan berhasil diunggah.');
     }
@@ -176,6 +209,8 @@ class RegulationController extends Controller
 
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
+
+        UserActivityLog::log('deleted', Regulation::class, $regulation->id, "Menghapus dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Dokumen tambahan berhasil dihapus.');
@@ -196,5 +231,39 @@ class RegulationController extends Controller
             'Content-Type' => $contentType,
             'Content-Disposition' => 'inline',
         ]);
+    }
+
+    public function parseRegulation(Regulation $regulation): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        $result = $this->regulationParserService->parseRegulation($regulation);
+
+        if (! $result['success']) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('error', $result['message']);
+        }
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse teks regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('success', $result['message']);
+    }
+
+    public function parseDocument(Regulation $regulation, RegulationDocument $document): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        $result = $this->regulationParserService->parseDocument($document);
+
+        if (! $result['success']) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('error', $result['message']);
+        }
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('success', $result['message']);
     }
 }

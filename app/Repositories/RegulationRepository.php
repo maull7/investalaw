@@ -13,7 +13,8 @@ class RegulationRepository
 {
     public function paginateWithFilters(array $filters): LengthAwarePaginator
     {
-        $query = Regulation::with(['type', 'category', 'subCategories'])
+        $query = Regulation::with(['type', 'category', 'subCategories', 'documents'])
+            ->withCount('documents')
             ->orderByDesc('year')
             ->orderByDesc('id');
 

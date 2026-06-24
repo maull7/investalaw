@@ -23,6 +23,12 @@ class User extends Authenticatable
         return $this->hasMany(ReviewDocument::class);
     }
 
+    /** @return HasMany<UserActivityLog> */
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(UserActivityLog::class);
+    }
+
     /** @return HasMany<Review> */
     public function reviews(): HasMany
     {

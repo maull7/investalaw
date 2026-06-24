@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -37,10 +38,21 @@ class UserController extends Controller
 
         $data['permissions'] = $data['permissions'] ?? [];
 
-        User::create($data);
+        $user = User::create($data);
+
+        UserActivityLog::log('created', User::class, $user->id, "Menambahkan user {$user->name} ({$user->email}) dengan role {$user->role}");
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil ditambahkan.');
+    }
+
+    public function show(User $user): View
+    {
+        $logs = $user->activityLogs()
+            ->latest()
+            ->paginate(20);
+
+        return view('users.show', compact('user', 'logs'));
     }
 
     public function edit(User $user): View
@@ -58,7 +70,16 @@ class UserController extends Controller
 
         $data['permissions'] = $data['permissions'] ?? [];
 
+        $changes = collect($data)->except('permissions')->filter(fn ($val, $key) => $val != $user->$key);
+
         $user->update($data);
+
+        $desc = "Memperbarui user {$user->name}";
+        if ($changes->isNotEmpty()) {
+            $desc .= ' ('.$changes->keys()->implode(', ').')';
+        }
+
+        UserActivityLog::log('updated', User::class, $user->id, $desc);
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil diperbarui.');
@@ -71,7 +92,10 @@ class UserController extends Controller
                 ->with('error', 'Tidak dapat menghapus admin terakhir.');
         }
 
+        $name = $user->name;
         $user->delete();
+
+        UserActivityLog::log('deleted', User::class, $user->id, "Menghapus user {$name}");
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil dihapus.');

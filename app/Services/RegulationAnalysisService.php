@@ -1,0 +1,494 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Regulation;
+use App\Models\RegulationAnalysis;
+use Illuminate\Support\Facades\Http;
+
+class RegulationAnalysisService
+{
+    private const MAX_TEXT_LENGTH = 30000;
+
+    public function analyze(Regulation $regulation): RegulationAnalysis
+    {
+        $existing = RegulationAnalysis::where('regulation_id', $regulation->id)
+            ->with(['pasal', 'references'])
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $this->generate($regulation);
+    }
+
+    public function regenerate(Regulation $regulation): RegulationAnalysis
+    {
+        RegulationAnalysis::where('regulation_id', $regulation->id)->delete();
+
+        return $this->generate($regulation);
+    }
+
+    private function generate(Regulation $regulation): RegulationAnalysis
+    {
+        $regulation->loadMissing(['relatedRegulations.type', 'relatedRegulations.documents', 'documents']);
+
+        $relatedData = $this->collectRelatedData($regulation);
+        $context = $this->buildContext($regulation, $relatedData);
+
+        $parsedText = $regulation->isParsed() && $regulation->parsed_text
+            ? mb_substr($regulation->parsed_text, 0, self::MAX_TEXT_LENGTH)
+            : null;
+
+        $extracted = $parsedText ? $this->extractRegulationsFromText($parsedText) : null;
+
+        $aiResult = $this->tryAiAnalysis($context, $relatedData, $parsedText);
+        $analysis = $aiResult ?? $this->fallbackAnalysis($relatedData);
+
+        $changesSummary = $extracted['changes_summary'] ?? null;
+        $keyPoints = $extracted['key_points'] ?? null;
+
+        $record = RegulationAnalysis::create([
+            'regulation_id' => $regulation->id,
+            'context' => $context,
+            'comparison_insights' => $analysis['comparison_insights'],
+            'change_analysis' => $analysis['change_analysis'],
+            'revocation_analysis' => $analysis['revocation_analysis'],
+            'changes_summary' => $changesSummary,
+            'key_points' => $keyPoints,
+            'related_data' => $relatedData,
+            'metadata' => [
+                'total_related' => count($relatedData['related']),
+                'total_amendments' => count($relatedData['amendments']),
+                'total_revocations' => count($relatedData['revocations']),
+                'total_referenced_regulations' => count($extracted['referenced_regulations'] ?? []),
+                'total_pasal' => count($extracted['pasal_structure'] ?? []),
+                'generated_at' => now()->toIso8601String(),
+                'ai_generated' => $aiResult !== null,
+            ],
+        ]);
+
+        if (! empty($extracted['pasal_structure'])) {
+            $pasalData = array_map(fn (array $p, int $i) => [
+                'regulation_analysis_id' => $record->id,
+                'pasal' => $p['pasal'] ?? '',
+                'content' => $p['content'] ?? null,
+                'type' => $p['type'] ?? 'existing',
+                'changes' => $p['changes'] ?? null,
+                'sort_order' => $i,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ], $extracted['pasal_structure'], array_keys($extracted['pasal_structure']));
+
+            $record->pasal()->insert($pasalData);
+        }
+
+        if (! empty($extracted['referenced_regulations'])) {
+            $refData = array_map(fn (array $r, int $i) => [
+                'regulation_analysis_id' => $record->id,
+                'name' => $r['name'] ?? '',
+                'number' => $r['number'] ?? null,
+                'year' => $r['year'] ?? null,
+                'relationship' => $r['relationship'] ?? 'disebut',
+                'sort_order' => $i,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ], $extracted['referenced_regulations'], array_keys($extracted['referenced_regulations']));
+
+            $record->references()->insert($refData);
+        }
+
+        return $record->load(['pasal', 'references']);
+    }
+
+    private function extractRegulationsFromText(string $text): ?array
+    {
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $prompt = <<<PROMPT
+Anda adalah ekstraktor regulasi. Dari teks peraturan berikut, ekstrak:
+
+1. SEMUA referensi ke peraturan lain yang disebut (cari pola seperti "Peraturan ... Nomor ...", "POJK", "UU", "PP", "Peraturan Pemerintah", dll)
+2. Struktur Pasal/Pasal dalam teks
+3. Perubahan yang disebutkan (sisipan, perubahan, pencabutan pasal)
+
+TEKS:
+{$text}
+
+Kembalikan JSON SAJA (tanpa markdown, tanpa penjelasan) dengan format:
+
+{
+  "referenced_regulations": [
+    {
+      "name": "nama lengkap peraturan",
+      "number": "nomor peraturan",
+      "year": tahun,
+      "relationship": "diubah|dicabut|dirujuk|disebut"
+    }
+  ],
+  "pasal_structure": [
+    {
+      "pasal": "Pasal X",
+      "content": "ringkasan/isi pasal (max 200 chars)",
+      "type": "baru|diubah|dicabut|sisipan|existing",
+      "changes": "deskripsi perubahan jika ada"
+    }
+  ],
+  "changes_summary": "ringkasan singkat tentang perubahan yang dilakukan peraturan ini",
+  "key_points": ["poin penting 1", "poin penting 2"]
+}
+
+Jika tidak ada data, kembalikan array kosong [].
+PROMPT;
+
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 4096,
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+
+                if (empty($content)) {
+                    continue;
+                }
+
+                $decoded = json_decode($content, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    continue;
+                }
+
+                return $decoded;
+            } catch (\Throwable $e) {
+                report($e);
+
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    private function collectRelatedData(Regulation $regulation): array
+    {
+        $related = [];
+        $amendments = [];
+        $revocations = [];
+
+        foreach ($regulation->relatedRegulations as $relatedReg) {
+            $parsedText = $relatedReg->isParsed() && $relatedReg->parsed_text
+                ? mb_substr($relatedReg->parsed_text, 0, 3000)
+                : null;
+
+            $entry = [
+                'id' => $relatedReg->id,
+                'regulation_number' => $relatedReg->regulation_number,
+                'title' => $relatedReg->title,
+                'year' => $relatedReg->year,
+                'type' => $relatedReg->type?->name,
+                'is_parsed' => $relatedReg->isParsed(),
+                'parsed_text_preview' => $parsedText,
+                'documents_count' => $relatedReg->documents->count(),
+            ];
+
+            $related[] = $entry;
+
+            $titleLower = mb_strtolower($relatedReg->title.' '.$relatedReg->regulation_number);
+            $relationType = $this->detectRelationType($titleLower);
+
+            if ($relationType === 'amendment') {
+                $amendments[] = $entry;
+            } elseif ($relationType === 'revocation') {
+                $revocations[] = $entry;
+            }
+        }
+
+        return [
+            'related' => $related,
+            'amendments' => $amendments,
+            'revocations' => $revocations,
+            'main_regulation' => [
+                'regulation_number' => $regulation->regulation_number,
+                'title' => $regulation->title,
+                'year' => $regulation->year,
+                'is_parsed' => $regulation->isParsed(),
+                'documents_count' => $regulation->documents->count(),
+            ],
+        ];
+    }
+
+    private function detectRelationType(string $titleLower): string
+    {
+        $amendmentKeywords = ['perubahan', 'amandemen', 'amendment', 'revisi', 'ubah', 'perubahan atas'];
+        $revocationKeywords = ['pencabutan', 'revocation', 'cabut', 'mencabut', 'pencabutan atas'];
+
+        foreach ($revocationKeywords as $keyword) {
+            if (str_contains($titleLower, $keyword)) {
+                return 'revocation';
+            }
+        }
+
+        foreach ($amendmentKeywords as $keyword) {
+            if (str_contains($titleLower, $keyword)) {
+                return 'amendment';
+            }
+        }
+
+        return 'related';
+    }
+
+    private function buildContext(Regulation $regulation, array $relatedData): string
+    {
+        $parts = [];
+
+        $parts[] = "Regulasi Utama: {$regulation->regulation_number} - {$regulation->title} ({$regulation->year})";
+
+        if ($relatedData['amendments']) {
+            $parts[] = "\nPerubahan terkait:";
+            foreach ($relatedData['amendments'] as $amendment) {
+                $parts[] = "- {$amendment['regulation_number']} - {$amendment['title']} ({$amendment['year']})";
+            }
+        }
+
+        if ($relatedData['revocations']) {
+            $parts[] = "\nPencabutan terkait:";
+            foreach ($relatedData['revocations'] as $revocation) {
+                $parts[] = "- {$revocation['regulation_number']} - {$revocation['title']} ({$revocation['year']})";
+            }
+        }
+
+        if ($relatedData['related']) {
+            $parts[] = "\nRegulasi terkait lainnya:";
+            foreach ($relatedData['related'] as $rel) {
+                $parts[] = "- {$rel['regulation_number']} - {$rel['title']} ({$rel['year']}) [{$rel['type']}]";
+            }
+        } else {
+            $parts[] = "\nTidak ada regulasi terkait.";
+        }
+
+        return implode("\n", $parts);
+    }
+
+    private function tryAiAnalysis(string $context, array $relatedData, ?string $parsedText): ?array
+    {
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+            'groq' => [
+                'api_key' => config('ai.groq.api_key'),
+                'base_url' => config('ai.groq.base_url', 'https://api.groq.com/openai/v1'),
+                'model' => config('ai.groq.model', 'llama-3.3-70b-versatile'),
+            ],
+        ];
+
+        $mainReg = $relatedData['main_regulation'];
+        $regNumber = $mainReg['regulation_number'] ?? '';
+        $regTitle = $mainReg['title'] ?? '';
+        $regYear = $mainReg['year'] ?? '';
+
+        $relatedTexts = [];
+        foreach ($relatedData['related'] as $rel) {
+            if ($rel['parsed_text_preview']) {
+                $relatedTexts[] = "--- {$rel['regulation_number']} ---\n{$rel['parsed_text_preview']}";
+            }
+        }
+        $relatedBlock = implode("\n\n", $relatedTexts);
+
+        $mainTextBlock = $parsedText
+            ? "TEKS REGULASI UTAMA:\n{$parsedText}"
+            : 'TEKS REGULASI UTAMA: (belum diparse)';
+
+        $relatedTotal = count($relatedData['related'] ?? []);
+        $amendmentTotal = count($relatedData['amendments'] ?? []);
+        $revocationTotal = count($relatedData['revocations'] ?? []);
+
+        $prompt = <<<PROMPT
+Anda adalah analis regulasi profesional. Analisis peraturan berikut secara mendalam.
+
+REGULASI UTAMA:
+{$regNumber} - {$regTitle} ({$regYear})
+
+{$mainTextBlock}
+
+REGULASI TERKAIT (dari database):
+{$relatedBlock}
+
+INFORMASI TAMBAHAN:
+- Jumlah regulasi terkait di database: {$relatedTotal}
+- Jumlah perubahan: {$amendmentTotal}
+- Jumlah pencabutan: {$revocationTotal}
+
+Berdasarkan teks di atas, berikan analisis dalam bahasa Indonesia:
+
+1. COMPARISON_INSIGHTS:
+Jelaskan perbandingan antara peraturan ini dengan peraturan terkait. Sorot persamaan, perbedaan, dan ketidaksesuaian.
+
+2. CHANGE_ANALYSIS:
+Analisis perubahan apa saja yang dilakukan. Sebutkan pasal-pasal yang berubah, apa yang berubah, dan implikasinya.
+
+3. REVOCATION_ANALYSIS:
+Analisis pencabutan yang dilakukan. Sebutkan peraturan atau pasal apa yang dicabut dan dampaknya.
+PROMPT;
+
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 4096,
+                        'temperature' => 0.3,
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+
+                if (empty($content)) {
+                    continue;
+                }
+
+                return $this->parseAiResponse($content);
+            } catch (\Throwable $e) {
+                report($e);
+
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    private function parseAiResponse(string $content): array
+    {
+        $sections = [
+            'comparison_insights' => '',
+            'change_analysis' => '',
+            'revocation_analysis' => '',
+        ];
+
+        $currentSection = null;
+        $lines = explode("\n", $content);
+
+        foreach ($lines as $line) {
+            $upperLine = mb_strtoupper(trim($line));
+
+            if (str_contains($upperLine, 'COMPARISON_INSIGHTS')) {
+                $currentSection = 'comparison_insights';
+
+                continue;
+            }
+            if (str_contains($upperLine, 'CHANGE_ANALYSIS')) {
+                $currentSection = 'change_analysis';
+
+                continue;
+            }
+            if (str_contains($upperLine, 'REVOCATION_ANALYSIS')) {
+                $currentSection = 'revocation_analysis';
+
+                continue;
+            }
+
+            if ($currentSection && trim($line) !== '') {
+                $sections[$currentSection] .= $line."\n";
+            }
+        }
+
+        foreach ($sections as $key => $value) {
+            $sections[$key] = trim($value);
+        }
+
+        return $sections;
+    }
+
+    private function fallbackAnalysis(array $relatedData): array
+    {
+        $insights = [];
+        $changes = [];
+        $revocations = [];
+
+        $reg = $relatedData['main_regulation'];
+
+        if ($reg['is_parsed']) {
+            $insights[] = "Regulasi {$reg['regulation_number']} sudah diparse dan siap untuk dianalisis.";
+        } else {
+            $insights[] = "Regulasi {$reg['regulation_number']} belum diparse. Lakukan parser PDF terlebih dahulu untuk analisis yang lebih mendalam.";
+        }
+
+        $relatedTotal = count($relatedData['related']);
+        $amendmentTotal = count($relatedData['amendments']);
+        $revocationTotal = count($relatedData['revocations']);
+
+        if ($relatedTotal > 0) {
+            $insights[] = "Regulasi ini memiliki {$relatedTotal} regulasi terkait.";
+            $insights[] = "Dari jumlah tersebut, {$amendmentTotal} merupakan regulasi perubahan dan {$revocationTotal} merupakan regulasi pencabutan.";
+            $insights[] = 'Disarankan untuk melakukan review menyeluruh terhadap seluruh regulasi terkait untuk memastikan kepatuhan dan konsistensi.';
+        } else {
+            $insights[] = 'Regulasi ini tidak memiliki regulasi terkait.';
+            $insights[] = 'Tambahkan regulasi terkait melalui menu edit untuk analisis perbandingan yang lebih komprehensif.';
+        }
+
+        if ($amendmentTotal > 0) {
+            $changes[] = 'Terdeteksi '.$amendmentTotal.' regulasi perubahan:';
+            foreach ($relatedData['amendments'] as $amendment) {
+                $changes[] = "- {$amendment['regulation_number']} - {$amendment['title']} ({$amendment['year']})";
+                $changes[] = '  Status: '.($amendment['is_parsed'] ? 'Sudah diparse' : 'Belum diparse');
+            }
+        } else {
+            $changes[] = 'Tidak terdeteksi regulasi perubahan yang terkait dengan regulasi ini.';
+        }
+
+        if ($revocationTotal > 0) {
+            $revocations[] = 'Terdeteksi '.$revocationTotal.' regulasi pencabutan:';
+            foreach ($relatedData['revocations'] as $revocation) {
+                $revocations[] = "- {$revocation['regulation_number']} - {$revocation['title']} ({$revocation['year']})";
+                $revocations[] = '  Status: '.($revocation['is_parsed'] ? 'Sudah diparse' : 'Belum diparse');
+            }
+        } else {
+            $revocations[] = 'Tidak terdeteksi regulasi pencabutan yang terkait dengan regulasi ini.';
+        }
+
+        return [
+            'comparison_insights' => implode("\n", $insights),
+            'change_analysis' => implode("\n", $changes),
+            'revocation_analysis' => implode("\n", $revocations),
+        ];
+    }
+}

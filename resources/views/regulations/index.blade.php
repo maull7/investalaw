@@ -45,7 +45,7 @@
     </x-card>
 
     {{-- Table --}}
-    <x-card :padding="false" class="mt-6">
+    <x-card :padding="false" class="mt-6" x-data="{ docModal: null, docs: [], parseModal: null, parseData: null }">
         @if($regulations->isEmpty())
             <div class="text-center py-14">
                 <div class="mx-auto w-16 h-16 rounded-2xl bg-[#f6f8fb] flex items-center justify-center text-[#c99a3e]">
@@ -65,6 +65,8 @@
                             <th>Jenis</th>
                             <th>Kategori</th>
                             <th>Tahun</th>
+                            <th class="text-center">Dok Tambahan</th>
+                            <th class="text-center">Status Parser</th>
                             <th class="text-right">Aksi</th>
                         </tr>
                     </thead>
@@ -88,6 +90,25 @@
                                 <td>
                                     <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
                                 </td>
+                                <td class="text-center">
+                                    @php $docCount = $reg->documents->count(); @endphp
+                                    @if($docCount > 0)
+                                        <button type="button" @click="docModal = {{ $reg->id }}; docs = {{ Js::from($reg->documents->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'type' => $d->document_type])) }}"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-700 hover:bg-sky-200 transition cursor-pointer">
+                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+                                            {{ $docCount }}
+                                        </button>
+                                    @else
+                                        <span class="text-xs text-[#b0b8c5]">—</span>
+                                    @endif
+                                </td>
+                                <td class="text-center">
+                                    @php
+                                        $status = $reg->parseStatusLabel();
+                                        $color = $reg->parseStatusBadgeColor();
+                                    @endphp
+                                    <x-badge :color="$color">{{ $status }}</x-badge>
+                                </td>
                                 <td>
                                     <div class="flex items-center justify-end gap-2">
                                         <x-button href="{{ route('regulations.show', $reg) }}" variant="outline" size="sm">
@@ -110,5 +131,40 @@
                 {{ $regulations->links() }}
             </div>
         @endif
+
+        {{-- Dok Tambahan Modal --}}
+        <div x-show="docModal" x-cloak
+             class="fixed inset-0 z-50 flex items-center justify-center bg-[#071b3a]/60 backdrop-blur-sm overflow-hidden"
+             @click.self="docModal = null">
+            <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-base font-bold text-[#071833]">Dokumen Tambahan</h3>
+                    <button type="button" @click="docModal = null" class="p-1.5 rounded-lg text-[#667085] hover:bg-[#f6f8fb] transition">
+                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <template x-if="docs.length === 0">
+                    <p class="text-sm text-[#667085] py-4 text-center">Belum ada dokumen tambahan.</p>
+                </template>
+                <template x-if="docs.length > 0">
+                    <ul class="divide-y divide-[#e7eaf0]">
+                        <template x-for="doc in docs" :key="doc.id">
+                            <li class="flex items-center gap-3 py-3">
+                                <div class="shrink-0 w-9 h-9 rounded-lg bg-sky-50 text-sky-500 flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-semibold text-[#071833]" x-text="doc.name"></p>
+                                    <p class="text-xs text-[#667085]" x-text="doc.type"></p>
+                                </div>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+                <div class="mt-4 pt-3 border-t border-[#e7eaf0] flex justify-end">
+                    <x-button type="button" variant="outline" size="sm" @click="docModal = null">Tutup</x-button>
+                </div>
+            </div>
+        </div>
     </x-card>
 @endsection

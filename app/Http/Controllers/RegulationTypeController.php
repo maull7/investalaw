@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\RegulationType\StoreRegulationTypeRequest;
 use App\Http\Requests\RegulationType\UpdateRegulationTypeRequest;
 use App\Models\RegulationType;
+use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -28,7 +29,9 @@ class RegulationTypeController extends Controller
 
     public function store(StoreRegulationTypeRequest $request): RedirectResponse
     {
-        RegulationType::create($request->validated());
+        $type = RegulationType::create($request->validated());
+
+        UserActivityLog::log('created', RegulationType::class, $type->id, "Menambahkan jenis regulasi {$type->name}");
 
         return redirect()->route('regulation-types.index')
             ->with('success', 'Jenis regulasi berhasil ditambahkan.');
@@ -45,6 +48,8 @@ class RegulationTypeController extends Controller
     {
         $regulationType->update($request->validated());
 
+        UserActivityLog::log('updated', RegulationType::class, $regulationType->id, "Memperbarui jenis regulasi {$regulationType->name}");
+
         return redirect()->route('regulation-types.index')
             ->with('success', 'Jenis regulasi berhasil diperbarui.');
     }
@@ -58,7 +63,10 @@ class RegulationTypeController extends Controller
                 ->with('error', 'Tidak dapat menghapus jenis regulasi yang masih digunakan oleh regulasi.');
         }
 
+        $name = $regulationType->name;
         $regulationType->delete();
+
+        UserActivityLog::log('deleted', RegulationType::class, null, "Menghapus jenis regulasi {$name}");
 
         return redirect()->route('regulation-types.index')
             ->with('success', 'Jenis regulasi berhasil dihapus.');

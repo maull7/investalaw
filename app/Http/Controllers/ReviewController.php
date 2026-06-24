@@ -7,6 +7,7 @@ use App\Http\Requests\Review\StoreReviewRequest;
 use App\Http\Requests\Review\UpdateReviewRequest;
 use App\Models\Review;
 use App\Models\ReviewDocument;
+use App\Models\UserActivityLog;
 use App\Repositories\ReviewDocumentRepository;
 use App\Repositories\ReviewRepository;
 use App\Services\ReviewService;
@@ -60,6 +61,8 @@ class ReviewController extends Controller
             $request->user()->id
         );
 
+        UserActivityLog::log('created', Review::class, $review->id, "Membuat review untuk dokumen #{$validated['review_document_id']}");
+
         return redirect()->route('reviews.show', $review)
             ->with('success', 'Review created successfully.');
     }
@@ -96,6 +99,8 @@ class ReviewController extends Controller
             $validated['findings']
         );
 
+        UserActivityLog::log('updated', Review::class, $review->id, "Memperbarui review untuk dokumen #{$review->review_document_id}");
+
         return redirect()->route('reviews.show', $review)
             ->with('success', 'Review updated successfully.');
     }
@@ -106,6 +111,8 @@ class ReviewController extends Controller
         $this->authorize('update', $review);
 
         $this->reviewService->completeReview($review);
+
+        UserActivityLog::log('completed', Review::class, $review->id, "Menyelesaikan review dan menyetujui dokumen #{$review->review_document_id}");
 
         return redirect()->route('reviews.show', $review)
             ->with('success', 'Review completed and document approved.');
@@ -120,6 +127,8 @@ class ReviewController extends Controller
 
         $this->reviewService->requestRevision($review, $request->input('notes'));
 
+        UserActivityLog::log('revision_requested', Review::class, $review->id, "Meminta revisi untuk dokumen #{$review->review_document_id}");
+
         return redirect()->route('reviews.show', $review)
             ->with('success', 'Revision requested for document.');
     }
@@ -132,6 +141,8 @@ class ReviewController extends Controller
         $request->validate(['notes' => 'required|string']);
 
         $this->reviewService->rejectReview($review, $request->input('notes'));
+
+        UserActivityLog::log('rejected', Review::class, $review->id, "Menolak dokumen #{$review->review_document_id}");
 
         return redirect()->route('reviews.show', $review)
             ->with('success', 'Document rejected.');

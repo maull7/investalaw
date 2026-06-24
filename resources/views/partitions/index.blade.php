@@ -23,7 +23,9 @@
                 <p class="mt-3 text-white/70 max-w-3xl leading-relaxed">Buat partisi, tentukan halaman Daftar Isi, lalu ekstrak otomatis Bab → Subbab → Isi.</p>
             </div>
             <div class="shrink-0 flex flex-wrap gap-2">
-                <a href="{{ route('partitions.parsed-text', $document) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 bg-white/5 hover:bg-white/10 backdrop-blur transition">
+                <a @if($allParsed) href="{{ route('partitions.parsed-text', $document) }}" @else href="#" @endif
+                   @if(!$allParsed) @click.prevent="alert('Semua BAB harus diparse dulu di tab Daftar Isi.')" @endif
+                   class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 backdrop-blur transition {{ $allParsed ? 'bg-white/5 hover:bg-white/10' : 'bg-white/5 opacity-40 cursor-not-allowed' }}">
                     Hasil Parser PDF
                 </a>
                 <a href="{{ route('ai-preview.show', $document) }}?type={{ request('type', 'analisa') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-[#c99a3e]/30 bg-[#c99a3e]/15 hover:bg-[#c99a3e]/25 backdrop-blur transition">
@@ -58,8 +60,9 @@
                     @endif
                 </span>
             </button>
-            <a href="{{ route('partitions.parsed-text', $document) }}"
-               class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition text-[#667085] hover:text-[#071833] text-center">
+            <a @if($allParsed) href="{{ route('partitions.parsed-text', $document) }}" @else href="#" @endif
+               @if(!$allParsed) @click.prevent="alert('Semua BAB harus diparse dulu di tab Daftar Isi.')" @endif
+               class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition text-center {{ $allParsed ? 'text-[#667085] hover:text-[#071833]' : 'text-[#b0b8c5] cursor-not-allowed' }}">
                 <span class="flex items-center justify-center gap-2">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
                     Parse PDF
@@ -388,7 +391,72 @@
         </div>
 
         {{-- Tab: Daftar Isi --}}
-        <div x-show="activeTab === 'daftar-isi'" x-cloak>
+        <div x-data="{
+            selectedBabIds: [],
+            maxSelect: 5,
+            parsedBabIds: {{ json_encode($parsedBabIds) }},
+            processing: false,
+            progress: 0,
+            totalToProcess: 0,
+            processedCount: 0,
+            results: [],
+
+            toggleBab(id) {
+                if (this.parsedBabIds.includes(id)) return;
+                const idx = this.selectedBabIds.indexOf(id);
+                if (idx > -1) {
+                    this.selectedBabIds.splice(idx, 1);
+                } else if (this.selectedBabIds.length < this.maxSelect) {
+                    this.selectedBabIds.push(id);
+                }
+            },
+
+            isParsed(id) {
+                return this.parsedBabIds.includes(id);
+            },
+
+            async startProcessing() {
+                if (this.selectedBabIds.length === 0 || this.processing) return;
+
+                this.processing = true;
+                this.progress = 0;
+                this.totalToProcess = this.selectedBabIds.length;
+                this.processedCount = 0;
+                this.results = [];
+
+                const ids = [...this.selectedBabIds];
+
+                for (let i = 0; i < ids.length; i++) {
+                    const id = ids[i];
+                    this.progress = Math.round((i / ids.length) * 100);
+
+                    try {
+                        const response = await fetch('{{ route('bab-structures.detect-ajax', [$document, '__ID__']) }}'.replace('__ID__', id), {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                        });
+                        const data = await response.json();
+                        this.results.push(data);
+
+                        if (data.success) {
+                            this.parsedBabIds.push(id);
+                            const idx = this.selectedBabIds.indexOf(id);
+                            if (idx > -1) this.selectedBabIds.splice(idx, 1);
+                        }
+                    } catch (e) {
+                        this.results.push({ success: false, message: e.message || 'Network error' });
+                    }
+
+                    this.processedCount = i + 1;
+                }
+
+                this.progress = 100;
+                setTimeout(() => { this.processing = false; }, 1500);
+            },
+        }" x-show="activeTab === 'daftar-isi'" x-cloak>
             @if(empty($babTree))
                 <x-card>
                     <div class="text-center py-8">
@@ -402,36 +470,64 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="bg-[#f6f8fb] text-[10px] font-bold uppercase tracking-wider text-[#667085]">
+                                    <th class="text-center px-4 py-2.5 w-14">
+                                        <span class="sr-only">Pilih</span>
+                                    </th>
                                     <th class="text-left px-4 py-2.5 w-10">No</th>
                                     <th class="text-left px-4 py-2.5">Bab / Subbab / Isi</th>
                                     <th class="text-center px-4 py-2.5 w-24">Halaman</th>
+                                    <th class="text-center px-4 py-2.5 w-16">Status</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-[#e7eaf0]">
                                 @foreach($babTree as $bIdx => $bab)
-                                    <tr class="bg-[#fafbfc]">
-                                        <td class="px-4 py-2.5 text-xs font-bold text-[#c99a3e]">{{ $bIdx + 1 }}.</td>
+                                    @php $isParsed = !empty($bab['children']); @endphp
+                                    <tr class="{{ $isParsed ? 'bg-emerald-50/40' : 'bg-[#fafbfc]' }}">
+                                        <td class="px-4 py-2.5 text-center">
+                                            <input type="checkbox"
+                                                   @click="toggleBab({{ $bab['id'] }})"
+                                                   :checked="selectedBabIds.includes({{ $bab['id'] }})"
+                                                   :disabled="isParsed({{ $bab['id'] }}) || processing"
+                                                   class="w-4 h-4 rounded border-gray-300 text-[#c99a3e] focus:ring-[#c99a3e] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                                        </td>
+                                        <td class="px-4 py-2.5 text-xs font-bold {{ $isParsed ? 'text-emerald-600' : 'text-[#c99a3e]' }}">{{ $bIdx + 1 }}.</td>
                                         <td class="px-4 py-2.5">
                                             <div class="flex items-center gap-2">
-                                                <span class="w-2 h-2 rounded-full bg-[#c99a3e] shrink-0"></span>
-                                                <span class="font-bold text-[#071833] text-sm">{{ $bab['title'] }}</span>
+                                                <span class="w-2 h-2 rounded-full {{ $isParsed ? 'bg-emerald-500' : 'bg-[#c99a3e]' }} shrink-0"></span>
+                                                <span class="font-bold {{ $isParsed ? 'text-emerald-800' : 'text-[#071833]' }} text-sm">{{ $bab['title'] }}</span>
                                             </div>
                                         </td>
                                         <td class="px-4 py-2.5 text-center text-xs text-[#667085] font-semibold">{{ $bab['start_page'] }}–{{ $bab['end_page'] }}</td>
+                                        <td class="px-4 py-2.5 text-center">
+                                            @if($isParsed)
+                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-700">
+                                                    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                                                    Sudah
+                                                </span>
+                                            @else
+                                                <span class="text-[9px] text-[#b0b8c5]">—</span>
+                                            @endif
+                                        </td>
                                     </tr>
                                     @foreach($bab['children'] as $sIdx => $subbab)
-                                        <tr class="hover:bg-[#f6f8fb]/40">
+                                        @php $isUndetected = $subbab['title'] === '—'; @endphp
+                                        <tr class="{{ $isUndetected ? 'opacity-40' : 'hover:bg-[#f6f8fb]/40' }}">
+                                            <td class="px-4 py-1.5"></td>
                                             <td class="px-4 py-1.5"></td>
                                             <td class="px-4 py-1.5">
                                                 <div class="flex items-center gap-2 ml-6">
-                                                    <span class="w-1.5 h-1.5 rounded-full border-2 border-[#c99a3e] shrink-0"></span>
-                                                    <span class="text-xs font-semibold text-[#071833]">{{ $subbab['title'] }}</span>
+                                                    <span class="w-1.5 h-1.5 rounded-full border-2 shrink-0 {{ $isUndetected ? 'border-[#b0b8c5]' : 'border-[#c99a3e]' }}"></span>
+                                                    <span class="text-xs {{ $isUndetected ? 'text-[#b0b8c5] italic' : 'font-semibold text-[#071833]' }}">
+                                                        {{ $isUndetected ? 'Sub-bab tidak terdeteksi' : $subbab['title'] }}
+                                                    </span>
                                                 </div>
                                             </td>
+                                            <td class="px-4 py-1.5"></td>
                                             <td class="px-4 py-1.5"></td>
                                         </tr>
                                         @foreach($subbab['children'] ?? [] as $isi)
                                             <tr class="text-[#667085]">
+                                                <td class="px-4 py-1"></td>
                                                 <td class="px-4 py-1"></td>
                                                 <td class="px-4 py-1">
                                                     <div class="flex items-center gap-2 ml-12">
@@ -440,6 +536,7 @@
                                                     </div>
                                                 </td>
                                                 <td class="px-4 py-1"></td>
+                                                <td class="px-4 py-1"></td>
                                             </tr>
                                         @endforeach
                                     @endforeach
@@ -447,8 +544,80 @@
                             </tbody>
                         </table>
                     </div>
+
+                    {{-- Action Bar --}}
+                    <div class="border-t border-[#e7eaf0]">
+                        <div class="flex items-center justify-between px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-[#667085]">
+                                    <span x-text="selectedBabIds.length" class="font-bold text-[#071833]"></span>
+                                    dari <span class="font-bold text-[#071833]">{{ count($babTree) }}</span> BAB dapat dipilih
+                                    <span x-show="selectedBabIds.length >= 5" class="text-amber-600 font-semibold">(maksimal 5)</span>
+                                </span>
+                            </div>
+                            <button type="button"
+                                    @click="startProcessing()"
+                                    :disabled="selectedBabIds.length === 0 || processing"
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#c99a3e] hover:bg-[#b8892f] disabled:opacity-40 disabled:cursor-not-allowed transition">
+                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                                <span x-text="processing ? 'Memproses...' : 'Generate Struktur Terpilih'"></span>
+                            </button>
+                        </div>
+                    </div>
                 </x-card>
             @endif
+
+            {{-- Progress Modal --}}
+            <div x-show="processing" x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-[#071b3a]/60 backdrop-blur-sm overflow-hidden">
+                <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+                    <div class="text-center">
+                        <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-[#c99a3e]/20 to-[#e6c06a]/20 flex items-center justify-center mb-4">
+                            <svg class="w-7 h-7 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-[#071833] mb-1">Memproses Struktur BAB</h3>
+                        <p class="text-sm text-[#667085] mb-6">
+                            <span x-text="processedCount"></span> dari <span x-text="totalToProcess"></span> BAB selesai
+                        </p>
+
+                        {{-- Progress Bar --}}
+                        <div class="w-full bg-[#f6f8fb] rounded-full h-3 overflow-hidden ring-1 ring-[#e7eaf0] mb-4">
+                            <div class="h-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-full transition-all duration-500 ease-out"
+                                 :style="`width: ${progress}%`"></div>
+                        </div>
+
+                        <p class="text-xs text-[#667085]" x-text="`${progress}%`"></p>
+
+                        {{-- Results --}}
+                        <template x-if="processedCount === totalToProcess && totalToProcess > 0">
+                            <div class="mt-4 pt-4 border-t border-[#e7eaf0]">
+                                <div class="space-y-1 text-left">
+                                    <template x-for="(r, i) in results" :key="i">
+                                        <div class="flex items-start gap-2 text-xs leading-relaxed" :class="r.success ? (r.detected ? 'text-emerald-700' : 'text-amber-600') : 'text-rose-600'">
+                                            <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <template x-if="r.success && r.detected">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                                                </template>
+                                                <template x-if="r.success && !r.detected">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/>
+                                                </template>
+                                                <template x-if="!r.success">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+                                                </template>
+                                            </svg>
+                                            <span x-text="r.message"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                                <button type="button" @click="processing = false; location.reload()"
+                                        class="mt-3 w-full px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#071833] hover:bg-[#0f2a4a] transition">
+                                    Selesai — Refresh Halaman
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 @endsection
@@ -486,5 +655,7 @@ function partitionForm(existingPartitions, totalPages) {
         },
     };
 }
+
+
 </script>
 @endpush

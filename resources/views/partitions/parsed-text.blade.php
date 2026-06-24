@@ -218,37 +218,75 @@
 
                                         {{-- AI Detected Structure --}}
                                         @if($bab->children->isNotEmpty())
-                                            <div x-data="{ expandedAi: null }" class="mt-3 pt-3 border-t border-[#e7eaf0]">
+                                            <div class="mt-3 pt-3 border-t border-[#e7eaf0]">
                                                 <p class="text-[10px] font-bold uppercase tracking-wider text-sky-700 mb-2">Struktur AI — {{ $bab->children->count() }} Subbab</p>
-                                                <div class="space-y-1">
+                                                <div class="space-y-3">
                                                     @foreach($bab->children as $subbab)
-                                                        <div class="rounded-lg border border-[#e7eaf0] overflow-hidden">
-                                                            <button @click="expandedAi = expandedAi === {{ $subbab->id }} ? null : {{ $subbab->id }}" class="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-[#f6f8fb] transition">
-                                                                <div class="flex items-center gap-2 min-w-0">
-                                                                    <span class="w-5 h-5 rounded bg-sky-100 text-sky-700 text-[8px] font-bold flex items-center justify-center shrink-0">{{ $loop->iteration }}</span>
-                                                                    <span class="text-[11px] font-semibold text-[#071833] truncate">{{ $subbab->name }}</span>
-                                                                </div>
-                                                                <div class="flex items-center gap-2 shrink-0 ml-2">
-                                                                    <span class="text-[9px] text-[#667085]">hlm.{{ $subbab->start_page }}–{{ $subbab->end_page }}</span>
-                                                                    @if($subbab->children->isNotEmpty())
-                                                                        <span class="px-1.5 py-0.5 rounded-full bg-sky-50 text-[8px] font-bold text-sky-600">{{ $subbab->children->count() }}</span>
-                                                                    @endif
-                                                                    <svg class="w-3 h-3 text-[#667085] transition-transform shrink-0" :class="expandedAi === {{ $subbab->id }} ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
-                                                                </div>
-                                                            </button>
-                                                            @if($subbab->children->isNotEmpty())
-                                                                <div x-show="expandedAi === {{ $subbab->id }}" x-collapse>
-                                                                    <div class="px-3 pb-2 space-y-0.5">
-                                                                        @foreach($subbab->children as $isi)
-                                                                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#f6f8fb]">
-                                                                                <span class="w-4 h-4 rounded bg-emerald-100 text-emerald-700 text-[7px] font-bold flex items-center justify-center shrink-0">I</span>
-                                                                                <span class="text-[10px] text-[#071833] truncate">{{ $isi->name }}</span>
-                                                                                <span class="text-[8px] text-[#667085] shrink-0 ml-auto">hlm.{{ $isi->start_page }}–{{ $isi->end_page }}</span>
-                                                                            </div>
-                                                                        @endforeach
+                                                        @php
+                                                            $subbabPages = array_values(array_filter($group['pages'], fn($p) => $p['page'] >= $subbab->start_page && $p['page'] <= $subbab->end_page));
+                                                        @endphp
+                                                        <div class="rounded-xl border border-[#e7eaf0] overflow-hidden bg-white shadow-sm">
+                                                            <div class="px-4 py-3 bg-gradient-to-r from-sky-50/80 to-white border-b border-[#e7eaf0]">
+                                                                <div class="flex items-start justify-between gap-3">
+                                                                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                                                                        <span class="w-6 h-6 rounded-lg bg-sky-100 text-sky-700 text-[9px] font-bold flex items-center justify-center shrink-0">{{ $loop->iteration }}</span>
+                                                                        <span class="text-sm font-bold text-[#071833]">{{ $subbab->name }}</span>
+                                                                    </div>
+                                                                    <div class="flex items-center gap-2 shrink-0">
+                                                                        <span class="text-[10px] text-[#667085] font-semibold">hlm.{{ $subbab->start_page }}–{{ $subbab->end_page }}</span>
+                                                                        @if($subbab->children->isNotEmpty())
+                                                                            <span class="px-1.5 py-0.5 rounded-full bg-sky-50 text-[8px] font-bold text-sky-600">{{ $subbab->children->count() }} isi</span>
+                                                                        @endif
                                                                     </div>
                                                                 </div>
-                                                            @endif
+                                                            </div>
+                                                            <div class="divide-y divide-[#e7eaf0]">
+                                                                @foreach($subbabPages as $pData)
+                                                                    <div x-data="{ open: false }" class="divide-y divide-[#e7eaf0]">
+                                                                        <button @click="open = !open" class="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-[#f6f8fb] transition">
+                                                                            <div class="flex items-center gap-2">
+                                                                                <span class="w-5 h-5 rounded bg-[#f6f8fb] text-[#667085] text-[8px] font-bold flex items-center justify-center">{{ $pData['page'] }}</span>
+                                                                                <span class="text-xs font-semibold text-[#071833]">Halaman {{ $pData['page'] }}</span>
+                                                                            </div>
+                                                                            <div class="flex items-center gap-2">
+                                                                                @if($pData['char_count'] === 0)
+                                                                                    <span class="px-1.5 py-0.5 rounded-full bg-rose-100 text-[8px] font-bold text-rose-700">Kosong</span>
+                                                                                @elseif($pData['char_count'] < 50)
+                                                                                    <span class="px-1.5 py-0.5 rounded-full bg-amber-100 text-[8px] font-bold text-amber-700">Sedikit</span>
+                                                                                @else
+                                                                                    <span class="px-1.5 py-0.5 rounded-full bg-emerald-100 text-[8px] font-bold text-emerald-700">OK</span>
+                                                                                @endif
+                                                                                <span class="text-[10px] text-[#667085]">{{ number_format($pData['char_count']) }} char</span>
+                                                                                <svg class="w-3 h-3 text-[#667085] transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                                                                            </div>
+                                                                        </button>
+                                                                        <div x-show="open" x-collapse>
+                                                                            <div class="px-4 pb-3 pt-2">
+                                                                                @if($pData['char_count'] > 0)
+                                                                                    <div class="rounded-lg bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0] max-h-60 overflow-y-auto">
+                                                                                        <pre class="text-[10px] text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $pData['text'] }}</pre>
+                                                                                    </div>
+                                                                                @else
+                                                                                    <p class="text-xs text-[#667085] italic">Halaman ini tidak mengandung teks yang bisa diekstrak (mungkin gambar atau scan).</p>
+                                                                                @endif
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                @endforeach
+                                                                @if($subbab->children->isNotEmpty())
+                                                                    <div class="px-4 py-2 bg-[#fafbfc]">
+                                                                        <p class="text-[9px] font-bold uppercase tracking-wider text-[#667085] mb-1.5">Isi dalam subbab ini</p>
+                                                                        <div class="flex flex-wrap gap-1">
+                                                                            @foreach($subbab->children as $isi)
+                                                                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[9px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                                                                    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                                                                                    {{ $isi->name }}
+                                                                                </span>
+                                                                            @endforeach
+                                                                        </div>
+                                                                    </div>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     @endforeach
                                                 </div>

@@ -11,6 +11,7 @@ use App\Services\BabStructureService;
 use App\Services\DocumentParser;
 use App\Services\PartitionService;
 use App\Services\TocExtractorService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -40,10 +41,16 @@ class DocumentPartitionController extends Controller
 
         $babTree = $this->babStructureService->getTree($reviewDocument);
 
+        $parsedBabIds = collect($babTree)->filter(fn ($b) => ! empty($b['children']))->pluck('id')->values()->toArray();
+
+        $allParsed = ! empty($babTree) && collect($babTree)->every(fn ($b) => ! empty($b['children']));
+
         return view('partitions.index', [
             'document' => $reviewDocument,
             'totalPages' => $totalPages,
             'babTree' => $babTree,
+            'parsedBabIds' => $parsedBabIds,
+            'allParsed' => $allParsed,
         ]);
     }
 
@@ -296,6 +303,125 @@ class DocumentPartitionController extends Controller
         }
     }
 
+    public function batchDetectStructure(Request $request, ReviewDocument $reviewDocument): RedirectResponse
+    {
+        abort_if($request->user()->isSubAdmin(), 403);
+
+        $validated = $request->validate([
+            'bab_ids' => ['required', 'array', 'min:1', 'max:5'],
+            'bab_ids.*' => ['required', 'integer', 'exists:document_bab_structures,id'],
+        ]);
+
+        set_time_limit(300);
+
+        $babs = DocumentBabStructure::whereIn('id', $validated['bab_ids'])
+            ->where('review_document_id', $reviewDocument->id)
+            ->where('level', 0)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($babs->isEmpty()) {
+            return redirect()->back()
+                ->with('error', 'Tidak ada BAB valid yang dipilih.');
+        }
+
+        $success = [];
+        $errors = [];
+
+        foreach ($babs as $bab) {
+            try {
+                $subsections = $this->aiService->detectContentStructure($bab);
+
+                if (empty($subsections)) {
+                    $errors[] = "{$bab->name}: AI tidak dapat mendeteksi struktur";
+
+                    continue;
+                }
+
+                $subsections = $this->babStructureService->resolveChildPages($bab, $subsections);
+                $this->babStructureService->saveStructureChildren($bab, $subsections, 1);
+
+                $totalItems = collect($subsections)->sum(fn ($s) => count($s['items'] ?? []));
+                $success[] = "{$bab->name}: ".count($subsections)." Subbab, {$totalItems} Isi";
+            } catch (\Exception $e) {
+                $errors[] = "{$bab->name}: {$e->getMessage()}";
+            }
+        }
+
+        $message = '';
+        if ($success) {
+            $message .= 'Berhasil: '.implode('; ', $success).'. ';
+        }
+        if ($errors) {
+            $message .= 'Gagal: '.implode('; ', $errors);
+        }
+
+        $message = trim($message);
+
+        return redirect()->back()->with(
+            $errors && ! $success ? 'error' : 'success',
+            $message
+        );
+    }
+
+    public function detectStructureAjax(Request $request, ReviewDocument $reviewDocument, DocumentBabStructure $documentBabStructure): JsonResponse
+    {
+        abort_if($request->user()->isSubAdmin(), 403);
+
+        if ($documentBabStructure->level !== 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Deteksi struktur hanya untuk BAB level (level=0).',
+            ]);
+        }
+
+        set_time_limit(300);
+
+        try {
+            $subsections = $this->aiService->detectContentStructure($documentBabStructure);
+
+            if (empty($subsections)) {
+                DocumentBabStructure::create([
+                    'review_document_id' => $documentBabStructure->review_document_id,
+                    'parent_id' => $documentBabStructure->id,
+                    'name' => '—',
+                    'start_page' => $documentBabStructure->start_page,
+                    'end_page' => $documentBabStructure->end_page,
+                    'sort_order' => 1,
+                    'level' => 1,
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'detected' => false,
+                    'message' => 'Sub-bab tidak terdeteksi pada "'.$documentBabStructure->name.'".',
+                ]);
+            }
+
+            $subsections = $this->babStructureService->resolveChildPages($documentBabStructure, $subsections);
+            $this->babStructureService->saveStructureChildren($documentBabStructure, $subsections, 1);
+
+            $totalItems = collect($subsections)->sum(fn ($s) => count($s['items'] ?? []));
+
+            return response()->json([
+                'success' => true,
+                'detected' => true,
+                'message' => count($subsections).' Subbab, '.$totalItems.' Isi pada "'.$documentBabStructure->name.'".',
+                'data' => [
+                    'bab_id' => $documentBabStructure->id,
+                    'bab_name' => $documentBabStructure->name,
+                    'total_subsections' => count($subsections),
+                    'total_items' => $totalItems,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal deteksi struktur AI: '.$e->getMessage(),
+            ]);
+        }
+    }
+
     public function showParsedText(ReviewDocument $reviewDocument): View
     {
         abort_if(auth()->user()->isSubAdmin(), 403);
@@ -303,6 +429,19 @@ class DocumentPartitionController extends Controller
         $reviewDocument->loadMissing(['regulations.documents']);
 
         $isParsed = $reviewDocument->isParsed();
+
+        if (! $isParsed) {
+            $allBabsHaveStructure = DocumentBabStructure::query()
+                ->where('review_document_id', $reviewDocument->id)
+                ->whereNull('parent_id')
+                ->whereDoesntHave('children')
+                ->doesntExist();
+
+            if ($allBabsHaveStructure) {
+                $this->documentParser->extractAndCachePages($reviewDocument);
+                $isParsed = true;
+            }
+        }
 
         if ($isParsed) {
             $docPages = $reviewDocument->pages()

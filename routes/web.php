@@ -91,6 +91,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure');
     Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect', [DocumentPartitionController::class, 'detectStructure'])->name('bab-structures.detect');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect-ajax', [DocumentPartitionController::class, 'detectStructureAjax'])->name('bab-structures.detect-ajax');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/batch-detect', [DocumentPartitionController::class, 'batchDetectStructure'])->name('bab-structures.batch-detect');
     Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf');
 
     // AI Prompts management

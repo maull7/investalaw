@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiPrompt;
+use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -36,12 +37,14 @@ class AiPromptController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
 
-        AiPrompt::create([
+        $prompt = AiPrompt::create([
             'type' => $validated['type'],
             'title' => $validated['title'] ?? null,
             'prompt_text' => $validated['prompt_text'],
             'is_active' => $validated['is_active'] ?? true,
         ]);
+
+        UserActivityLog::log('created', AiPrompt::class, $prompt->id, "Menambahkan prompt AI {$prompt->type}");
 
         return redirect()->route('ai-prompts.index')
             ->with('success', 'Prompt berhasil ditambahkan.');
@@ -72,6 +75,8 @@ class AiPromptController extends Controller
             'is_active' => $validated['is_active'] ?? true,
         ]);
 
+        UserActivityLog::log('updated', AiPrompt::class, $aiPrompt->id, "Memperbarui prompt AI {$aiPrompt->type}");
+
         return redirect()->route('ai-prompts.index')
             ->with('success', 'Prompt berhasil diperbarui.');
     }
@@ -80,7 +85,10 @@ class AiPromptController extends Controller
     {
         abort_if(request()->user()->isSubAdmin() && ! request()->user()->hasPermission('manage_prompts'), 403);
 
+        $type = $aiPrompt->type;
         $aiPrompt->delete();
+
+        UserActivityLog::log('deleted', AiPrompt::class, null, "Menghapus prompt AI {$type}");
 
         return redirect()->route('ai-prompts.index')
             ->with('success', 'Prompt berhasil dihapus.');

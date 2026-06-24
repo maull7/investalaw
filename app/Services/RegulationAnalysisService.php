@@ -12,11 +12,26 @@ class RegulationAnalysisService
 
     public function analyze(Regulation $regulation): RegulationAnalysis
     {
-        $existing = RegulationAnalysis::where('regulation_id', $regulation->id)->first();
+        $existing = RegulationAnalysis::where('regulation_id', $regulation->id)
+            ->with(['pasal', 'references'])
+            ->first();
+
         if ($existing) {
-            $existing->delete();
+            return $existing;
         }
 
+        return $this->generate($regulation);
+    }
+
+    public function regenerate(Regulation $regulation): RegulationAnalysis
+    {
+        RegulationAnalysis::where('regulation_id', $regulation->id)->delete();
+
+        return $this->generate($regulation);
+    }
+
+    private function generate(Regulation $regulation): RegulationAnalysis
+    {
         $regulation->loadMissing(['relatedRegulations.type', 'relatedRegulations.documents', 'documents']);
 
         $relatedData = $this->collectRelatedData($regulation);
@@ -85,11 +100,6 @@ class RegulationAnalysisService
         }
 
         return $record->load(['pasal', 'references']);
-    }
-
-    public function regenerate(Regulation $regulation): RegulationAnalysis
-    {
-        return $this->analyze($regulation);
     }
 
     private function extractRegulationsFromText(string $text): ?array

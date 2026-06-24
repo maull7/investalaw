@@ -6,6 +6,7 @@ use App\Enums\ReviewStatus;
 use App\Http\Requests\ReviewDocument\StoreReviewDocumentRequest;
 use App\Http\Requests\ReviewDocument\UpdateReviewDocumentRequest;
 use App\Models\ReviewDocument;
+use App\Models\UserActivityLog;
 use App\Repositories\RegulationCategoryRepository;
 use App\Repositories\ReviewDocumentRepository;
 use App\Services\ReviewDocumentService;
@@ -60,6 +61,8 @@ class ReviewDocumentController extends Controller
             $request->user()->id
         );
 
+        UserActivityLog::log('created', ReviewDocument::class, null, "Mengunggah dokumen review {$request->input('title')}");
+
         return redirect()->route('review-documents.index')
             ->with('success', 'Document uploaded successfully.');
     }
@@ -93,6 +96,8 @@ class ReviewDocumentController extends Controller
             $request->file('file')
         );
 
+        UserActivityLog::log('updated', ReviewDocument::class, $reviewDocument->id, "Memperbarui dokumen review {$reviewDocument->title}");
+
         return redirect()->route('review-documents.show', $reviewDocument)
             ->with('success', 'Document updated successfully.');
     }
@@ -101,7 +106,10 @@ class ReviewDocumentController extends Controller
     {
         abort_if(request()->user()->isSubAdmin(), 403);
 
+        $title = $reviewDocument->title;
         $this->reviewDocumentService->deleteReviewDocument($reviewDocument);
+
+        UserActivityLog::log('deleted', ReviewDocument::class, null, "Menghapus dokumen review {$title}");
 
         return redirect()->route('review-documents.index')
             ->with('success', 'Document deleted successfully.');
@@ -112,6 +120,8 @@ class ReviewDocumentController extends Controller
         abort_if(request()->user()->isSubAdmin(), 403);
 
         $this->reviewDocumentService->submitForReview($reviewDocument);
+
+        UserActivityLog::log('submitted', ReviewDocument::class, $reviewDocument->id, "Mengirim dokumen review {$reviewDocument->title} untuk ditinjau");
 
         return redirect()->route('review-documents.show', $reviewDocument)
             ->with('success', 'Document submitted for review.');

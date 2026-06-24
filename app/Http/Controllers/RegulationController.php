@@ -6,6 +6,7 @@ use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
+use App\Models\UserActivityLog;
 use App\Repositories\RegulationRepository;
 use App\Services\RegulationAnalysisService;
 use App\Services\RegulationParserService;
@@ -66,6 +67,8 @@ class RegulationController extends Controller
             $regulation->relatedRegulations()->sync($data['related_regulations']);
         }
 
+        UserActivityLog::log('created', Regulation::class, $regulation->id, "Menambahkan regulasi {$regulation->regulation_number} - {$regulation->title}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Regulasi berhasil ditambahkan.');
     }
@@ -109,6 +112,8 @@ class RegulationController extends Controller
         $regulation->subCategories()->sync($data['sub_categories'] ?? []);
         $regulation->relatedRegulations()->sync($data['related_regulations'] ?? []);
 
+        UserActivityLog::log('updated', Regulation::class, $regulation->id, "Memperbarui regulasi {$regulation->regulation_number} - {$regulation->title}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Regulasi berhasil diperbarui.');
     }
@@ -126,6 +131,8 @@ class RegulationController extends Controller
     {
         $this->regulationAnalysisService->regenerate($regulation);
 
+        UserActivityLog::log('reanalyzed', Regulation::class, $regulation->id, "Melakukan re-analisis AI untuk regulasi {$regulation->regulation_number}");
+
         return redirect()->route('regulations.analyze', $regulation)
             ->with('success', 'Analisis berhasil diperbarui.');
     }
@@ -140,7 +147,10 @@ class RegulationController extends Controller
             Storage::disk('public')->delete($document->file_path);
         }
 
+        $number = $regulation->regulation_number;
         $regulation->delete();
+
+        UserActivityLog::log('deleted', Regulation::class, $regulation->id, "Menghapus regulasi {$number}");
 
         return redirect()->route('regulations.index')
             ->with('success', 'Regulasi berhasil dihapus.');
@@ -185,6 +195,8 @@ class RegulationController extends Controller
             'file_path' => $filePath,
         ]);
 
+        UserActivityLog::log('uploaded', Regulation::class, $regulation->id, "Mengunggah dokumen {$request->input('name')} ke regulasi {$regulation->regulation_number}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Dokumen tambahan berhasil diunggah.');
     }
@@ -197,6 +209,8 @@ class RegulationController extends Controller
 
         Storage::disk('public')->delete($document->file_path);
         $document->delete();
+
+        UserActivityLog::log('deleted', Regulation::class, $regulation->id, "Menghapus dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Dokumen tambahan berhasil dihapus.');
@@ -230,6 +244,8 @@ class RegulationController extends Controller
                 ->with('error', $result['message']);
         }
 
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse teks regulasi {$regulation->regulation_number}");
+
         return redirect()->route('regulations.show', $regulation)
             ->with('success', $result['message']);
     }
@@ -244,6 +260,8 @@ class RegulationController extends Controller
             return redirect()->route('regulations.show', $regulation)
                 ->with('error', $result['message']);
         }
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', $result['message']);

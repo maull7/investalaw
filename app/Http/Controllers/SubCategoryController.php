@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RegulationCategory;
 use App\Models\SubCategory;
+use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -44,6 +45,8 @@ class SubCategoryController extends Controller
             'name' => $request->input('name'),
         ]);
 
+        UserActivityLog::log('created', SubCategory::class, null, "Menambahkan sub kategori {$request->input('name')}");
+
         return redirect()->route('sub-categories.index')
             ->with('success', 'Sub category berhasil ditambahkan.');
     }
@@ -58,6 +61,8 @@ class SubCategoryController extends Controller
 
         $subCategory->update(['name' => $request->input('name')]);
 
+        UserActivityLog::log('updated', SubCategory::class, $subCategory->id, "Memperbarui sub kategori {$subCategory->name}");
+
         return redirect()->route('sub-categories.index')
             ->with('success', 'Sub category berhasil diperbarui.');
     }
@@ -68,6 +73,8 @@ class SubCategoryController extends Controller
 
         $subCategory->update(['is_active' => ! $subCategory->is_active]);
 
+        UserActivityLog::log('toggled', SubCategory::class, $subCategory->id, ($subCategory->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." sub kategori {$subCategory->name}");
+
         return redirect()->route('sub-categories.index')
             ->with('success', 'Status sub category berhasil diperbarui.');
     }
@@ -76,7 +83,10 @@ class SubCategoryController extends Controller
     {
         abort_if(request()->user()->isSubAdmin() && ! request()->user()->hasPermission('manage_sub_categories'), 403);
 
+        $name = $subCategory->name;
         $subCategory->delete();
+
+        UserActivityLog::log('deleted', SubCategory::class, null, "Menghapus sub kategori {$name}");
 
         return redirect()->route('sub-categories.index')
             ->with('success', 'Sub category berhasil dihapus.');

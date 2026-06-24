@@ -7,6 +7,7 @@ use App\Http\Requests\RegulationCategory\UpdateRegulationCategoryRequest;
 use App\Models\CategoryFile;
 use App\Models\RegulationCategory;
 use App\Models\SubCategory;
+use App\Models\UserActivityLog;
 use App\Repositories\RegulationCategoryRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -54,6 +55,8 @@ class RegulationCategoryController extends Controller
             }
         }
 
+        UserActivityLog::log('created', RegulationCategory::class, $category->id, "Menambahkan kategori {$category->name}");
+
         return redirect()->route('regulation-categories.show', $category)
             ->with('success', 'Category berhasil ditambahkan.');
     }
@@ -79,6 +82,8 @@ class RegulationCategoryController extends Controller
     {
         $this->categoryRepository->update($regulationCategory, $request->validated());
 
+        UserActivityLog::log('updated', RegulationCategory::class, $regulationCategory->id, "Memperbarui kategori {$regulationCategory->name}");
+
         return redirect()->route('regulation-categories.show', $regulationCategory)
             ->with('success', 'Category updated successfully.');
     }
@@ -91,7 +96,10 @@ class RegulationCategoryController extends Controller
             Storage::disk('public')->delete($file->file_path);
         }
 
+        $name = $regulationCategory->name;
         $this->categoryRepository->delete($regulationCategory);
+
+        UserActivityLog::log('deleted', RegulationCategory::class, $regulationCategory->id, "Menghapus kategori {$name}");
 
         return redirect()->route('regulation-categories.index')
             ->with('success', 'Category deleted successfully.');
@@ -116,6 +124,8 @@ class RegulationCategoryController extends Controller
             ]);
         }
 
+        UserActivityLog::log('uploaded', RegulationCategory::class, $regulationCategory->id, 'Mengunggah '.count($request->file('files'))." file ke kategori {$regulationCategory->name}");
+
         return redirect()->route('regulation-categories.show', $regulationCategory)
             ->with('success', count($request->file('files')).' file(s) uploaded successfully.');
     }
@@ -128,6 +138,8 @@ class RegulationCategoryController extends Controller
 
         Storage::disk('public')->delete($file->file_path);
         $file->delete();
+
+        UserActivityLog::log('deleted', CategoryFile::class, $file->id, "Menghapus file {$file->filename} dari kategori {$category->name}");
 
         return redirect()->route('regulation-categories.show', $category)
             ->with('success', 'File deleted successfully.');
@@ -156,6 +168,8 @@ class RegulationCategoryController extends Controller
             'name' => $request->input('name'),
         ]);
 
+        UserActivityLog::log('created', SubCategory::class, null, "Menambahkan sub kategori {$request->input('name')} ke kategori {$regulationCategory->name}");
+
         return redirect()->route('regulation-categories.show', $regulationCategory)
             ->with('success', 'Sub category berhasil ditambahkan.');
     }
@@ -170,6 +184,8 @@ class RegulationCategoryController extends Controller
 
         $subCategory->update(['name' => $request->input('name')]);
 
+        UserActivityLog::log('updated', SubCategory::class, $subCategory->id, "Memperbarui sub kategori {$subCategory->name}");
+
         return redirect()->route('regulation-categories.show', $subCategory->category)
             ->with('success', 'Sub category berhasil diperbarui.');
     }
@@ -180,6 +196,8 @@ class RegulationCategoryController extends Controller
 
         $subCategory->update(['is_active' => ! $subCategory->is_active]);
 
+        UserActivityLog::log('toggled', SubCategory::class, $subCategory->id, ($subCategory->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." sub kategori {$subCategory->name}");
+
         return redirect()->route('regulation-categories.show', $subCategory->category)
             ->with('success', 'Status sub category berhasil diperbarui.');
     }
@@ -189,7 +207,10 @@ class RegulationCategoryController extends Controller
         abort_unless(request()->user()->isAdmin(), 403);
 
         $category = $subCategory->category;
+        $name = $subCategory->name;
         $subCategory->delete();
+
+        UserActivityLog::log('deleted', SubCategory::class, null, "Menghapus sub kategori {$name} dari kategori {$category->name}");
 
         return redirect()->route('regulation-categories.show', $category)
             ->with('success', 'Sub category berhasil dihapus.');

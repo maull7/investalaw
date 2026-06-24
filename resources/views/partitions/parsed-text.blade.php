@@ -132,7 +132,7 @@
                                                 <div class="px-4 pb-3">
                                                     @if($pageData['char_count'] > 0)
                                                         <div class="rounded-lg bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0] max-h-60 overflow-y-auto">
-                                                            <pre class="text-[10px] text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $pageData['text'] }}</pre>
+                                                            <div class="text-xs text-[#071833] leading-relaxed">@formatText($pageData['text'])</div>
                                                         </div>
                                                     @else
                                                         <p class="text-xs text-[#667085] italic">Kosong</p>
@@ -205,7 +205,7 @@
                                                     <div class="px-4 pb-3">
                                                         @if($pageData['char_count'] > 0)
                                                             <div class="rounded-lg bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0] max-h-60 overflow-y-auto">
-                                                                <pre class="text-[10px] text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $pageData['text'] }}</pre>
+                                                                <div class="text-xs text-[#071833] leading-relaxed">@formatText($pageData['text'])</div>
                                                             </div>
                                                         @else
                                                             <p class="text-xs text-[#667085] italic">Halaman ini tidak mengandung teks yang bisa diekstrak (mungkin gambar atau scan).</p>
@@ -325,7 +325,7 @@
                                 <div class="px-5 pb-5">
                                     @if($pageData['char_count'] > 0)
                                         <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
-                                            <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $pageData['text'] }}</pre>
+                                            <div class="text-xs text-[#071833] leading-relaxed">@formatText($pageData['text'])</div>
                                         </div>
                                     @else
                                         <p class="text-sm text-[#667085] italic">Halaman ini tidak mengandung teks yang bisa diekstrak (mungkin gambar atau scan).</p>

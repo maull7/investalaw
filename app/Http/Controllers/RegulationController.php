@@ -7,6 +7,7 @@ use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use App\Repositories\RegulationRepository;
+use App\Services\RegulationAnalysisService;
 use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +21,7 @@ class RegulationController extends Controller
     public function __construct(
         private readonly RegulationRepository $regulationRepository,
         private readonly RegulationParserService $regulationParserService,
+        private readonly RegulationAnalysisService $regulationAnalysisService,
     ) {}
 
     public function index(Request $request): View
@@ -109,6 +111,23 @@ class RegulationController extends Controller
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Regulasi berhasil diperbarui.');
+    }
+
+    public function analyze(Regulation $regulation): View
+    {
+        $regulation = $this->regulationRepository->findByIdWithRelations($regulation->id);
+
+        $analysis = $this->regulationAnalysisService->analyze($regulation);
+
+        return view('regulations.analyze', compact('regulation', 'analysis'));
+    }
+
+    public function reanalyze(Regulation $regulation): RedirectResponse
+    {
+        $this->regulationAnalysisService->regenerate($regulation);
+
+        return redirect()->route('regulations.analyze', $regulation)
+            ->with('success', 'Analisis berhasil diperbarui.');
     }
 
     public function destroy(Regulation $regulation): RedirectResponse

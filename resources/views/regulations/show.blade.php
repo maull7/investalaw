@@ -221,7 +221,7 @@
                 </x-slot>
 
                 <div x-show="parseTab === 'result'">
-                    <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-sans max-h-96 overflow-y-auto bg-[#f6f8fb] rounded-xl p-4">{{ $regulation->parsed_text }}</pre>
+                    <div class="text-xs text-[#071833] leading-relaxed bg-[#f6f8fb] rounded-xl p-4 max-h-96 overflow-y-auto">@formatText($regulation->parsed_text)</div>
                 </div>
 
                 <div x-show="parseTab === 'analysis'">
@@ -313,6 +313,10 @@
                             Lihat Hasil Parse
                         </a>
                     @endif
+                    <a href="{{ route('regulations.analyze', $regulation) }}" class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0 5.25 5.25M13.5 3.75h4.5m-4.5 0v4.5m0-4.5 5.25 5.25M3.75 13.5h4.5m-4.5 0v4.5m0-4.5 5.25-5.25M13.5 20.25h4.5m-4.5 0v-4.5m0 4.5 5.25-5.25"/></svg>
+                        Checking Hasil Parse
+                    </a>
                     <x-button href="{{ route('regulations.edit', $regulation) }}" variant="outline" class="w-full justify-start">
                         <svg class="w-4 h-4 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487 18.55 2.8a2.121 2.121 0 1 1 3 3L19.863 7.487m-3-3L8.25 13.1l-1.5 4.5 4.5-1.5 8.613-8.613m-3-3 3 3"/></svg>
                         Edit Regulasi

@@ -85,7 +85,8 @@
                             <div>
                                 <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-2">File Regulasi Utama — {{ number_format($reg['main_chars']) }} karakter</p>
                                 <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
-                                    <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $reg['main_text'] }}</pre>
+                                    <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
+                                    <div class="text-xs text-[#071833] leading-relaxed">@formatText($reg['main_text'])</div>
                                 </div>
                             </div>
                         @endif
@@ -106,7 +107,7 @@
                                 </div>
                                 @if($doc['has_text'])
                                     <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
-                                        <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $doc['text'] }}</pre>
+                                        <div class="text-xs text-[#071833] leading-relaxed">@formatText($doc['text'])</div>
                                     </div>
                                 @elseif(! $doc['has_file'])
                                     <p class="text-xs text-[#667085] italic">Dokumen tidak memiliki file.</p>

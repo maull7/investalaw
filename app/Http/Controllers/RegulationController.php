@@ -7,6 +7,7 @@ use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use App\Repositories\RegulationRepository;
+use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class RegulationController extends Controller
 {
     public function __construct(
-        private readonly RegulationRepository $regulationRepository
+        private readonly RegulationRepository $regulationRepository,
+        private readonly RegulationParserService $regulationParserService,
     ) {}
 
     public function index(Request $request): View
@@ -196,5 +198,35 @@ class RegulationController extends Controller
             'Content-Type' => $contentType,
             'Content-Disposition' => 'inline',
         ]);
+    }
+
+    public function parseRegulation(Regulation $regulation): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        $result = $this->regulationParserService->parseRegulation($regulation);
+
+        if (! $result['success']) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('error', $result['message']);
+        }
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('success', $result['message']);
+    }
+
+    public function parseDocument(Regulation $regulation, RegulationDocument $document): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        $result = $this->regulationParserService->parseDocument($document);
+
+        if (! $result['success']) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('error', $result['message']);
+        }
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('success', $result['message']);
     }
 }

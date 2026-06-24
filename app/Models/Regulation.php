@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path'])]
+#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats'])]
 class Regulation extends Model
 {
     use HasFactory, SoftDeletes;
@@ -50,11 +50,36 @@ class Regulation extends Model
         return $this->hasMany(RegulationDocument::class);
     }
 
+    public function isParsed(): bool
+    {
+        return $this->parsed_at !== null;
+    }
+
+    public function parseStatusLabel(): string
+    {
+        return match ($this->parse_status) {
+            'complete' => 'Complete',
+            'incomplete' => 'InComplete',
+            default => 'Not Parsed',
+        };
+    }
+
+    public function parseStatusBadgeColor(): string
+    {
+        return match ($this->parse_status) {
+            'complete' => 'emerald',
+            'incomplete' => 'amber',
+            default => 'gray',
+        };
+    }
+
     protected function casts(): array
     {
         return [
             'year' => 'integer',
             'effective_date' => 'date',
+            'parsed_at' => 'datetime',
+            'parse_stats' => 'array',
         ];
     }
 }

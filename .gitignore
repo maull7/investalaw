@@ -21,7 +21,7 @@
 /storage/*.key
 /storage/pail
 /vendor
-/.agent
+/.agents
 /.claude
 /.coder
 _ide_helper.php

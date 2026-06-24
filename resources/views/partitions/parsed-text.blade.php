@@ -25,12 +25,18 @@
                         Tercache {{ $document->parsed_at->diffForHumans() }}
                     </span>
                 @else
-                    <form action="{{ route('partitions.parse-pdf', $document) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-[#c99a3e] hover:bg-[#b8892f] transition">
-                            Parse PDF Sekarang
-                        </button>
-                    </form>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/20">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+                            Perlu Generate
+                        </span>
+                        <form action="{{ route('partitions.parse-pdf', $document) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white bg-[#c99a3e] hover:bg-[#b8892f] transition">
+                                Generate Parser OCR
+                            </button>
+                        </form>
+                    </div>
                 @endif
                 <a href="{{ route('partitions.index', $document) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 bg-white/5 hover:bg-white/10 backdrop-blur transition">
                     Kembali ke Partisi
@@ -39,31 +45,21 @@
         </div>
     </section>
 
-    <div class="mt-6" x-data="{ activeTab: 'document' }">
-        {{-- Tab Navigation --}}
-        <div class="flex gap-1 bg-[#f6f8fb] rounded-2xl p-1.5 ring-1 ring-[#e7eaf0]">
-            <button @click="activeTab = 'document'"
-                    :class="activeTab === 'document' ? 'bg-white shadow-sm ring-1 ring-[#e7eaf0] text-[#071833]' : 'text-[#667085] hover:text-[#071833]'"
-                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition">
-                <span class="flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
-                    Dokumen Review
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#c99a3e]/10 text-[#c99a3e]">{{ count($docPages) }} hlm</span>
-                </span>
-            </button>
-            <button @click="activeTab = 'regulations'"
-                    :class="activeTab === 'regulations' ? 'bg-white shadow-sm ring-1 ring-[#e7eaf0] text-[#071833]' : 'text-[#667085] hover:text-[#071833]'"
-                    class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition">
-                <span class="flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
-                    Regulasi Acuan
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">{{ count($regulations) }}</span>
-                </span>
-            </button>
+    <div class="mt-6">
+            <div class="flex gap-1 bg-[#f6f8fb] rounded-2xl p-1.5 ring-1 ring-[#e7eaf0]">
+            <span class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer text-center flex items-center justify-center gap-2 bg-white shadow-sm ring-1 ring-[#e7eaf0] text-[#071833]">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+                Dokumen Review
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#c99a3e]/10 text-[#c99a3e]">{{ count($docPages) }} hlm</span>
+            </span>
+            <a href="{{ route('partitions.regulations', $document) }}" 
+               class="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition cursor-pointer text-center flex items-center justify-center gap-2 text-[#667085] hover:text-[#071833] bg-transparent hover:bg-white/50">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
+                Regulasi Acuan
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">{{ count($regulations) }}</span>
+            </a>
         </div>
-
-        {{-- Tab: Dokumen Review --}}
-        <div x-show="activeTab === 'document'" class="mt-4 space-y-4">
+        <div id="tab-content-document" class="tab-content mt-4 space-y-4">
             {{-- Summary --}}
             <x-card :padding="false">
                 <x-slot name="header">
@@ -153,36 +149,39 @@
                     {{-- BAB sections --}}
                     @foreach($babs as $bab)
                         @php $group = $babGroups[$bab->id] ?? null; @endphp
-                        @if($group)
-                            <div class="rounded-2xl border border-[#e7eaf0] overflow-hidden bg-white" id="bab-{{ $bab->id }}">
-                                <button @click="expandedBab = expandedBab === {{ $bab->id }} ? null : {{ $bab->id }}" class="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#f6f8fb] transition">
-                                    <div class="flex items-center gap-3 min-w-0 flex-1">
-                                        <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c99a3e]/15 to-[#e6c06a]/15 text-[#c99a3e] text-xs font-bold flex items-center justify-center shrink-0">{{ $loop->iteration }}</span>
-                                        <div class="min-w-0">
-                                            <p class="text-sm font-bold text-[#071833] truncate">{{ $bab->name }}</p>
-                                            <p class="text-[10px] text-[#667085]">Halaman {{ $bab->start_page }}–{{ $bab->end_page }} · {{ count($group['pages']) }} halaman</p>
-                                        </div>
+                        <div class="rounded-2xl border border-[#e7eaf0] overflow-hidden bg-white" id="bab-{{ $bab->id }}">
+                            <button @click="expandedBab = expandedBab === {{ $bab->id }} ? null : {{ $bab->id }}" class="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-[#f6f8fb] transition">
+                                <div class="flex items-center gap-3 min-w-0 flex-1">
+                                    <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-[#c99a3e]/15 to-[#e6c06a]/15 text-[#c99a3e] text-xs font-bold flex items-center justify-center shrink-0">{{ $loop->iteration }}</span>
+                                    <div class="min-w-0">
+                                        <p class="text-sm font-bold text-[#071833] truncate">{{ $bab->name }}</p>
+                                        <p class="text-[10px] text-[#667085]">Halaman {{ $bab->start_page }}–{{ $bab->end_page }}
+                                            @if($group) · {{ count($group['pages']) }} halaman @endif
+                                        </p>
                                     </div>
-                                    <div class="flex items-center gap-2 shrink-0 ml-3">
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0 ml-3">
+                                    @if($group)
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
                                             {{ number_format(array_sum(array_column($group['pages'], 'char_count'))) }} char
                                         </span>
-                                        @if($bab->children->isNotEmpty())
-                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700">{{ $bab->children->count() }} sub</span>
-                                        @endif
-                                        <svg class="w-4 h-4 text-[#667085] transition-transform shrink-0" :class="expandedBab === {{ $bab->id }} ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
-                                    </div>
-                                </button>
-                                <div x-show="expandedBab === {{ $bab->id }}" x-collapse>
-                                    <div class="px-5 pb-4 space-y-1.5">
-                                        <div class="flex items-center justify-end gap-2 mb-2">
-                                            <form action="{{ route('bab-structures.detect', [$document, $bab]) }}" method="POST" onsubmit="return confirm('Deteksi struktur AI untuk {{ $bab->name }}?')">
-                                                @csrf
-                                                <button type="submit" class="px-3 py-1.5 rounded-lg text-[10px] font-bold bg-gradient-to-r from-[#c99a3e]/15 to-[#e6c06a]/15 text-[#c99a3e] hover:from-[#c99a3e]/25 hover:to-[#e6c06a]/25 ring-1 ring-[#c99a3e]/20 transition">
-                                                    AI Detect Struktur
-                                                </button>
-                                            </form>
+                                    @endif
+                                    @if($bab->children->isNotEmpty())
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700">{{ $bab->children->count() }} sub</span>
+                                    @else
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">AI Detect</span>
+                                    @endif
+                                    <svg class="w-4 h-4 text-[#667085] transition-transform shrink-0" :class="expandedBab === {{ $bab->id }} ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                                </div>
+                            </button>
+                            <div x-show="expandedBab === {{ $bab->id }}" x-collapse>
+                                <div class="px-5 pb-4 space-y-1.5">
+                                    @if(! $group)
+                                        <div class="rounded-xl bg-amber-50 p-4 ring-1 ring-amber-200 text-center">
+                                            <p class="text-sm font-semibold text-amber-800">PDF belum di-generate</p>
+                                            <p class="text-xs text-amber-700 mt-1">Generate parser OCR terlebih dahulu untuk melihat konten BAB ini.</p>
                                         </div>
+                                    @else
                                         @foreach($group['pages'] as $pageData)
                                             <div class="rounded-xl border border-[#e7eaf0] overflow-hidden">
                                                 <button @click="expandedPage = expandedPage === '{{ $bab->id }}-{{ $pageData['page'] }}' ? null : '{{ $bab->id }}-{{ $pageData['page'] }}'" class="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-[#f6f8fb] transition">
@@ -331,92 +330,6 @@
                                     @else
                                         <p class="text-sm text-[#667085] italic">Halaman ini tidak mengandung teks yang bisa diekstrak (mungkin gambar atau scan).</p>
                                     @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-
-        {{-- Tab: Regulasi Acuan --}}
-        <div x-show="activeTab === 'regulations'" class="mt-4 space-y-4">
-            @if(empty($regulations))
-                <x-card>
-                    <div class="text-center py-14">
-                        <div class="mx-auto w-16 h-16 rounded-2xl bg-[#f6f8fb] flex items-center justify-center text-[#c99a3e]">
-                            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
-                        </div>
-                        <p class="mt-4 text-base font-bold text-[#071833]">Belum ada regulasi acuan</p>
-                        <p class="mt-1 text-sm text-[#667085]">Tambahkan regulasi pada dokumen ini untuk melihat hasil parser regulasi.</p>
-                    </div>
-                </x-card>
-            @else
-                <div x-data="{ expandedReg: null, expandedDoc: null }" class="space-y-3">
-                    @foreach($regulations as $index => $reg)
-                        <div class="rounded-2xl border border-[#e7eaf0] overflow-hidden bg-white">
-                            {{-- Regulation Header --}}
-                            <button @click="expandedReg = expandedReg === {{ $index }} ? null : {{ $index }}" class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#f6f8fb] transition">
-                                <div class="flex items-center gap-3 min-w-0 flex-1">
-                                    <span class="shrink-0 w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center ring-1 ring-emerald-200">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
-                                    </span>
-                                    <div class="min-w-0">
-                                        <p class="text-sm font-bold text-[#071833] truncate">{{ $reg['regulation_number'] }}</p>
-                                        <p class="text-[11px] text-[#667085] truncate">{{ $reg['title'] }} ({{ $reg['year'] }})</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-2 shrink-0 ml-3">
-                                    @if($reg['main_chars'] > 0)
-                                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">{{ number_format($reg['main_chars']) }} char</span>
-                                    @else
-                                        <span class="px-2 py-0.5 rounded-full bg-rose-100 text-[10px] font-bold text-rose-700">No file</span>
-                                    @endif
-                                    @if(count($reg['documents']) > 0)
-                                        <span class="px-2 py-0.5 rounded-full bg-sky-100 text-[10px] font-bold text-sky-700">{{ count($reg['documents']) }} dok</span>
-                                    @endif
-                                    <svg class="w-4 h-4 text-[#667085] transition-transform" :class="expandedReg === {{ $index }} ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
-                                </div>
-                            </button>
-
-                            <div x-show="expandedReg === {{ $index }}" x-collapse>
-                                <div class="px-5 pb-5 space-y-4">
-                                    {{-- Main regulation file --}}
-                                    @if($reg['main_chars'] > 0)
-                                        <div>
-                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-2">File Regulasi Utama — {{ number_format($reg['main_chars']) }} karakter</p>
-                                            <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
-                                                <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $reg['main_text'] }}</pre>
-                                            </div>
-                                        </div>
-                                    @elseif($reg['main_chars'] === 0 && empty($reg['documents']))
-                                        <div class="rounded-xl bg-rose-50 p-4 ring-1 ring-rose-200">
-                                            <p class="text-sm text-rose-700">Tidak ada file regulasi yang terupload. Parser tidak bisa mengekstrak teks.</p>
-                                        </div>
-                                    @endif
-
-                                    {{-- Attached documents --}}
-                                    @foreach($reg['documents'] as $docIndex => $doc)
-                                        <div class="border-t border-[#e7eaf0] pt-4">
-                                            <button @click="expandedDoc = expandedDoc === '{{ $index }}_{{ $docIndex }}' ? null : '{{ $index }}_{{ $docIndex }}'" class="w-full flex items-center justify-between mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <svg class="w-4 h-4 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
-                                                    <p class="text-xs font-bold text-[#071833]">{{ $doc['name'] }}</p>
-                                                    <span class="px-2 py-0.5 rounded-full bg-[#f6f8fb] text-[10px] font-bold text-[#667085]">{{ number_format($doc['chars']) }} char</span>
-                                                </div>
-                                                <svg class="w-4 h-4 text-[#667085] transition-transform" :class="expandedDoc === '{{ $index }}_{{ $docIndex }}' ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
-                                            </button>
-                                            <div x-show="expandedDoc === '{{ $index }}_{{ $docIndex }}'" x-collapse>
-                                                @if($doc['chars'] > 0)
-                                                    <div class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0] max-h-96 overflow-y-auto">
-                                                        <pre class="text-xs text-[#071833] leading-relaxed whitespace-pre-wrap font-mono break-words">{{ $doc['text'] }}</pre>
-                                                    </div>
-                                                @else
-                                                    <p class="text-xs text-[#667085] italic">File tidak bisa diekstrak atau kosong.</p>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
                                 </div>
                             </div>
                         </div>

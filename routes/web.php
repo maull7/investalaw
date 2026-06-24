@@ -51,6 +51,8 @@ Route::middleware('auth')->group(function () {
     // Regulations
     Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
     Route::resource('regulations', RegulationController::class);
+    Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
+    Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
     Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
     Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
@@ -87,6 +89,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/extract-toc', [DocumentPartitionController::class, 'extractToc'])->name('partitions.extract-toc');
     Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/debug-toc', [DocumentPartitionController::class, 'debugToc'])->name('partitions.debug-toc');
     Route::get('/review-documents/{reviewDocument}/partitions/parsed-text', [DocumentPartitionController::class, 'showParsedText'])->name('partitions.parsed-text');
+    Route::get('/review-documents/{reviewDocument}/partitions/regulations', [DocumentPartitionController::class, 'showRegulations'])->name('partitions.regulations');
     Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure');
@@ -97,4 +100,53 @@ Route::middleware('auth')->group(function () {
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);
+
+    // TEMP DEBUG: Show regulation text directly
+    Route::get('/debug-reg-text/{id}', function ($id) {
+        $reg = \App\Models\Regulation::find($id);
+        if (!$reg || !$reg->parsed_text) return 'No text';
+        return '<pre>'.e(mb_substr($reg->parsed_text, 0, 1000)).'</pre>';
+    })->name('debug.reg-text');
+
+    // TEMP DEBUG: Test parsed-text view directly
+    Route::get('/debug-parsed-view', function () {
+        try {
+            $user = \App\Models\User::first();
+            \Auth::login($user);
+            $rd = \App\Models\ReviewDocument::find(2);
+
+            $debug = [];
+            $debug[] = "User: " . auth()->user()->name;
+            $debug[] = "Doc: {$rd->id} - {$rd->title}";
+            $debug[] = "Regs count: " . $rd->regulations()->count();
+            $debug[] = "isParsed: " . ($rd->isParsed() ? 'yes' : 'no');
+
+            $reg = $rd->regulations()->first();
+            if ($reg) {
+                $debug[] = "Reg {$reg->id}: parsed=" . ($reg->isParsed() ? 'yes' : 'no') . " text_len=" . mb_strlen($reg->parsed_text ?? '');
+            }
+
+            $result = app(\App\Http\Controllers\DocumentPartitionController::class)->showParsedText($rd);
+            $debug[] = "Controller returned: " . get_class($result);
+            $debug[] = "View name: " . $result->getName();
+
+            $data = $result->getData();
+            $debug[] = "Regulations in view data: " . count($data['regulations'] ?? []);
+            if (!empty($data['regulations'])) {
+                $debug[] = "First reg has_text: " . ($data['regulations'][0]['has_text'] ? 'yes' : 'no');
+                $debug[] = "First reg main_parsed: " . ($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
+                $debug[] = "First reg main_chars: " . $data['regulations'][0]['main_chars'];
+            }
+
+            $html = $result->render();
+            $debug[] = "HTML length: " . strlen($html);
+            $debug[] = "Has Regulasi Acuan: " . (strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
+            $debug[] = "Has File Regulasi Utama: " . (strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
+            $debug[] = "Has OTORITAS: " . (strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
+
+            return response('<pre>'.implode("\n", $debug).'</pre>');
+        } catch (\Exception $e) {
+            return response("ERROR: " . $e->getMessage() . "\nFile: " . $e->getFile() . ":" . $e->getLine());
+        }
+    })->name('debug.parsed-view');
 });

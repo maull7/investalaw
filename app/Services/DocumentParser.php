@@ -182,7 +182,7 @@ class DocumentParser
                 $batch[] = [
                     'review_document_id' => $document->id,
                     'page_number' => $pageNumber,
-                    'content' => $text,
+                    'content' => preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text),
                     'char_count' => mb_strlen($text),
                 ];
             }
@@ -305,6 +305,7 @@ class DocumentParser
     {
         $text = preg_replace('/\s+/', ' ', $text);
         $text = trim($text);
+        $text = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
 
         if (mb_strlen($text) > $maxChars) {
             $text = mb_substr($text, 0, $maxChars).'... [konten dipotong]';

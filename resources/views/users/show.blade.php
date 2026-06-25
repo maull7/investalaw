@@ -91,10 +91,8 @@
                                 </td>
                                 <td class="text-sm text-[#071833] max-w-xs truncate">{{ $log->description }}</td>
                                 <td class="text-xs font-mono text-[#667085]">{{ $log->ip_address ?? '-' }}</td>
-                                <td class="text-right text-xs text-[#667085]">
-                                    <span title="{{ $log->created_at->format('d M Y H:i:s') }}">
-                                        {{ $log->created_at->diffForHumans() }}
-                                    </span>
+                                <td class="text-right text-xs text-[#667085] whitespace-nowrap">
+                                    <span>{{ $log->created_at->format('d M Y H:i') }}</span>
                                 </td>
                             </tr>
                         @endforeach

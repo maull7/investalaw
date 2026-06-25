@@ -27,7 +27,7 @@ class RegulationController extends Controller
 
     public function index(Request $request): View
     {
-        $filters = $request->only(['search', 'year', 'type_id', 'category_id']);
+        $filters = $request->only(['search', 'year', 'type_id', 'category_id', 'sort', 'direction']);
         $regulations = $this->regulationRepository->paginateWithFilters($filters);
         $filterOptions = $this->regulationRepository->getFilterOptions();
 
@@ -229,6 +229,14 @@ class RegulationController extends Controller
 
         return Storage::disk('public')->response($document->file_path, null, [
             'Content-Type' => $contentType,
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
+    public function viewFile(Regulation $regulation): StreamedResponse
+    {
+        return Storage::disk('public')->response($regulation->file_path, null, [
+            'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline',
         ]);
     }

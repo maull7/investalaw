@@ -59,6 +59,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
     Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
+    Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewFile'])->name('regulations.file');
     Route::get('/regulations/{regulation}/analyze', [RegulationController::class, 'analyze'])->name('regulations.analyze');
     Route::post('/regulations/{regulation}/reanalyze', [RegulationController::class, 'reanalyze'])->name('regulations.reanalyze');
 
@@ -102,6 +103,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect-ajax', [DocumentPartitionController::class, 'detectStructureAjax'])->name('bab-structures.detect-ajax');
     Route::post('/review-documents/{reviewDocument}/bab-structures/batch-detect', [DocumentPartitionController::class, 'batchDetectStructure'])->name('bab-structures.batch-detect');
     Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf');
+    Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/content', [DocumentPartitionController::class, 'showPartitionContent'])->name('partitions.content');
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);

@@ -13,10 +13,21 @@ class RegulationRepository
 {
     public function paginateWithFilters(array $filters): LengthAwarePaginator
     {
+        $sortField = $filters['sort'] ?? 'year';
+        $sortDirection = $filters['direction'] ?? 'desc';
+
+        $allowedSorts = ['regulation_number', 'title', 'year', 'regulation_type_id', 'category_id'];
+
+        if (! in_array($sortField, $allowedSorts)) {
+            $sortField = 'year';
+        }
+
+        if (! in_array($sortDirection, ['asc', 'desc'])) {
+            $sortDirection = 'desc';
+        }
+
         $query = Regulation::with(['type', 'category', 'subCategories', 'documents'])
-            ->withCount('documents')
-            ->orderByDesc('year')
-            ->orderByDesc('id');
+            ->withCount('documents');
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
@@ -37,6 +48,24 @@ class RegulationRepository
         if (! empty($filters['category_id'])) {
             $query->where('category_id', $filters['category_id']);
         }
+
+        if ($sortField === 'regulation_type_id') {
+            $query->orderBy(
+                RegulationType::select('level')
+                    ->whereColumn('regulation_types.id', 'regulations.regulation_type_id'),
+                $sortDirection
+            );
+        } elseif ($sortField === 'category_id') {
+            $query->orderBy(
+                RegulationCategory::select('name')
+                    ->whereColumn('regulation_categories.id', 'regulations.category_id'),
+                $sortDirection
+            );
+        } else {
+            $query->orderBy($sortField, $sortDirection);
+        }
+
+        $query->orderByDesc('id');
 
         return $query->paginate(15)->withQueryString();
     }

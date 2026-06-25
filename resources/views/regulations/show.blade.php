@@ -175,7 +175,7 @@
                                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-[#071833] truncate">{{ $doc->name }}</p>
+                                    <a href="{{ route('regulations.documents.view', $doc) }}" target="_blank" class="text-sm font-semibold text-[#071833] hover:text-[#c99a3e] transition truncate block" title="{{ $doc->name }}">{{ $doc->name }}</a>
                                     <p class="text-xs text-[#667085] mt-0.5">{{ $doc->document_type }} &middot; {{ strtoupper($ext) }}
                                         @if($doc->isParsed())
                                             <span class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">{{ $doc->parseStatusLabel() }}</span>
@@ -279,16 +279,18 @@
                 <x-slot name="header">
                     <h3 class="text-base font-bold text-[#071833]">File Regulasi</h3>
                 </x-slot>
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-[#f6f8fb]">
-                    <div class="shrink-0 w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
+                <a href="{{ route('regulations.file', $regulation) }}" target="_blank" class="block p-3 rounded-xl bg-[#f6f8fb] hover:bg-[#f0f3f8] transition">
+                    <div class="flex items-center gap-3">
+                        <div class="shrink-0 w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-[#071833] truncate">File PDF</p>
+                            <p class="text-xs text-[#667085]">Regulasi utama</p>
+                        </div>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-[#071833] truncate">File PDF</p>
-                        <p class="text-xs text-[#667085]">Regulasi utama</p>
-                    </div>
-                </div>
-                <a href="{{ route('regulations.show', $regulation) }}" class="mt-3 flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                </a>
+                <a href="{{ route('regulations.file', $regulation) }}" download class="mt-3 flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
                     Download PDF
                 </a>

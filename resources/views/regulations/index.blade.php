@@ -60,11 +60,21 @@
                 <table class="table-premium">
                     <thead>
                         <tr>
-                            <th>No. Regulasi</th>
-                            <th>Judul</th>
-                            <th>Jenis</th>
-                            <th>Kategori</th>
-                            <th>Tahun</th>
+                            <th>
+                                <x-sortable-link :filters="$filters" field="regulation_number" label="No. Regulasi" />
+                            </th>
+                            <th>
+                                <x-sortable-link :filters="$filters" field="title" label="Judul" />
+                            </th>
+                            <th>
+                                <x-sortable-link :filters="$filters" field="regulation_type_id" label="Jenis" />
+                            </th>
+                            <th>
+                                <x-sortable-link :filters="$filters" field="category_id" label="Kategori" />
+                            </th>
+                            <th>
+                                <x-sortable-link :filters="$filters" field="year" label="Tahun" />
+                            </th>
                             <th class="text-center">Dok Tambahan</th>
                             <th class="text-center">Status Parser</th>
                             <th class="text-right">Aksi</th>
@@ -77,7 +87,9 @@
                                     <a href="{{ route('regulations.show', $reg) }}" class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
                                 </td>
                                 <td>
-                                    <span class="text-sm text-[#071833]">{{ Str::limit($reg->title, 60) }}</span>
+                                    <a href="{{ route('regulations.file', $reg) }}" target="_blank" title="{{ $reg->title }}" class="text-sm text-[#071833] hover:text-[#c99a3e] transition block truncate max-w-xs">
+                                        {{ Str::limit($reg->title, 60) }}
+                                    </a>
                                 </td>
                                 <td>
                                     @if($reg->type)

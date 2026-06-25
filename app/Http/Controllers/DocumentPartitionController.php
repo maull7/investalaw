@@ -254,6 +254,33 @@ class DocumentPartitionController extends Controller
         return $entries;
     }
 
+    public function showPartitionContent(ReviewDocument $reviewDocument, DocumentPartition $documentPartition): View
+    {
+        abort_if(auth()->user()->isSubAdmin(), 403);
+
+        $pages = $reviewDocument->pages()
+            ->whereBetween('page_number', [$documentPartition->start_page, $documentPartition->end_page])
+            ->orderBy('page_number')
+            ->get()
+            ->map(fn ($p) => [
+                'page' => $p->page_number,
+                'text' => $p->content,
+                'char_count' => $p->char_count,
+            ])
+            ->toArray();
+
+        $totalChars = array_sum(array_column($pages, 'char_count'));
+        $totalPages = count($pages);
+
+        return view('partitions.partition-content', [
+            'document' => $reviewDocument,
+            'partition' => $documentPartition,
+            'pages' => $pages,
+            'totalChars' => $totalChars,
+            'totalPages' => $totalPages,
+        ]);
+    }
+
     public function parsePdf(Request $request, ReviewDocument $reviewDocument): RedirectResponse
     {
         abort_if($request->user()->isSubAdmin(), 403);

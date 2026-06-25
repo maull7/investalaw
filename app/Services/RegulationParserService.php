@@ -86,11 +86,16 @@ class RegulationParserService
         $regulation->update([
             'parsed_at' => now(),
             'parse_status' => $parseStatus,
-            'parsed_text' => $fullText,
+            'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
         ]);
 
         return $this->result('success', 'Regulasi berhasil diparse.', $stats, $fullText);
+    }
+
+    private function sanitizeUtf8(string $text): string
+    {
+        return preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
     }
 
     public function parseDocument(RegulationDocument $document): array
@@ -139,7 +144,7 @@ class RegulationParserService
         $document->update([
             'parsed_at' => now(),
             'parse_status' => $parseStatus,
-            'parsed_text' => $fullText,
+            'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
         ]);
 
@@ -191,7 +196,7 @@ class RegulationParserService
         $document->update([
             'parsed_at' => now(),
             'parse_status' => $parseStatus,
-            'parsed_text' => $fullText,
+            'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
         ]);
 

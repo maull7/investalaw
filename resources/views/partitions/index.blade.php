@@ -196,7 +196,7 @@
                                                 <button @click="openPart = openPart === {{ $pIdx }} ? null : {{ $pIdx }}" class="flex items-center gap-2 min-w-0 flex-1 text-left">
                                                     <svg class="w-3.5 h-3.5 text-[#c99a3e] shrink-0 transition-transform" :class="openPart === {{ $pIdx }} ? 'rotate-90' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
                                                     <span class="w-2 h-2 rounded-full bg-[#c99a3e] shrink-0"></span>
-                                                    <a href="{{ route('review-documents.view-file', $document) }}#page={{ $part->start_page }}" target="_blank" class="font-bold text-[#071833] text-sm truncate hover:text-[#c99a3e] transition">{{ $part->name }}</a>
+                                                    <a href="{{ route('partitions.content', [$document, $part]) }}" class="font-bold text-[#071833] text-sm truncate hover:text-[#c99a3e] transition">{{ $part->name }}</a>
                                                     <span class="text-[10px] text-[#667085] font-normal shrink-0">h.{{ $part->start_page }}–{{ $part->end_page }}</span>
                                                 </button>
                                             </div>

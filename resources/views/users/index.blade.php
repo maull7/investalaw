@@ -52,6 +52,7 @@
                             <th>Email</th>
                             <th>Role</th>
                             <th>Permissions</th>
+                            <th>Dibuat</th>
                             <th class="text-right">Aksi</th>
                         </tr>
                     </thead>
@@ -89,6 +90,7 @@
                                         <span class="text-xs text-[#667085]">-</span>
                                     @endif
                                 </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">{{ $user->created_at->format('d M Y H:i') }}</td>
                                 <td>
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('users.show', $user) }}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[#667085] hover:bg-[#f6f8fb] transition" title="Logs">

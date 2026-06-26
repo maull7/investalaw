@@ -33,8 +33,22 @@ class AiSummaryController extends Controller
 
         $request->validate(['type' => ['required', 'string', 'in:analisa,review,rekomendasi,validitas']]);
 
+        $type = $request->input('type');
+
+        if (! $reviewDocument->isParsed()) {
+            return redirect()->route('ai-summaries.index', $reviewDocument)
+                ->with('error', 'Dokumen belum di-parse. Silakan lakukan Parse PDF terlebih dahulu di menu Partisi.');
+        }
+
+        $reviewDocument->load('regulations');
+        $unparsedRegs = $reviewDocument->regulations->reject(fn ($r) => $r->isParsed());
+        if ($unparsedRegs->isNotEmpty()) {
+            return redirect()->route('ai-summaries.index', $reviewDocument)
+                ->with('error', 'Regulasi berikut belum diparse: '.$unparsedRegs->pluck('regulation_number')->implode(', ').'. Parse terlebih dahulu di menu Regulasi.');
+        }
+
         try {
-            $summary = $this->aiService->generateSummary($reviewDocument, $request->input('type'));
+            $summary = $this->aiService->generateSummary($reviewDocument, $type);
 
             return redirect()->route('ai-summaries.show', [$reviewDocument, $summary])
                 ->with('success', 'AI Summary berhasil digenerate menggunakan '.$summary->provider_used.'.');

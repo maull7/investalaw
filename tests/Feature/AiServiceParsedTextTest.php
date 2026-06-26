@@ -9,9 +9,7 @@ use App\Models\RegulationType;
 use App\Models\ReviewDocument;
 use App\Models\User;
 use App\Services\AiService;
-use App\Services\DocumentParser;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
 use Tests\TestCase;
 
 class AiServiceParsedTextTest extends TestCase
@@ -20,14 +18,11 @@ class AiServiceParsedTextTest extends TestCase
 
     private AiService $aiService;
 
-    private DocumentParser $mockParser;
-
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->mockParser = Mockery::mock(DocumentParser::class);
-        $this->aiService = new AiService($this->mockParser);
+        $this->aiService = app(AiService::class);
     }
 
     public function test_save_parsed_texts_stores_regulation_text_to_database(): void
@@ -51,20 +46,12 @@ class AiServiceParsedTextTest extends TestCase
             'category_id' => $category->id,
             'year' => 2024,
             'file_path' => 'regulations/test-reg.pdf',
+            'parsed_text' => 'Regulation text from DB',
+            'parsed_at' => now(),
         ]);
 
         $document->regulations()->attach($regulation->id);
         $document->loadMissing(['regulations.documents', 'partitions']);
-
-        $this->mockParser->shouldReceive('extractFromStoragePath')
-            ->with('documents/test.pdf')
-            ->once()
-            ->andReturn('Document text content');
-
-        $this->mockParser->shouldReceive('extractFromStoragePath')
-            ->with('regulations/test-reg.pdf')
-            ->once()
-            ->andReturn('Regulation text via OCR');
 
         // Use reflection to call private method
         $method = new \ReflectionMethod($this->aiService, 'saveParsedTexts');
@@ -74,13 +61,7 @@ class AiServiceParsedTextTest extends TestCase
             'review_document_id' => $document->id,
             'source_type' => 'regulation',
             'source_id' => $regulation->id,
-            'parsed_text' => 'Regulation text via OCR',
-        ]);
-
-        $this->assertDatabaseHas('document_parsed_texts', [
-            'review_document_id' => $document->id,
-            'source_type' => 'document',
-            'parsed_text' => 'Document text content',
+            'parsed_text' => 'Regulation text from DB',
         ]);
     }
 
@@ -105,6 +86,8 @@ class AiServiceParsedTextTest extends TestCase
             'category_id' => $category->id,
             'year' => 2024,
             'file_path' => 'regulations/test-reg.pdf',
+            'parsed_text' => 'Fresh regulation text',
+            'parsed_at' => now(),
         ]);
 
         $document->regulations()->attach($regulation->id);
@@ -120,19 +103,10 @@ class AiServiceParsedTextTest extends TestCase
 
         $document->loadMissing(['regulations.documents', 'partitions']);
 
-        // Parser should NOT be called for regulation (cached)
-        $this->mockParser->shouldReceive('extractFromStoragePath')
-            ->with('documents/test.pdf')
-            ->once()
-            ->andReturn('Document text');
-
-        $this->mockParser->shouldNotReceive('extractFromStoragePath')
-            ->with('regulations/test-reg.pdf');
-
         $method = new \ReflectionMethod($this->aiService, 'saveParsedTexts');
         $method->invoke($this->aiService, $document);
 
-        // Regulation cache should remain untouched
+        // Regulation cache should remain untouched (not overwritten by fresh data)
         $this->assertDatabaseHas('document_parsed_texts', [
             'review_document_id' => $document->id,
             'source_type' => 'regulation',
@@ -164,6 +138,8 @@ class AiServiceParsedTextTest extends TestCase
             'category_id' => $category->id,
             'year' => 2024,
             'file_path' => 'regulations/another.pdf',
+            'parsed_text' => 'Regulation text from DB',
+            'parsed_at' => now(),
         ]);
 
         $document->regulations()->attach($regulation->id);
@@ -176,12 +152,43 @@ class AiServiceParsedTextTest extends TestCase
             'char_count' => 35,
         ]);
 
-        // Parser should NOT be called
-        $this->mockParser->shouldNotReceive('extractFromStoragePath');
-
         $method = new \ReflectionMethod($this->aiService, 'getOrParseRegulationText');
         $result = $method->invoke($this->aiService, $document, $regulation);
 
         $this->assertEquals('Previously parsed regulation text', $result);
+    }
+
+    public function test_get_or_parse_regulation_text_falls_back_to_db_field(): void
+    {
+        $user = User::factory()->create();
+        $category = RegulationCategory::create(['name' => 'Test Category']);
+        $type = RegulationType::create(['name' => 'UU', 'level' => 1]);
+
+        $document = ReviewDocument::create([
+            'user_id' => $user->id,
+            'title' => 'Test Document',
+            'description' => 'Test',
+            'file_path' => 'documents/test.pdf',
+            'status' => 'draft',
+        ]);
+
+        $regulation = Regulation::create([
+            'regulation_number' => 'UU/3/2024',
+            'title' => 'Fallback Regulation',
+            'regulation_type_id' => $type->id,
+            'category_id' => $category->id,
+            'year' => 2024,
+            'file_path' => 'regulations/fallback.pdf',
+            'parsed_text' => 'Regulation text from DB field',
+            'parsed_at' => now(),
+        ]);
+
+        $document->regulations()->attach($regulation->id);
+
+        // No DocumentParsedText cache — should fall back to $regulation->parsed_text
+        $method = new \ReflectionMethod($this->aiService, 'getOrParseRegulationText');
+        $result = $method->invoke($this->aiService, $document, $regulation);
+
+        $this->assertEquals('Regulation text from DB field', $result);
     }
 }

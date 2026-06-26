@@ -17,20 +17,16 @@ use OpenAI;
 
 class AiService
 {
-    public function __construct(
-        private readonly DocumentParser $documentParser
-    ) {}
-
     public function generateSummary(ReviewDocument $document, string $type): AiSummary
     {
         $prompt = AiPrompt::active()->where('type', $type)->firstOrFail();
 
         $document->loadMissing(['partitions' => fn ($q) => $q->ordered(), 'regulations.documents']);
 
-        $context = $this->buildContext($document);
-
-        // Save parsed texts to DB
+        // Save parsed texts to DB first, so buildContext can use cache
         $this->saveParsedTexts($document);
+
+        $context = $this->buildContext($document);
 
         $messages = [
             ['role' => 'system', 'content' => $prompt->prompt_text],
@@ -60,14 +56,6 @@ class AiService
             ->orderBy('page_number')
             ->pluck('content')
             ->implode("\n");
-
-        if (! $partitionText) {
-            $partitionText = $this->documentParser->extractPagesFromStoragePath(
-                $document->file_path,
-                $partition->start_page,
-                $partition->end_page
-            );
-        }
 
         $systemPrompt = $this->buildPartitionSystemPrompt($type);
         $userPrompt = $this->buildPartitionUserPrompt($document, $partition, $partitionText);
@@ -108,6 +96,27 @@ class AiService
             ->when($partitionIds, fn ($q) => $q->whereIn('id', $partitionIds))
             ->ordered()
             ->get();
+
+        // Pre-cache all regulation texts once before the loop
+        $document->load('regulations.documents');
+        foreach ($document->regulations as $reg) {
+            $existing = DocumentParsedText::forRegulation($document->id, $reg->id)->first();
+            if (! $existing || $existing->char_count === 0) {
+                $regText = $this->getRegulationTextFromDb($reg);
+                DocumentParsedText::updateOrCreate(
+                    [
+                        'review_document_id' => $document->id,
+                        'source_type' => 'regulation',
+                        'source_id' => $reg->id,
+                    ],
+                    [
+                        'page' => null,
+                        'parsed_text' => $regText ?: '',
+                        'char_count' => mb_strlen($regText),
+                    ]
+                );
+            }
+        }
 
         $results = [];
 
@@ -220,7 +229,7 @@ PROMPT;
         $context .= "Judul: {$document->title}\n";
         $context .= "Deskripsi: {$document->description}\n\n";
 
-        // Document text from cache or fresh parse
+        // Document text from cache (DocumentParsedText) or DocumentPage
         $cachedDoc = DocumentParsedText::forDocument($document->id)->get();
 
         if ($document->partitions->isNotEmpty()) {
@@ -236,17 +245,12 @@ PROMPT;
                         ->implode("\n");
                 }
 
-                if (! $partitionText) {
-                    $partitionText = $this->documentParser->extractPagesFromStoragePath($document->file_path, $partition->start_page, $partition->end_page);
-                }
-
                 $context .= "--- Partisi: {$partition->name} (h.{$partition->start_page}-{$partition->end_page}) ---\n";
                 $context .= "{$partitionText}\n\n";
             }
         } else {
             $cached = $cachedDoc->whereNull('source_id')->first();
-            $documentText = $cached?->parsed_text
-                ?? $this->documentParser->extractFromStoragePath($document->file_path);
+            $documentText = $cached?->parsed_text ?? '';
             if ($documentText) {
                 $context .= "--- Konten Dokumen ---\n{$documentText}\n\n";
             }
@@ -277,24 +281,20 @@ PROMPT;
             return $cached->parsed_text;
         }
 
-        return $this->extractRegulationText($regulation);
+        return $this->getRegulationTextFromDb($regulation);
     }
 
-    private function extractRegulationText(Regulation $regulation): string
+    private function getRegulationTextFromDb(Regulation $regulation): string
     {
         $texts = [];
 
-        if ($regulation->file_path) {
-            $text = $this->documentParser->extractFromStoragePath($regulation->file_path);
-            if ($text) {
-                $texts[] = $text;
-            }
+        if ($regulation->parsed_text) {
+            $texts[] = $regulation->parsed_text;
         }
 
         foreach ($regulation->documents as $doc) {
-            $text = $this->documentParser->extractFromStoragePath($doc->file_path);
-            if ($text) {
-                $texts[] = "[{$doc->name}] {$text}";
+            if ($doc->parsed_text) {
+                $texts[] = "[{$doc->name}] {$doc->parsed_text}";
             }
         }
 
@@ -308,11 +308,12 @@ PROMPT;
 
         if ($document->partitions->isNotEmpty()) {
             foreach ($document->partitions as $partition) {
-                $text = $this->documentParser->extractPagesFromStoragePath(
-                    $document->file_path,
-                    $partition->start_page,
-                    $partition->end_page
-                );
+                $text = DocumentPage::where('review_document_id', $document->id)
+                    ->whereBetween('page_number', [$partition->start_page, $partition->end_page])
+                    ->orderBy('page_number')
+                    ->pluck('content')
+                    ->implode("\n");
+
                 DocumentParsedText::create([
                     'review_document_id' => $document->id,
                     'source_type' => 'document',
@@ -323,7 +324,11 @@ PROMPT;
                 ]);
             }
         } else {
-            $text = $this->documentParser->extractFromStoragePath($document->file_path);
+            $text = DocumentPage::where('review_document_id', $document->id)
+                ->orderBy('page_number')
+                ->pluck('content')
+                ->implode("\n");
+
             DocumentParsedText::create([
                 'review_document_id' => $document->id,
                 'source_type' => 'document',
@@ -339,10 +344,10 @@ PROMPT;
             $existing = DocumentParsedText::forRegulation($document->id, $reg->id)->first();
 
             if ($existing && $existing->char_count > 0) {
-                continue; // Already cached, skip re-parsing
+                continue; // Already cached, skip
             }
 
-            $regText = $this->extractRegulationText($reg);
+            $regText = $this->getRegulationTextFromDb($reg);
             DocumentParsedText::updateOrCreate(
                 [
                     'review_document_id' => $document->id,
@@ -366,19 +371,11 @@ PROMPT;
 
         $document = $bab->reviewDocument;
 
-        if ($document->relationLoaded('pages') || $document->isParsed()) {
-            $pages = $document->pages()
-                ->whereBetween('page_number', [$bab->start_page, $bab->end_page])
-                ->orderBy('page_number')
-                ->get();
-            $text = $pages->pluck('content')->implode(' ');
-        } else {
-            $text = $this->documentParser->extractPagesFromStoragePath(
-                $document->file_path,
-                $bab->start_page,
-                $bab->end_page
-            );
-        }
+        $pages = $document->pages()
+            ->whereBetween('page_number', [$bab->start_page, $bab->end_page])
+            ->orderBy('page_number')
+            ->get();
+        $text = $pages->pluck('content')->implode(' ');
 
         $text = mb_substr($text, 0, 8000);
 

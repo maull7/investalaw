@@ -27,6 +27,7 @@ class ReviewDocumentController extends Controller
     public function index(Request $request): View
     {
         abort_if($request->user()->isSubAdmin(), 403);
+        $this->authorize('viewAny', ReviewDocument::class);
 
         $filters = $request->only(['status', 'search']);
         $documents = $this->reviewDocumentRepository->search($filters);
@@ -44,6 +45,7 @@ class ReviewDocumentController extends Controller
     public function create(): View
     {
         abort_if(auth()->user()->isSubAdmin(), 403);
+        $this->authorize('create', ReviewDocument::class);
 
         $categories = $this->categoryRepository->allWithRegulations();
 
@@ -53,6 +55,7 @@ class ReviewDocumentController extends Controller
     public function store(StoreReviewDocumentRequest $request): RedirectResponse
     {
         abort_if($request->user()->isSubAdmin(), 403);
+        $this->authorize('create', ReviewDocument::class);
 
         $this->reviewDocumentService->createReviewDocument(
             $request->safe()->only(['title', 'description']),
@@ -70,6 +73,7 @@ class ReviewDocumentController extends Controller
     public function show(ReviewDocument $reviewDocument): View
     {
         abort_if(auth()->user()->isSubAdmin(), 403);
+        $this->authorize('view', $reviewDocument);
 
         $document = $this->reviewDocumentRepository->findById($reviewDocument->id);
 
@@ -79,6 +83,7 @@ class ReviewDocumentController extends Controller
     public function edit(ReviewDocument $reviewDocument): View
     {
         abort_if(auth()->user()->isSubAdmin(), 403);
+        $this->authorize('update', $reviewDocument);
 
         $categories = $this->categoryRepository->allWithRegulations();
 
@@ -88,6 +93,7 @@ class ReviewDocumentController extends Controller
     public function update(UpdateReviewDocumentRequest $request, ReviewDocument $reviewDocument): RedirectResponse
     {
         abort_if($request->user()->isSubAdmin(), 403);
+        $this->authorize('update', $reviewDocument);
 
         $this->reviewDocumentService->updateReviewDocument(
             $reviewDocument,
@@ -105,6 +111,7 @@ class ReviewDocumentController extends Controller
     public function destroy(ReviewDocument $reviewDocument): RedirectResponse
     {
         abort_if(request()->user()->isSubAdmin(), 403);
+        $this->authorize('delete', $reviewDocument);
 
         $title = $reviewDocument->title;
         $this->reviewDocumentService->deleteReviewDocument($reviewDocument);
@@ -118,6 +125,7 @@ class ReviewDocumentController extends Controller
     public function submit(ReviewDocument $reviewDocument): RedirectResponse
     {
         abort_if(request()->user()->isSubAdmin(), 403);
+        $this->authorize('submit', $reviewDocument);
 
         $this->reviewDocumentService->submitForReview($reviewDocument);
 
@@ -130,6 +138,7 @@ class ReviewDocumentController extends Controller
     public function viewFile(ReviewDocument $reviewDocument): StreamedResponse
     {
         abort_if(auth()->user()->isSubAdmin(), 403);
+        $this->authorize('view', $reviewDocument);
 
         return Storage::disk('public')->response($reviewDocument->file_path, null, [
             'Content-Type' => 'application/pdf',

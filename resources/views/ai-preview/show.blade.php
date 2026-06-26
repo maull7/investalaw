@@ -4,6 +4,8 @@
 @section('header', 'AI Preview')
 
 @section('content')
+    @php $nonTocPartitions = $document->partitions->reject(fn ($p) => $p->hasToc()); @endphp
+
     <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
         <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/15 blur-3xl"></div>
         <div class="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -32,6 +34,55 @@
             </div>
         </div>
     </section>
+
+    {{-- Parse PDF Alert --}}
+    @if(!$document->isParsed())
+        <div class="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-bold text-amber-800">Dokumen belum di-parse</h3>
+                    <p class="mt-1 text-sm text-amber-700">AI Preview membutuhkan konten dokumen yang sudah di-parse. Lakukan Parse PDF terlebih dahulu agar AI bisa membaca konten dokumen.</p>
+                    <form action="{{ route('partitions.parse-pdf', $document) }}" method="POST" class="mt-3">
+                        @csrf
+                        <input type="hidden" name="redirect" value="{{ route('ai-preview.show', [$document, 'type' => $selectedType]) }}">
+                        <x-button type="submit" color="amber" size="sm">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+                            Parse PDF Sekarang
+                        </x-button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Regulasi Belum Diparse Alert --}}
+    @php
+        $unparsedRegs = $document->regulations->reject(fn ($r) => $r->isParsed());
+    @endphp
+    @if($unparsedRegs->isNotEmpty())
+        <div class="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-6">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-sm font-bold text-rose-800">Regulasi berikut belum diparse</h3>
+                    <p class="mt-1 text-sm text-rose-700">AI tidak bisa membaca isi regulasi berikut karena belum diparse. Silakan parse terlebih dahulu di menu Regulasi.</p>
+                    <ul class="mt-2 space-y-1">
+                        @foreach($unparsedRegs as $reg)
+                            <li class="flex items-center gap-2 text-sm text-rose-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0"></span>
+                                <a href="{{ route('regulations.show', $reg) }}" class="font-semibold hover:underline">{{ $reg->regulation_number }} — {{ $reg->title }}</a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <div x-data="{ mainTab: 'analysis', selectedType: '{{ $selectedType }}' }" class="mt-6">
         {{-- Tab Navigation --}}
@@ -78,11 +129,11 @@
                             </div>
                             <p class="text-sm font-semibold text-[#071833]">{{ $document->title }}</p>
                             <p class="text-xs text-[#667085] mt-1">Status: <span class="font-medium text-[#071833]">{{ $document->status->label() }}</span></p>
-                            @if($document->partitions->isNotEmpty())
+                            @if($nonTocPartitions->isNotEmpty())
                                 <div class="mt-2 pt-2 border-t border-[#e7eaf0]">
-                                    <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-1">Partisi ({{ $document->partitions->count() }})</p>
+                                    <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-1">Partisi ({{ $nonTocPartitions->count() }})</p>
                                     <div class="space-y-0.5">
-                                        @foreach($document->partitions as $p)
+                                        @foreach($nonTocPartitions as $p)
                                             <p class="text-[11px] text-[#071833]">• {{ $p->name }} <span class="text-[#667085]">(h.{{ $p->start_page }}–{{ $p->end_page }})</span></p>
                                         @endforeach
                                     </div>
@@ -253,7 +304,7 @@
                                 " class="rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
                                 <span class="text-xs font-semibold text-[#071833]">Semua</span>
                             </label>
-                            @foreach($document->partitions as $partition)
+                            @foreach($document->partitions->reject(fn ($p) => $p->hasToc()) as $partition)
                                 <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] cursor-pointer hover:bg-white transition">
                                     <input type="checkbox" name="partition_ids[]" value="{{ $partition->id }}" checked class="partition-checkbox rounded border-[#d0d5dd] text-[#c99a3e] focus:ring-[#c99a3e]">
                                     <span class="text-xs font-semibold text-[#071833]">{{ $partition->name }}</span>
@@ -588,16 +639,16 @@
                 </dl>
             </x-card>
 
-            @if($document->partitions->isNotEmpty())
+            @if($nonTocPartitions->isNotEmpty())
                 <x-card>
                     <x-slot name="header">
                         <div class="flex items-center justify-between">
                             <h3 class="text-base font-bold text-[#071833]">Partisi Dokumen</h3>
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">{{ $document->partitions->count() }}</span>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">{{ $nonTocPartitions->count() }}</span>
                         </div>
                     </x-slot>
                     <div class="space-y-2">
-                        @foreach($document->partitions as $partition)
+                        @foreach($nonTocPartitions as $partition)
                             <div class="flex items-center justify-between rounded-xl bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0]">
                                 <div class="min-w-0 flex-1">
                                     <p class="text-sm font-semibold text-[#071833] truncate">{{ $partition->name }}</p>
@@ -614,7 +665,7 @@
                     @if($document->total_pages)
                         <div class="mt-3 pt-3 border-t border-[#e7eaf0] flex items-center justify-between text-[10px]">
                             <span class="font-bold text-[#667085] uppercase tracking-wider">Total Halaman</span>
-                            <span class="font-bold text-[#071833]">{{ $document->partitions->sum(fn($p) => ($p->end_page - $p->start_page) + 1) }} / {{ $document->total_pages }} hlm</span>
+                            <span class="font-bold text-[#071833]">{{ $nonTocPartitions->sum(fn($p) => ($p->end_page - $p->start_page) + 1) }} / {{ $document->total_pages }} hlm</span>
                         </div>
                     @endif
                     <div class="mt-3">
@@ -708,9 +759,9 @@
                         </button>
                     </div>
 
-                    {{-- Document parsed texts --}}
+                    {{-- Document parsed texts (exclude Daftar Isi) --}}
                     <div x-show="parsedSubTab === 'document'" class="space-y-3">
-                        @foreach($parsedTexts->where('source_type', 'document') as $parsed)
+                        @foreach($parsedTexts->where('source_type', 'document')->reject(fn ($p) => $p->source_id && $document->partitions->firstWhere('id', $p->source_id)?->hasToc()) as $parsed)
                             <x-card>
                                 <x-slot name="header">
                                     <div class="flex items-center justify-between">

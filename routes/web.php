@@ -25,7 +25,7 @@ Route::get('/', function () {
 // //
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
-    Route::post('/login', [LoginController::class, 'store']);
+    Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
 });
 // //
 Route::middleware('auth')->group(function () {
@@ -80,14 +80,14 @@ Route::middleware('auth')->group(function () {
     Route::resource('users', UserController::class);
 
     // AI Summaries
-    Route::post('/review-documents/{reviewDocument}/ai-summaries/generate', [AiSummaryController::class, 'generate'])->name('ai-summaries.generate');
+    Route::post('/review-documents/{reviewDocument}/ai-summaries/generate', [AiSummaryController::class, 'generate'])->name('ai-summaries.generate')->middleware('throttle:3,1');
     Route::get('/review-documents/{reviewDocument}/ai-summaries/{aiSummary}/prompt', [AiSummaryController::class, 'checkPrompt'])->name('ai-summaries.check-prompt');
     Route::get('/review-documents/{reviewDocument}/ai-summaries', [AiSummaryController::class, 'index'])->name('ai-summaries.index');
     Route::get('/review-documents/{reviewDocument}/ai-summaries/{aiSummary}', [AiSummaryController::class, 'show'])->name('ai-summaries.show');
 
     // AI Preview
     Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
-    Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate')->middleware('throttle:3,1');
 
     // Document Partitions
     Route::get('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'index'])->name('partitions.index');
@@ -96,13 +96,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/debug-toc', [DocumentPartitionController::class, 'debugToc'])->name('partitions.debug-toc');
     Route::get('/review-documents/{reviewDocument}/partitions/parsed-text', [DocumentPartitionController::class, 'showParsedText'])->name('partitions.parsed-text');
     Route::get('/review-documents/{reviewDocument}/partitions/regulations', [DocumentPartitionController::class, 'showRegulations'])->name('partitions.regulations');
-    Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse');
+    Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse')->middleware('throttle:3,1');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
-    Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure');
-    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect', [DocumentPartitionController::class, 'detectStructure'])->name('bab-structures.detect');
-    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect-ajax', [DocumentPartitionController::class, 'detectStructureAjax'])->name('bab-structures.detect-ajax');
-    Route::post('/review-documents/{reviewDocument}/bab-structures/batch-detect', [DocumentPartitionController::class, 'batchDetectStructure'])->name('bab-structures.batch-detect');
-    Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf');
+    Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure')->middleware('throttle:3,1');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect', [DocumentPartitionController::class, 'detectStructure'])->name('bab-structures.detect')->middleware('throttle:3,1');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect-ajax', [DocumentPartitionController::class, 'detectStructureAjax'])->name('bab-structures.detect-ajax')->middleware('throttle:3,1');
+    Route::post('/review-documents/{reviewDocument}/bab-structures/batch-detect', [DocumentPartitionController::class, 'batchDetectStructure'])->name('bab-structures.batch-detect')->middleware('throttle:3,1');
+    Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf')->middleware('throttle:3,1');
     Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/content', [DocumentPartitionController::class, 'showPartitionContent'])->name('partitions.content');
 
     // AI Prompts management

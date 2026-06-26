@@ -67,6 +67,19 @@ class AiPreviewController extends Controller
         ]);
 
         $type = $request->input('type');
+
+        if (! $reviewDocument->isParsed()) {
+            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
+                ->with('error', 'Dokumen belum di-parse. Silakan lakukan Parse PDF terlebih dahulu di menu Partisi.');
+        }
+
+        $reviewDocument->load('regulations');
+        $unparsedRegs = $reviewDocument->regulations->reject(fn ($r) => $r->isParsed());
+        if ($unparsedRegs->isNotEmpty()) {
+            return redirect()->route('ai-preview.show', [$reviewDocument, 'type' => $type])
+                ->with('error', 'Regulasi berikut belum diparse: '.$unparsedRegs->pluck('regulation_number')->implode(', ').'. Parse terlebih dahulu di menu Regulasi.');
+        }
+
         $partitionIds = $request->input('partition_ids');
 
         try {

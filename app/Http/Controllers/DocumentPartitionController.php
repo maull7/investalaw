@@ -127,6 +127,12 @@ class DocumentPartitionController extends Controller
         ]);
 
         $type = $request->input('type');
+
+        if (! $reviewDocument->isParsed()) {
+            return redirect()->back()
+                ->with('error', 'Dokumen belum di-parse. Silakan lakukan Parse PDF terlebih dahulu.');
+        }
+
         $partitionIds = $request->input('partition_ids');
 
         $query = $reviewDocument->partitions()
@@ -289,6 +295,13 @@ class DocumentPartitionController extends Controller
 
         if (! $reviewDocument->isParsed()) {
             $this->documentParser->extractAndCachePages($reviewDocument);
+        }
+
+        $redirect = $request->input('redirect');
+
+        if ($redirect) {
+            return redirect($redirect)
+                ->with('success', 'Parser PDF berhasil dijalankan.');
         }
 
         return redirect()->route('partitions.parsed-text', $reviewDocument)

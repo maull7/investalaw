@@ -85,7 +85,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/review-documents/{reviewDocument}/ai-summaries', [AiSummaryController::class, 'index'])->name('ai-summaries.index');
     Route::get('/review-documents/{reviewDocument}/ai-summaries/{aiSummary}', [AiSummaryController::class, 'show'])->name('ai-summaries.show');
 
-    // AI Preview tes
+    // AI Preview
     Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
     Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate')->middleware('throttle:3,1');
 

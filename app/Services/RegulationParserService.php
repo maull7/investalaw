@@ -95,7 +95,13 @@ class RegulationParserService
 
     private function sanitizeUtf8(string $text): string
     {
-        return preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
+        // Hilangkan byte sequences yang tidak valid agar PREG tidak gagal.
+        $text = mb_convert_encoding($text, 'UTF-8', 'UTF-8');
+
+        // Hapus karakter di luar BMP (emoji, dll.) agar kompatibel dengan penyimpanan.
+        $cleaned = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
+
+        return $cleaned ?? $text;
     }
 
     public function parseDocument(RegulationDocument $document): array

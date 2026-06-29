@@ -102,7 +102,7 @@
                     $matchedRefs = app(App\Services\RegulationAnalysisService::class)->matchReferencesWithDb($analysis);
                 @endphp
 
-                <x-card>
+                <x-card x-data="analysisTabs()">
                     <x-slot name="header">
                         <div class="flex items-center justify-between">
                             <div>
@@ -122,7 +122,20 @@
                         </div>
                     </x-slot>
 
-                    <div class="space-y-5">
+                    <!-- Tab Navigation -->
+                    <div class="flex border-b border-[#e7eaf0] -mx-6 px-6 mb-5">
+                        <button @click="tab = 'analisis'" class="px-4 py-2.5 text-sm font-bold transition border-b-2 -mb-px" :class="tab === 'analisis' ? 'text-[#c99a3e] border-[#c99a3e]' : 'text-[#667085] border-transparent hover:text-[#071833]'">
+                            Analisis
+                        </button>
+                        @if($regulation->isParsed())
+                        <button @click="tab = 'perbab'; initBabs()" class="px-4 py-2.5 text-sm font-bold transition border-b-2 -mb-px" :class="tab === 'perbab' ? 'text-[#c99a3e] border-[#c99a3e]' : 'text-[#667085] border-transparent hover:text-[#071833]'">
+                            Per Bab
+                            <span x-show="doneCount" class="ml-1.5 px-1.5 py-0.5 rounded bg-emerald-100 text-[10px] font-bold text-emerald-700" x-text="doneCount + '/' + babs.length"></span>
+                        </button>
+                        @endif
+                    </div>
+
+                    <div x-show="tab === 'analisis'" class="space-y-5">
                         <div>
                             <div class="flex items-center justify-between mb-2">
                                 <h4 class="text-sm font-bold text-[#071833]">Ringkasan Regulasi Terkait</h4>
@@ -326,105 +339,132 @@
                             Analisis ini dihasilkan oleh AI dan mungkin mengandung ketidakakuratan. Harap verifikasi informasi penting dengan sumber resmi.
                         </p>
                     @endif
-                </x-card>
-            @endif
 
-            @if($regulation->isParsed())
-                <x-card x-data="babCard()">
-                    <x-slot name="header">
-                        <div>
-                            <h3 class="text-lg font-bold text-[#071833]">Analisis Per Bab</h3>
-                            <p class="text-xs text-[#667085] mt-0.5">Analisis pasal dan referensi per bab secara bertahap</p>
+                    @if($regulation->isParsed())
+                    <div x-show="tab === 'perbab'" class="space-y-5">
+                        <div x-show="doneCount" class="grid grid-cols-3 gap-3">
+                            <div class="rounded-xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-200">
+                                <p class="text-lg font-bold text-emerald-700" x-text="complianceCounts.sesuai"></p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Sesuai</p>
+                            </div>
+                            <div class="rounded-xl bg-amber-50 p-3 text-center ring-1 ring-amber-200">
+                                <p class="text-lg font-bold text-amber-700" x-text="complianceCounts.perlu"></p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-amber-600">Perlu Penyesuaian</p>
+                            </div>
+                            <div class="rounded-xl bg-rose-50 p-3 text-center ring-1 ring-rose-200">
+                                <p class="text-lg font-bold text-rose-700" x-text="complianceCounts.tidak"></p>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Tidak Sesuai</p>
+                            </div>
                         </div>
-                    </x-slot>
 
-                    <div x-show="!babs.length && !loading && !error" class="text-center py-6">
-                        <button @click="fetchBabs" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
-                            Muat Daftar Bab
-                        </button>
-                    </div>
-
-                    <div x-show="loading && !analyzing" class="text-center py-6">
-                        <svg class="animate-spin mx-auto w-6 h-6 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                        <p class="text-xs text-[#667085] mt-2">Memuat daftar bab...</p>
-                    </div>
-
-                    <div x-show="error" class="text-center py-6">
-                        <p class="text-xs text-rose-600" x-text="error"></p>
-                    </div>
-
-                    <template x-if="babs.length">
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <p class="text-xs text-[#667085]">
-                                    Ditemukan <strong x-text="babs.length"></strong> bab
-                                    <span x-show="analyzing" class="text-amber-600">(sedang menganalisis...)</span>
-                                </p>
-                                <button @click="analyzeAll" x-show="!analyzing && !done"
-                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c99a3e] text-xs font-bold text-white hover:bg-[#b88a2e] transition">
-                                    Analisis Semua Bab
-                                </button>
-                            </div>
-
-                            <div x-show="analyzing" class="w-full bg-[#f0f3f8] rounded-full h-2">
-                                <div class="bg-[#c99a3e] h-2 rounded-full transition-all duration-300" :style="'width: ' + progress + '%'"></div>
-                            </div>
-
-                            <template x-for="(bab, i) in babs" :key="i">
-                                <div class="rounded-xl border border-[#e7eaf0] overflow-hidden">
-                                    <div class="flex items-center justify-between px-4 py-2.5 bg-[#fafbfc] border-b border-[#e7eaf0]">
-                                        <div class="flex items-center gap-2">
-                                            <span class="font-bold text-sm text-[#071833]" x-text="bab.label"></span>
-                                            <span x-show="bab.status === 'done'" class="px-1.5 py-0.5 rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
-                                                <span x-text="bab.pasal_count + ' pasal'"></span>
-                                            </span>
-                                            <span x-show="bab.status === 'processing'" class="px-1.5 py-0.5 rounded bg-amber-100 text-[10px] font-bold text-amber-700">Processing</span>
+                        <div x-show="doneCount" class="rounded-xl bg-[#f6f8fb] p-4 ring-1 ring-[#e7eaf0]">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-3">Jumlah Pasal per Bab</p>
+                            <div class="space-y-2">
+                                <template x-for="bab in doneBabs" :key="bab.label">
+                                    <div>
+                                        <div class="flex items-center justify-between text-xs mb-1">
+                                            <span class="font-semibold text-[#071833]" x-text="bab.label"></span>
+                                            <span class="text-[#667085]" x-text="bab.pasal_count + ' pasal'"></span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <span x-show="bab.compliance_assessment === 'Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Sesuai</span>
-                                            <span x-show="bab.compliance_assessment === 'Perlu Penyesuaian'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Perlu Penyesuaian</span>
-                                            <span x-show="bab.compliance_assessment === 'Tidak Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Tidak Sesuai</span>
-                                            <span x-show="bab.status === 'done'" class="text-emerald-500">
-                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                                            </span>
+                                        <div class="w-full bg-white rounded-full h-2.5 ring-1 ring-[#e7eaf0] overflow-hidden">
+                                            <div class="bg-[#c99a3e] h-2.5 rounded-full transition-all" :style="'width: ' + (bab.pasal_count / Math.max(...doneBabs.map(b => b.pasal_count)) * 100) + '%'"></div>
                                         </div>
                                     </div>
-                                    <div x-show="bab.status === 'done'" class="px-4 py-2.5 space-y-3">
-                                        <div x-show="bab.insights" class="rounded-xl bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0]">
-                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-1">Insight</p>
-                                            <p class="text-xs text-[#071833] leading-relaxed" x-text="bab.insights"></p>
-                                        </div>
-                                        <div x-show="bab.key_findings?.length" class="space-y-1">
-                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Temuan</p>
-                                            <template x-for="(f, fi) in bab.key_findings" :key="fi">
-                                                <div class="flex items-start gap-2 text-xs">
-                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
-                                                    <span class="text-[#4a5568]" x-text="f"></span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <div x-show="bab.pasal?.length" class="space-y-1">
-                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Pasal</p>
-                                            <template x-for="(p, pi) in bab.pasal" :key="pi">
-                                                <div class="flex items-start gap-2 text-xs">
-                                                    <span class="font-semibold text-[#071833]" x-text="p.pasal"></span>
-                                                    <span class="text-[#667085]" x-text="p.content"></span>
-                                                </div>
-                                            </template>
-                                        </div>
-                                        <div x-show="bab.references?.length" class="space-y-1">
-                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Referensi</p>
-                                            <template x-for="(r, ri) in bab.references" :key="ri">
-                                                <div class="text-xs text-[#667085]" x-text="r.name"></div>
-                                            </template>
-                                        </div>
-                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div x-show="!babs.length && !loading && !error" class="text-center py-6">
+                            <button @click="initBabs" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
+                                Muat Daftar Bab
+                            </button>
+                        </div>
+
+                        <div x-show="loading && !analyzing" class="text-center py-6">
+                            <svg class="animate-spin mx-auto w-6 h-6 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            <p class="text-xs text-[#667085] mt-2">Memuat daftar bab...</p>
+                        </div>
+
+                        <div x-show="error" class="text-center py-6">
+                            <p class="text-xs text-rose-600" x-text="error"></p>
+                        </div>
+
+                        <template x-if="babs.length">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-xs text-[#667085]">
+                                        Ditemukan <strong x-text="babs.length"></strong> bab
+                                        <span x-show="analyzing" class="text-amber-600">(sedang menganalisis...)</span>
+                                    </p>
+                                    <button @click="analyzeAll" x-show="!analyzing && !done"
+                                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c99a3e] text-xs font-bold text-white hover:bg-[#b88a2e] transition">
+                                        Analisis Semua Bab
+                                    </button>
                                 </div>
-                            </template>
-                        </div>
-                    </template>
+
+                                <div x-show="analyzing" class="w-full bg-[#f0f3f8] rounded-full h-2">
+                                    <div class="bg-[#c99a3e] h-2 rounded-full transition-all duration-300" :style="'width: ' + progress + '%'"></div>
+                                </div>
+
+                                <template x-for="(bab, i) in babs" :key="i">
+                                    <div class="rounded-xl border border-[#e7eaf0] overflow-hidden">
+                                        <div class="flex items-center justify-between px-4 py-2.5 bg-[#fafbfc] border-b border-[#e7eaf0]">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-sm text-[#071833]" x-text="bab.label"></span>
+                                                <span x-show="bab.status === 'done'" class="px-1.5 py-0.5 rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
+                                                    <span x-text="bab.pasal_count + ' pasal'"></span>
+                                                </span>
+                                                <span x-show="bab.status === 'processing'" class="px-1.5 py-0.5 rounded bg-amber-100 text-[10px] font-bold text-amber-700">Processing</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span x-show="bab.compliance_assessment === 'Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Sesuai</span>
+                                                <span x-show="bab.compliance_assessment === 'Perlu Penyesuaian'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Perlu Penyesuaian</span>
+                                                <span x-show="bab.compliance_assessment === 'Tidak Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Tidak Sesuai</span>
+                                                <span x-show="bab.status === 'done'" class="text-emerald-500">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div x-show="bab.status === 'done'" class="px-4 py-2.5 space-y-3">
+                                            <div x-show="bab.insights" class="rounded-xl bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0]">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-1">Insight</p>
+                                                <p class="text-xs text-[#071833] leading-relaxed" x-text="bab.insights"></p>
+                                            </div>
+                                            <div x-show="bab.key_findings?.length" class="space-y-1">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Temuan</p>
+                                                <template x-for="(f, fi) in bab.key_findings" :key="fi">
+                                                    <div class="flex items-start gap-2 text-xs">
+                                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                                                        <span class="text-[#4a5568]" x-text="f"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div x-show="bab.pasal?.length" class="space-y-1">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Pasal</p>
+                                                <template x-for="(p, pi) in bab.pasal" :key="pi">
+                                                    <div class="flex items-start gap-2 text-xs">
+                                                        <span class="font-semibold text-[#071833]" x-text="p.pasal"></span>
+                                                        <span class="text-[#667085]" x-text="p.content"></span>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <div x-show="bab.references?.length" class="space-y-1">
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Referensi</p>
+                                                <template x-for="(r, ri) in bab.references" :key="ri">
+                                                    <div class="text-xs text-[#667085]" x-text="r.name"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                    @endif
                 </x-card>
             @endif
+
+
 
             @if($analysis && ! empty($relatedData['related']))
                 <x-card :padding="false">
@@ -590,7 +630,8 @@
 @push('scripts')
 <script>
     document.addEventListener('alpine:init', () => {
-        Alpine.data('babCard', () => ({
+        Alpine.data('analysisTabs', () => ({
+            tab: 'analisis',
             babs: [],
             loading: false,
             analyzing: false,
@@ -602,7 +643,25 @@
                 return Math.round((this.babs.filter(b => b.status === 'done').length / this.babs.length) * 100);
             },
 
-            async fetchBabs() {
+            get doneCount() {
+                return this.babs.filter(b => b.status === 'done').length;
+            },
+
+            get doneBabs() {
+                return this.babs.filter(b => b.status === 'done');
+            },
+
+            get complianceCounts() {
+                const done = this.doneBabs;
+                return {
+                    sesuai: done.filter(b => b.compliance_assessment === 'Sesuai').length,
+                    perlu: done.filter(b => b.compliance_assessment === 'Perlu Penyesuaian').length,
+                    tidak: done.filter(b => b.compliance_assessment === 'Tidak Sesuai').length,
+                };
+            },
+
+            async initBabs() {
+                if (this.babs.length) return;
                 this.loading = true;
                 this.error = null;
                 try {

@@ -65,6 +65,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/regulations/{regulation}/analyze/save', [RegulationController::class, 'saveAnalysis'])->name('regulations.analyze.save');
     Route::post('/regulations/{regulation}/analyze/connect-references', [RegulationController::class, 'connectReferences'])->name('regulations.analyze.connect-references');
     Route::post('/regulations/{regulation}/reanalyze', [RegulationController::class, 'reanalyze'])->name('regulations.reanalyze');
+    Route::post('/regulations/{regulation}/analyze/babs', [RegulationController::class, 'analyzeBabs'])->name('regulations.analyze.babs');
+    Route::post('/regulations/{regulation}/analyze/bab/{index}', [RegulationController::class, 'analyzeSingleBab'])->name('regulations.analyze.bab');
+    Route::get('/regulations/{regulation}/analyze/babs-list', [RegulationController::class, 'babList'])->name('regulations.analyze.babs-list');
 
     Route::resource('review-documents', ReviewDocumentController::class);
     Route::post('/review-documents/{reviewDocument}/submit', [ReviewDocumentController::class, 'submit'])->name('review-documents.submit');
@@ -91,6 +94,9 @@ Route::middleware('auth')->group(function () {
     // AI Preview
     Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
     Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate')->middleware('throttle:3,1');
+    Route::get('/review-documents/{reviewDocument}/ai-preview/babs-list', [AiPreviewController::class, 'babList'])->name('ai-preview.babs-list');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/babs-analyze', [AiPreviewController::class, 'analyzeBabs'])->name('ai-preview.babs-analyze');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/bab/{index}', [AiPreviewController::class, 'analyzeSingleBab'])->name('ai-preview.bab');
 
     // Document Partitions
     Route::get('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'index'])->name('partitions.index');

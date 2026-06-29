@@ -145,11 +145,24 @@
                                 <span class="w-2 h-2 rounded-full bg-[#0b5e42]"></span>
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Regulasi Pembanding</span>
                             </div>
-                            <div class="space-y-1">
+                            <div class="space-y-2">
                                 @foreach($document->regulations as $reg)
+                                    @php
+                                        $psColor = $reg->parseStatusBadgeColor();
+                                        $psColors = ['emerald' => 'bg-emerald-100 text-emerald-700', 'amber' => 'bg-amber-100 text-amber-700', 'gray' => 'bg-gray-100 text-gray-600'];
+                                    @endphp
                                     <div class="flex items-center gap-1.5">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                                         <span class="text-sm text-[#071833]">{{ $reg->regulation_number }}</span>
+                                        <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold {{ $psColors[$psColor] ?? $psColors['gray'] }}">
+                                            @if($psColor === 'gray')
+                                                Not Parsed
+                                            @elseif($psColor === 'amber')
+                                                Parsed Incomplete
+                                            @else
+                                                Parsed Complete
+                                            @endif
+                                        </span>
                                     </div>
                                 @endforeach
                             </div>
@@ -509,6 +522,12 @@
                                 </div>
                             </div>
                         @endif
+
+                        @if($summary)
+                            <p class="text-[11px] text-amber-600 italic border-t border-[#e7eaf0] pt-4">
+                                Analisis ini dihasilkan oleh AI dan mungkin mengandung ketidakakuratan. Harap verifikasi informasi penting dengan sumber resmi.
+                            </p>
+                        @endif
                     </div>
                 @else
                     <div class="text-center py-14">
@@ -598,6 +617,103 @@
                             </div>
                         @endforeach
                     </div>
+                </x-card>
+            @endif
+
+            @if($document->isParsed())
+                <x-card x-data="babCard()">
+                    <x-slot name="header">
+                        <div>
+                            <h3 class="text-lg font-bold text-[#071833]">Analisis Per Bab</h3>
+                            <p class="text-xs text-[#667085] mt-0.5">Analisis pasal dan referensi per bab secara bertahap</p>
+                        </div>
+                    </x-slot>
+
+                    <div x-show="!babs.length && !loading && !error" class="text-center py-6">
+                        <button @click="fetchBabs" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
+                            Muat Daftar Bab
+                        </button>
+                    </div>
+
+                    <div x-show="loading && !analyzing" class="text-center py-6">
+                        <svg class="animate-spin mx-auto w-6 h-6 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        <p class="text-xs text-[#667085] mt-2">Memuat daftar bab...</p>
+                    </div>
+
+                    <div x-show="error" class="text-center py-6">
+                        <p class="text-xs text-rose-600" x-text="error"></p>
+                    </div>
+
+                    <template x-if="babs.length">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <p class="text-xs text-[#667085]">
+                                    Ditemukan <strong x-text="babs.length"></strong> bab
+                                    <span x-show="analyzing" class="text-amber-600">(sedang menganalisis...)</span>
+                                </p>
+                                <button @click="analyzeAll" x-show="!analyzing && !done"
+                                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#c99a3e] text-xs font-bold text-white hover:bg-[#b88a2e] transition">
+                                    Analisis Semua Bab
+                                </button>
+                            </div>
+
+                            <div x-show="analyzing" class="w-full bg-[#f0f3f8] rounded-full h-2">
+                                <div class="bg-[#c99a3e] h-2 rounded-full transition-all duration-300" :style="'width: ' + progress + '%'"></div>
+                            </div>
+
+                            <template x-for="(bab, i) in babs" :key="i">
+                                <div class="rounded-xl border border-[#e7eaf0] overflow-hidden">
+                                    <div class="flex items-center justify-between px-4 py-2.5 bg-[#fafbfc] border-b border-[#e7eaf0]">
+                                        <div class="flex items-center gap-2">
+                                            <span class="font-bold text-sm text-[#071833]" x-text="bab.label"></span>
+                                            <span x-show="bab.status === 'done'" class="px-1.5 py-0.5 rounded bg-emerald-100 text-[10px] font-bold text-emerald-700">
+                                                <span x-text="bab.pasal_count + ' pasal'"></span>
+                                            </span>
+                                            <span x-show="bab.status === 'processing'" class="px-1.5 py-0.5 rounded bg-amber-100 text-[10px] font-bold text-amber-700">Processing</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span x-show="bab.compliance_assessment === 'Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">Sesuai</span>
+                                            <span x-show="bab.compliance_assessment === 'Perlu Penyesuaian'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Perlu Penyesuaian</span>
+                                            <span x-show="bab.compliance_assessment === 'Tidak Sesuai'" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700">Tidak Sesuai</span>
+                                            <span x-show="bab.status === 'done'" class="text-emerald-500">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div x-show="bab.status === 'done'" class="px-4 py-2.5 space-y-3">
+                                        <div x-show="bab.insights" class="rounded-xl bg-[#f6f8fb] p-3 ring-1 ring-[#e7eaf0]">
+                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-1">Insight</p>
+                                            <p class="text-xs text-[#071833] leading-relaxed" x-text="bab.insights"></p>
+                                        </div>
+                                        <div x-show="bab.key_findings?.length" class="space-y-1">
+                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Temuan</p>
+                                            <template x-for="(f, fi) in bab.key_findings" :key="fi">
+                                                <div class="flex items-start gap-2 text-xs">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0"></span>
+                                                    <span class="text-[#4a5568]" x-text="f"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="bab.pasal?.length" class="space-y-1">
+                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Pasal</p>
+                                            <template x-for="(p, pi) in bab.pasal" :key="pi">
+                                                <div class="flex items-start gap-2 text-xs">
+                                                    <span class="font-semibold text-[#071833]" x-text="p.pasal"></span>
+                                                    <span class="text-[#667085]" x-text="p.content"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div x-show="bab.references?.length" class="space-y-1">
+                                            <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Referensi</p>
+                                            <template x-for="(r, ri) in bab.references" :key="ri">
+                                                <div class="text-xs text-[#667085]" x-text="r.name"></div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
                 </x-card>
             @endif
         </div>
@@ -822,4 +938,57 @@
             @endif
         </div>
     </div>{{-- end x-data mainTab --}}
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('babCard', () => ({
+            babs: [],
+            loading: false,
+            analyzing: false,
+            done: false,
+            error: null,
+
+            get progress() {
+                if (!this.babs.length) return 0;
+                return Math.round((this.babs.filter(b => b.status === 'done').length / this.babs.length) * 100);
+            },
+
+            async fetchBabs() {
+                this.loading = true;
+                this.error = null;
+                try {
+                    const res = await fetch('{{ route("ai-preview.babs-list", $document) }}');
+                    const data = await res.json();
+                    this.babs = (data.babs || []).map(b => ({ ...b, status: 'idle', pasal: [], references: [], pasal_count: 0, ref_count: 0 }));
+                } catch (e) {
+                    this.error = 'Gagal memuat daftar bab.';
+                } finally {
+                    this.loading = false;
+                }
+            },
+
+            async analyzeAll() {
+                this.analyzing = true;
+                this.error = null;
+                for (let i = 0; i < this.babs.length; i++) {
+                    this.babs[i].status = 'processing';
+                    try {
+                        const res = await fetch('/review-documents/{{ $document->id }}/ai-preview/bab/' + i, { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
+                        const result = await res.json();
+                        this.babs[i].status = 'done';
+                        this.babs[i].pasal = result.pasal || [];
+                        this.babs[i].references = result.references || [];
+                        this.babs[i].pasal_count = result.pasal_count || 0;
+                        this.babs[i].ref_count = result.ref_count || 0;
+                    } catch (e) {
+                        this.babs[i].status = 'done';
+                    }
+                }
+                this.done = true;
+                this.analyzing = false;
+            },
+        }));
+    });
+</script>
+@endpush
 @endsection

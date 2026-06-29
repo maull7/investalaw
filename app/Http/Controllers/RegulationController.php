@@ -181,6 +181,34 @@ class RegulationController extends Controller
             ->with($connected > 0 ? 'success' : 'info', $message);
     }
 
+    public function analyzeBabs(Request $request, Regulation $regulation): JsonResponse
+    {
+        $results = $this->regulationAnalysisService->analyzeByBabs($regulation);
+
+        return response()->json($results);
+    }
+
+    public function analyzeSingleBab(Request $request, Regulation $regulation, int $index): JsonResponse
+    {
+        $result = $this->regulationAnalysisService->analyzeBabByIndex($regulation, $index);
+
+        return response()->json($result);
+    }
+
+    public function babList(Regulation $regulation): JsonResponse
+    {
+        $text = $this->regulationAnalysisService->getContentText($regulation);
+        if (! $text) {
+            return response()->json(['babs' => []]);
+        }
+
+        $babs = $this->regulationAnalysisService->splitTextToBabs($text);
+
+        return response()->json([
+            'babs' => array_map(fn ($b) => ['label' => $b['label']], $babs),
+        ]);
+    }
+
     public function reanalyze(Regulation $regulation): RedirectResponse
     {
         $this->regulationAnalysisService->regenerate($regulation);

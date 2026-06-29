@@ -114,7 +114,7 @@ class RegulationAnalysisService
         return $record->load(['pasal', 'references']);
     }
 
-    private function getContentText(Regulation $regulation): ?string
+    public function getContentText(Regulation $regulation): ?string
     {
         $text = $regulation->parsed_text;
         $stats = $regulation->parse_stats;
@@ -239,6 +239,9 @@ PROMPT;
                 'year' => $relatedReg->year,
                 'type' => $relatedReg->type?->name,
                 'is_parsed' => $relatedReg->isParsed(),
+                'parse_status' => $relatedReg->parse_status,
+                'parse_status_label' => $relatedReg->parseStatusLabel(),
+                'parse_status_color' => $relatedReg->parseStatusBadgeColor(),
                 'parsed_text_preview' => $parsedText,
                 'documents_count' => $relatedReg->documents->count(),
             ];
@@ -561,6 +564,251 @@ PROMPT;
         $regulation->relatedRegulations()->attach($new);
 
         return count($new);
+    }
+
+    public function analyzeByBabs(Regulation $regulation): array
+    {
+        $text = $this->getContentText($regulation);
+        if (! $text) {
+            return ['babs' => []];
+        }
+
+        $babs = $this->splitTextToBabs($text);
+
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $results = [];
+        foreach ($babs as $i => $bab) {
+            $babLabel = $bab['label'];
+            $babText = $bab['text'];
+
+            $prompt = <<<PROMPT
+Anda adalah ekstraktor pasal. Dari teks BAB berikut, ekstrak struktur pasal dan referensi ke peraturan lain.
+
+BAB: {$babLabel}
+
+TEKS:
+{$babText}
+
+Kembalikan JSON SAJA dengan format:
+{
+  "pasal_structure": [
+    {
+      "pasal": "Pasal X",
+      "content": "ringkasan isi pasal (max 200 chars)",
+      "type": "baru|existing|diubah",
+      "changes": "deskripsi perubahan jika ada"
+    }
+  ],
+  "referenced_regulations": [
+    {
+      "name": "nama peraturan",
+      "number": "nomor",
+      "year": tahun,
+      "relationship": "diubah|dicabut|dirujuk|disebut"
+    }
+  ]
+}
+PROMPT;
+
+            $result = ['pasal_structure' => [], 'referenced_regulations' => []];
+
+            foreach ($providers as $provider) {
+                if (empty($provider['api_key'])) {
+                    continue;
+                }
+                try {
+                    $response = Http::withToken($provider['api_key'])
+                        ->timeout(120)
+                        ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                            'model' => $provider['model'],
+                            'messages' => [
+                                ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                                ['role' => 'user', 'content' => $prompt],
+                            ],
+                            'max_tokens' => 4096,
+                            'temperature' => 0.1,
+                            'response_format' => ['type' => 'json_object'],
+                        ]);
+
+                    if (! $response->successful()) {
+                        continue;
+                    }
+
+                    $content = $response->json('choices.0.message.content');
+                    if (empty($content)) {
+                        continue;
+                    }
+
+                    $decoded = json_decode($content, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $result = $decoded;
+                        break;
+                    }
+                } catch (\Throwable $e) {
+                    report($e);
+
+                    continue;
+                }
+            }
+
+            $results[] = [
+                'label' => $babLabel,
+                'pasal_count' => count($result['pasal_structure'] ?? []),
+                'ref_count' => count($result['referenced_regulations'] ?? []),
+                'pasal' => $result['pasal_structure'] ?? [],
+                'references' => $result['referenced_regulations'] ?? [],
+            ];
+        }
+
+        return ['babs' => $results];
+    }
+
+    public function analyzeBabByIndex(Regulation $regulation, int $index): array
+    {
+        $text = $this->getContentText($regulation);
+        if (! $text) {
+            return ['label' => null, 'pasal' => [], 'references' => [], 'insights' => null, 'compliance_assessment' => null, 'key_findings' => []];
+        }
+
+        $babs = $this->splitTextToBabs($text);
+
+        if (! isset($babs[$index])) {
+            return ['label' => null, 'pasal' => [], 'references' => [], 'insights' => null, 'compliance_assessment' => null, 'key_findings' => []];
+        }
+
+        $bab = $babs[$index];
+        $babLabel = $bab['label'];
+        $babText = $bab['text'];
+
+        $regulation->loadMissing(['relatedRegulations']);
+        $relatedTexts = [];
+        foreach ($regulation->relatedRegulations as $rel) {
+            if ($rel->isParsed() && $rel->parsed_text) {
+                $relatedTexts[] = "{$rel->regulation_number} - {$rel->title}:\n".mb_substr($rel->parsed_text, 0, 3000);
+            }
+        }
+        $relatedBlock = $relatedTexts ? "\n\nREGULASI TERKAIT:\n".implode("\n\n", $relatedTexts) : '';
+
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $prompt = <<<PROMPT
+Anda adalah analis regulasi. Analisis BAB berikut dari {$regulation->regulation_number} - {$regulation->title} ({$regulation->year}).
+
+BAB: {$babLabel}
+
+Konten BAB:
+{$babText}
+{$relatedBlock}
+
+Berikan analisis JSON dengan format:
+{
+  "pasal_structure": [
+    {
+      "pasal": "Pasal X",
+      "content": "ringkasan isi pasal",
+      "type": "baru|existing|diubah",
+      "changes": "deskripsi perubahan jika ada"
+    }
+  ],
+  "referenced_regulations": [
+    {
+      "name": "nama peraturan",
+      "number": "nomor",
+      "year": tahun,
+      "relationship": "diubah|dicabut|dirujuk|disebut"
+    }
+  ],
+  "insights": "analisis perbandingan bab ini dengan regulasi terkait, apakah ada kesesuaian, perubahan, atau celah",
+  "compliance_assessment": "Sesuai|Perlu Penyesuaian|Tidak Sesuai|Tidak Ada Regulasi Terkait",
+  "key_findings": ["temuan singkat 1", "temuan singkat 2"]
+}
+PROMPT;
+
+        $result = ['pasal_structure' => [], 'referenced_regulations' => [], 'insights' => null, 'compliance_assessment' => null, 'key_findings' => []];
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 4096,
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+                if (empty($content)) {
+                    continue;
+                }
+
+                $decoded = json_decode($content, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $result = $decoded;
+                    break;
+                }
+            } catch (\Throwable $e) {
+                report($e);
+
+                continue;
+            }
+        }
+
+        return [
+            'label' => $babLabel,
+            'pasal_count' => count($result['pasal_structure'] ?? []),
+            'ref_count' => count($result['referenced_regulations'] ?? []),
+            'pasal' => $result['pasal_structure'] ?? [],
+            'references' => $result['referenced_regulations'] ?? [],
+            'insights' => $result['insights'] ?? null,
+            'compliance_assessment' => $result['compliance_assessment'] ?? null,
+            'key_findings' => $result['key_findings'] ?? [],
+        ];
+    }
+
+    public function splitTextToBabs(string $text): array
+    {
+        $pattern = '/(BAB\s+(?:[IVXLCDM]+|\d+)[^\n]*)/i';
+        preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
+
+        if (empty($matches[0])) {
+            return [['label' => 'Full Text', 'text' => mb_substr($text, 0, 30000)]];
+        }
+
+        $babs = [];
+        foreach ($matches[0] as $idx => $match) {
+            $label = trim($match[0]);
+            $start = $match[1];
+            $nextStart = $matches[0][$idx + 1][1] ?? strlen($text);
+            $babText = mb_substr($text, $start, $nextStart - $start);
+            $babText = mb_substr($babText, 0, 30000);
+            $babs[] = ['label' => $label, 'text' => $babText];
+        }
+
+        return $babs;
     }
 
     private function fallbackAnalysis(array $relatedData): array

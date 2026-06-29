@@ -115,10 +115,7 @@ class BabStructureService
 
     public function saveTocChildren(DocumentPartition $partition, array $babs, int $pageOffset = 0): void
     {
-        $firstBab = $babs[0] ?? null;
-        $offset = $firstBab
-            ? ($partition->end_page + 1) - ($firstBab['start_page'] ?? 1)
-            : $pageOffset;
+        $offset = $this->computePdfOffset($partition, $babs[0] ?? null);
 
         DB::transaction(function () use ($partition, $babs, $offset) {
             $documentId = $partition->review_document_id;
@@ -183,6 +180,35 @@ class BabStructureService
         });
     }
 
+    private function computePdfOffset(DocumentPartition $partition, ?array $firstBab): int
+    {
+        $firstBabStart = $firstBab['start_page'] ?? 1;
+        $title = $firstBab['title'] ?? '';
+
+        if ($title) {
+            $search = null;
+            if (preg_match('/^(BAB\s+\w+)/iu', $title, $m)) {
+                $search = $m[1];
+            }
+
+            if ($search) {
+                $found = $partition->reviewDocument->pages()
+                    ->where('page_number', '>', $partition->end_page)
+                    ->whereRaw('LOCATE(?, content) > 0', [$search])
+                    ->orderBy('page_number')
+                    ->first();
+
+                if ($found) {
+                    return $found->page_number - $firstBabStart;
+                }
+            }
+        }
+
+        $endPage = $partition->end_page ?? 0;
+
+        return ($endPage + 1) - $firstBabStart;
+    }
+
     public function saveStructureChildren(DocumentBabStructure $parent, array $children, int $childLevel): void
     {
         DB::transaction(function () use ($parent, $children, $childLevel) {
@@ -228,12 +254,16 @@ class BabStructureService
             }
 
             foreach ($filtered as $data) {
+                $startPage = $data['start_page'] ?? 1;
+                $endPage = $data['end_page'] ?? ($data['start_page'] ?? 1);
                 $child = DocumentBabStructure::create([
                     'review_document_id' => $parent->review_document_id,
                     'parent_id' => $parent->id,
                     'name' => $data['title'],
-                    'start_page' => $data['start_page'] ?? 1,
-                    'end_page' => $data['end_page'] ?? ($data['start_page'] ?? 1),
+                    'start_page' => $startPage,
+                    'end_page' => $endPage,
+                    'pdf_page' => $startPage,
+                    'pdf_end_page' => $endPage,
                     'sort_order' => 0,
                     'level' => $childLevel,
                 ]);

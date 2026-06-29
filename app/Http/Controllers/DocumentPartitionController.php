@@ -397,6 +397,8 @@ class DocumentPartitionController extends Controller
                     'name' => '—',
                     'start_page' => $documentBabStructure->start_page,
                     'end_page' => $documentBabStructure->end_page,
+                    'pdf_page' => $documentBabStructure->pdf_page,
+                    'pdf_end_page' => $documentBabStructure->pdf_end_page,
                     'sort_order' => 1,
                     'level' => 1,
                 ]);
@@ -442,6 +444,8 @@ class DocumentPartitionController extends Controller
                     'name' => '—',
                     'start_page' => $documentBabStructure->start_page,
                     'end_page' => $documentBabStructure->end_page,
+                    'pdf_page' => $documentBabStructure->pdf_page,
+                    'pdf_end_page' => $documentBabStructure->pdf_end_page,
                     'sort_order' => 1,
                     'level' => 1,
                 ]);

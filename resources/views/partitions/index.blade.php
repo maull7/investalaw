@@ -495,7 +495,7 @@
                                                 <span class="font-bold {{ $isParsed ? 'text-emerald-800' : 'text-[#071833]' }} text-sm">{{ $bab['title'] }}</span>
                                             </div>
                                         </td>
-                                        <td class="px-4 py-2.5 text-center text-xs text-[#667085] font-semibold">{{ $bab['start_page'] }}–{{ $bab['end_page'] }}</td>
+                                        <td class="px-4 py-2.5 text-center text-xs text-[#667085] font-semibold">{{ $bab['toc_page'] ?? $bab['start_page'] }}–{{ $bab['end_page'] }}</td>
                                         <td class="px-4 py-2.5 text-center">
                                             @if($isParsed)
                                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-700">

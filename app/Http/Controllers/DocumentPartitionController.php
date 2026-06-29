@@ -104,7 +104,7 @@ class DocumentPartitionController extends Controller
                     ->with('error', 'Tidak dapat menemukan struktur Daftar Isi pada partisi ini.');
             }
 
-            $this->babStructureService->saveTocChildren($documentPartition, $toc->toArray());
+            $this->babStructureService->saveTocChildren($documentPartition, $toc->toArray(), $documentPartition->end_page);
 
             return redirect()->route('partitions.index', $reviewDocument)
                 ->with('success', 'Daftar Isi berhasil diekstrak: '.$toc->count().' Bab, '.$toc->sum(fn ($b) => count($b['children'])).' Subbab.');
@@ -397,6 +397,8 @@ class DocumentPartitionController extends Controller
                     'name' => '—',
                     'start_page' => $documentBabStructure->start_page,
                     'end_page' => $documentBabStructure->end_page,
+                    'pdf_page' => $documentBabStructure->pdf_page,
+                    'pdf_end_page' => $documentBabStructure->pdf_end_page,
                     'sort_order' => 1,
                     'level' => 1,
                 ]);
@@ -442,6 +444,8 @@ class DocumentPartitionController extends Controller
                     'name' => '—',
                     'start_page' => $documentBabStructure->start_page,
                     'end_page' => $documentBabStructure->end_page,
+                    'pdf_page' => $documentBabStructure->pdf_page,
+                    'pdf_end_page' => $documentBabStructure->pdf_end_page,
                     'sort_order' => 1,
                     'level' => 1,
                 ]);
@@ -511,7 +515,7 @@ class DocumentPartitionController extends Controller
 
         foreach ($docPages as $pageData) {
             $pageNum = (int) $pageData['page'];
-            $matched = $babs->first(fn ($bab) => $pageNum >= $bab->start_page && $pageNum <= $bab->end_page);
+            $matched = $babs->first(fn ($bab) => $pageNum >= $bab->pdf_page && $pageNum <= $bab->pdf_end_page);
 
             if ($matched) {
                 $key = $matched->id;

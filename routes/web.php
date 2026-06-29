@@ -61,7 +61,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
     Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewFile'])->name('regulations.file');
     Route::get('/regulations/{regulation}/analyze', [RegulationController::class, 'analyze'])->name('regulations.analyze');
+    Route::post('/regulations/{regulation}/analyze/generate', [RegulationController::class, 'generateAnalysis'])->name('regulations.analyze.generate');
+    Route::post('/regulations/{regulation}/analyze/save', [RegulationController::class, 'saveAnalysis'])->name('regulations.analyze.save');
+    Route::post('/regulations/{regulation}/analyze/connect-references', [RegulationController::class, 'connectReferences'])->name('regulations.analyze.connect-references');
     Route::post('/regulations/{regulation}/reanalyze', [RegulationController::class, 'reanalyze'])->name('regulations.reanalyze');
+    Route::post('/regulations/{regulation}/analyze/babs', [RegulationController::class, 'analyzeBabs'])->name('regulations.analyze.babs');
+    Route::post('/regulations/{regulation}/analyze/bab/{index}', [RegulationController::class, 'analyzeSingleBab'])->name('regulations.analyze.bab');
+    Route::get('/regulations/{regulation}/analyze/babs-list', [RegulationController::class, 'babList'])->name('regulations.analyze.babs-list');
 
     Route::resource('review-documents', ReviewDocumentController::class);
     Route::post('/review-documents/{reviewDocument}/submit', [ReviewDocumentController::class, 'submit'])->name('review-documents.submit');
@@ -88,6 +94,9 @@ Route::middleware('auth')->group(function () {
     // AI Preview
     Route::get('/review-documents/{reviewDocument}/ai-preview', [AiPreviewController::class, 'show'])->name('ai-preview.show');
     Route::post('/review-documents/{reviewDocument}/ai-preview/generate', [AiPreviewController::class, 'generate'])->name('ai-preview.generate')->middleware('throttle:3,1');
+    Route::get('/review-documents/{reviewDocument}/ai-preview/babs-list', [AiPreviewController::class, 'babList'])->name('ai-preview.babs-list');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/babs-analyze', [AiPreviewController::class, 'analyzeBabs'])->name('ai-preview.babs-analyze');
+    Route::post('/review-documents/{reviewDocument}/ai-preview/bab/{index}', [AiPreviewController::class, 'analyzeSingleBab'])->name('ai-preview.bab');
 
     // Document Partitions
     Route::get('/review-documents/{reviewDocument}/partitions', [DocumentPartitionController::class, 'index'])->name('partitions.index');
@@ -115,7 +124,7 @@ Route::middleware('auth')->group(function () {
             return 'No text';
         }
 
-        return '<pre>' . e(mb_substr($reg->parsed_text, 0, 1000)) . '</pre>';
+        return '<pre>'.e(mb_substr($reg->parsed_text, 0, 1000)).'</pre>';
     })->name('debug.reg-text');
 
     // TEMP DEBUG: Test parsed-text view directly
@@ -126,37 +135,37 @@ Route::middleware('auth')->group(function () {
             $rd = ReviewDocument::find(2);
 
             $debug = [];
-            $debug[] = 'User: ' . auth()->user()->name;
+            $debug[] = 'User: '.auth()->user()->name;
             $debug[] = "Doc: {$rd->id} - {$rd->title}";
-            $debug[] = 'Regs count: ' . $rd->regulations()->count();
-            $debug[] = 'isParsed: ' . ($rd->isParsed() ? 'yes' : 'no');
+            $debug[] = 'Regs count: '.$rd->regulations()->count();
+            $debug[] = 'isParsed: '.($rd->isParsed() ? 'yes' : 'no');
 
             $reg = $rd->regulations()->first();
             if ($reg) {
-                $debug[] = "Reg {$reg->id}: parsed=" . ($reg->isParsed() ? 'yes' : 'no') . ' text_len=' . mb_strlen($reg->parsed_text ?? '');
+                $debug[] = "Reg {$reg->id}: parsed=".($reg->isParsed() ? 'yes' : 'no').' text_len='.mb_strlen($reg->parsed_text ?? '');
             }
 
             $result = app(DocumentPartitionController::class)->showParsedText($rd);
-            $debug[] = 'Controller returned: ' . get_class($result);
-            $debug[] = 'View name: ' . $result->getName();
+            $debug[] = 'Controller returned: '.get_class($result);
+            $debug[] = 'View name: '.$result->getName();
 
             $data = $result->getData();
-            $debug[] = 'Regulations in view data: ' . count($data['regulations'] ?? []);
+            $debug[] = 'Regulations in view data: '.count($data['regulations'] ?? []);
             if (! empty($data['regulations'])) {
-                $debug[] = 'First reg has_text: ' . ($data['regulations'][0]['has_text'] ? 'yes' : 'no');
-                $debug[] = 'First reg main_parsed: ' . ($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
-                $debug[] = 'First reg main_chars: ' . $data['regulations'][0]['main_chars'];
+                $debug[] = 'First reg has_text: '.($data['regulations'][0]['has_text'] ? 'yes' : 'no');
+                $debug[] = 'First reg main_parsed: '.($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
+                $debug[] = 'First reg main_chars: '.$data['regulations'][0]['main_chars'];
             }
 
             $html = $result->render();
-            $debug[] = 'HTML length: ' . strlen($html);
-            $debug[] = 'Has Regulasi Acuan: ' . (strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
-            $debug[] = 'Has File Regulasi Utama: ' . (strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
-            $debug[] = 'Has OTORITAS: ' . (strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
+            $debug[] = 'HTML length: '.strlen($html);
+            $debug[] = 'Has Regulasi Acuan: '.(strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
+            $debug[] = 'Has File Regulasi Utama: '.(strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
+            $debug[] = 'Has OTORITAS: '.(strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
 
-            return response('<pre>' . implode("\n", $debug) . '</pre>');
+            return response('<pre>'.implode("\n", $debug).'</pre>');
         } catch (Exception $e) {
-            return response('ERROR: ' . $e->getMessage() . "\nFile: " . $e->getFile() . ':' . $e->getLine());
+            return response('ERROR: '.$e->getMessage()."\nFile: ".$e->getFile().':'.$e->getLine());
         }
     })->name('debug.parsed-view');
 });

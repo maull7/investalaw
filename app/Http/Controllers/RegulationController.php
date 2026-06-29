@@ -127,6 +127,88 @@ class RegulationController extends Controller
         return view('regulations.analyze', compact('regulation', 'analysis'));
     }
 
+    public function generateAnalysis(Regulation $regulation): RedirectResponse
+    {
+        $analysis = $this->regulationAnalysisService->generate($regulation);
+
+        UserActivityLog::log('generated', Regulation::class, $regulation->id, "Menghasilkan analisis AI untuk regulasi {$regulation->regulation_number}");
+
+        if (! $analysis) {
+            return redirect()->route('regulations.analyze', $regulation)
+                ->with('error', 'Gagal menghasilkan analisis.');
+        }
+
+        return redirect()->route('regulations.analyze', $regulation)
+            ->with('success', 'Analisis berhasil dihasilkan. Klik "Simpan Analisis" untuk menyimpan hasil.');
+    }
+
+    public function saveAnalysis(Regulation $regulation): RedirectResponse
+    {
+        $result = $this->regulationAnalysisService->saveAnalysis($regulation);
+
+        if (! $result) {
+            return redirect()->route('regulations.analyze', $regulation)
+                ->with('error', 'Tidak ada analisis untuk disimpan.');
+        }
+
+        UserActivityLog::log('saved', Regulation::class, $regulation->id, "Menyimpan analisis AI untuk regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.analyze', $regulation)
+            ->with('success', 'Analisis berhasil disimpan.');
+    }
+
+    public function connectReferences(Request $request, Regulation $regulation): RedirectResponse
+    {
+        $validated = $request->validate([
+            'reference_ids' => ['required', 'array'],
+            'reference_ids.*' => ['integer', 'exists:regulation_analysis_references,id'],
+        ]);
+
+        $connected = $this->regulationAnalysisService->connectReferences(
+            $regulation,
+            $validated['reference_ids'],
+        );
+
+        if ($connected > 0) {
+            UserActivityLog::log('connected', Regulation::class, $regulation->id, "Menghubungkan {$connected} referensi regulasi ke {$regulation->regulation_number}");
+        }
+
+        $message = $connected > 0
+            ? "{$connected} referensi berhasil dihubungkan."
+            : 'Tidak ada referensi baru yang dihubungkan.';
+
+        return redirect()->route('regulations.analyze', $regulation)
+            ->with($connected > 0 ? 'success' : 'info', $message);
+    }
+
+    public function analyzeBabs(Request $request, Regulation $regulation): JsonResponse
+    {
+        $results = $this->regulationAnalysisService->analyzeByBabs($regulation);
+
+        return response()->json($results);
+    }
+
+    public function analyzeSingleBab(Request $request, Regulation $regulation, int $index): JsonResponse
+    {
+        $result = $this->regulationAnalysisService->analyzeBabByIndex($regulation, $index);
+
+        return response()->json($result);
+    }
+
+    public function babList(Regulation $regulation): JsonResponse
+    {
+        $text = $this->regulationAnalysisService->getContentText($regulation);
+        if (! $text) {
+            return response()->json(['babs' => []]);
+        }
+
+        $babs = $this->regulationAnalysisService->splitTextToBabs($text);
+
+        return response()->json([
+            'babs' => array_map(fn ($b) => ['label' => $b['label']], $babs),
+        ]);
+    }
+
     public function reanalyze(Regulation $regulation): RedirectResponse
     {
         $this->regulationAnalysisService->regenerate($regulation);
@@ -134,7 +216,7 @@ class RegulationController extends Controller
         UserActivityLog::log('reanalyzed', Regulation::class, $regulation->id, "Melakukan re-analisis AI untuk regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.analyze', $regulation)
-            ->with('success', 'Analisis berhasil diperbarui.');
+            ->with('success', 'Analisis berhasil diperbarui. Klik "Simpan Analisis" untuk menyimpan hasil.');
     }
 
     public function destroy(Regulation $regulation): RedirectResponse

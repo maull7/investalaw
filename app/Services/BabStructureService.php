@@ -14,8 +14,8 @@ class BabStructureService
 
     public function resolveChildPages(DocumentBabStructure $parent, array $children, ?int $maxPages = null): array
     {
-        $parentStart = $parent->start_page;
-        $parentEnd = $parent->end_page;
+        $parentStart = $parent->pdf_page;
+        $parentEnd = $parent->pdf_end_page;
 
         if ($parent->reviewDocument->relationLoaded('pages') || $parent->reviewDocument->isParsed()) {
             $pages = $parent->reviewDocument->pages()
@@ -113,9 +113,11 @@ class BabStructureService
         return null;
     }
 
-    public function saveTocChildren(DocumentPartition $partition, array $babs): void
+    public function saveTocChildren(DocumentPartition $partition, array $babs, int $pageOffset = 0): void
     {
-        DB::transaction(function () use ($partition, $babs) {
+        $offset = $this->computePdfOffset($partition, $babs[0] ?? null);
+
+        DB::transaction(function () use ($partition, $babs, $offset) {
             $documentId = $partition->review_document_id;
 
             DocumentBabStructure::where('review_document_id', $documentId)
@@ -124,36 +126,51 @@ class BabStructureService
 
             $babOrder = 0;
             foreach ($babs as $babData) {
+                $startPage = $babData['start_page'] ?? 1;
+                $endPage = $babData['end_page'] ?? ($startPage + 5);
                 $bab = DocumentBabStructure::create([
                     'review_document_id' => $documentId,
                     'parent_id' => null,
                     'name' => $babData['title'],
-                    'start_page' => $babData['start_page'] ?? 1,
-                    'end_page' => $babData['end_page'] ?? ($babData['start_page'] ?? 1) + 5,
+                    'start_page' => $startPage,
+                    'end_page' => $endPage,
+                    'toc_page' => $startPage,
+                    'pdf_page' => $startPage + $offset,
+                    'pdf_end_page' => $endPage + $offset,
                     'sort_order' => $babOrder++,
                     'level' => 0,
                 ]);
 
                 $subOrder = 0;
                 foreach ($babData['children'] ?? [] as $subData) {
+                    $subStart = $subData['start_page'] ?? 1;
+                    $subEnd = $subData['end_page'] ?? ($subStart + 3);
                     $subbab = DocumentBabStructure::create([
                         'review_document_id' => $documentId,
                         'parent_id' => $bab->id,
                         'name' => $subData['title'],
-                        'start_page' => $subData['start_page'] ?? 1,
-                        'end_page' => $subData['end_page'] ?? ($subData['start_page'] ?? 1) + 3,
+                        'start_page' => $subStart,
+                        'end_page' => $subEnd,
+                        'toc_page' => $subStart,
+                        'pdf_page' => $subStart + $offset,
+                        'pdf_end_page' => $subEnd + $offset,
                         'sort_order' => $subOrder++,
                         'level' => 1,
                     ]);
 
                     $isiOrder = 0;
                     foreach ($subData['children'] ?? [] as $isiData) {
+                        $isiStart = $isiData['start_page'] ?? 1;
+                        $isiEnd = $isiData['end_page'] ?? $isiStart;
                         DocumentBabStructure::create([
                             'review_document_id' => $documentId,
                             'parent_id' => $subbab->id,
                             'name' => $isiData['title'],
-                            'start_page' => $isiData['start_page'] ?? 1,
-                            'end_page' => $isiData['end_page'] ?? ($isiData['start_page'] ?? 1),
+                            'start_page' => $isiStart,
+                            'end_page' => $isiEnd,
+                            'toc_page' => $isiStart,
+                            'pdf_page' => $isiStart + $offset,
+                            'pdf_end_page' => $isiEnd + $offset,
                             'sort_order' => $isiOrder++,
                             'level' => 2,
                         ]);
@@ -161,6 +178,35 @@ class BabStructureService
                 }
             }
         });
+    }
+
+    private function computePdfOffset(DocumentPartition $partition, ?array $firstBab): int
+    {
+        $firstBabStart = $firstBab['start_page'] ?? 1;
+        $title = $firstBab['title'] ?? '';
+
+        if ($title) {
+            $search = null;
+            if (preg_match('/^(BAB\s+\w+)/iu', $title, $m)) {
+                $search = $m[1];
+            }
+
+            if ($search) {
+                $found = $partition->reviewDocument->pages()
+                    ->where('page_number', '>', $partition->end_page)
+                    ->whereRaw('LOCATE(?, content) > 0', [$search])
+                    ->orderBy('page_number')
+                    ->first();
+
+                if ($found) {
+                    return $found->page_number - $firstBabStart;
+                }
+            }
+        }
+
+        $endPage = $partition->end_page ?? 0;
+
+        return ($endPage + 1) - $firstBabStart;
     }
 
     public function saveStructureChildren(DocumentBabStructure $parent, array $children, int $childLevel): void
@@ -208,12 +254,16 @@ class BabStructureService
             }
 
             foreach ($filtered as $data) {
+                $startPage = $data['start_page'] ?? 1;
+                $endPage = $data['end_page'] ?? ($data['start_page'] ?? 1);
                 $child = DocumentBabStructure::create([
                     'review_document_id' => $parent->review_document_id,
                     'parent_id' => $parent->id,
                     'name' => $data['title'],
-                    'start_page' => $data['start_page'] ?? 1,
-                    'end_page' => $data['end_page'] ?? ($data['start_page'] ?? 1),
+                    'start_page' => $startPage,
+                    'end_page' => $endPage,
+                    'pdf_page' => $startPage,
+                    'pdf_end_page' => $endPage,
                     'sort_order' => 0,
                     'level' => $childLevel,
                 ]);
@@ -246,6 +296,9 @@ class BabStructureService
                 'title' => $node->name,
                 'start_page' => $node->start_page,
                 'end_page' => $node->end_page,
+                'toc_page' => $node->toc_page,
+                'pdf_page' => $node->pdf_page,
+                'pdf_end_page' => $node->pdf_end_page,
                 'children' => $this->buildTree($node->children),
             ];
 

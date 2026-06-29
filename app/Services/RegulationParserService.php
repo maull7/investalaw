@@ -71,6 +71,10 @@ class RegulationParserService
 
         $parseStatus = $percentParsed >= 100 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
 
+        // ponytail: detect first BAB page to compute content offset
+        $contentStartPage = $this->detectContentStartPage($pages);
+        $pageOffset = $contentStartPage ? $contentStartPage - 1 : 0;
+
         $stats = [
             'pdf_type' => $pdfType,
             'total_pages' => $totalPages,
@@ -81,6 +85,8 @@ class RegulationParserService
             'ocr_pages' => $pdfType === 'image' ? $parsedCount : 0,
             'char_total' => array_sum(array_column($pages, 'char_count')),
             'used_ocr' => $pdfType === 'image',
+            'content_start_page' => $contentStartPage,
+            'page_offset' => $pageOffset,
         ];
 
         $regulation->update([
@@ -102,6 +108,18 @@ class RegulationParserService
         $cleaned = preg_replace('/[\x{10000}-\x{10FFFF}]/u', '', $text);
 
         return $cleaned ?? $text;
+    }
+
+    private function detectContentStartPage(array $pages): ?int
+    {
+        foreach ($pages as $page) {
+            $text = trim($page['text']);
+            if (preg_match('/^BAB\s+I/i', $text)) {
+                return $page['page'];
+            }
+        }
+
+        return null;
     }
 
     public function parseDocument(RegulationDocument $document): array

@@ -10,17 +10,12 @@ class RegulationAnalysisService
 {
     private const MAX_TEXT_LENGTH = 30000;
 
-    public function analyze(Regulation $regulation): RegulationAnalysis
+    public function analyze(Regulation $regulation): ?RegulationAnalysis
     {
-        $existing = RegulationAnalysis::where('regulation_id', $regulation->id)
+        return RegulationAnalysis::where('regulation_id', $regulation->id)
             ->with(['pasal', 'references'])
+            ->latest()
             ->first();
-
-        if ($existing) {
-            return $existing;
-        }
-
-        return $this->generate($regulation);
     }
 
     public function regenerate(Regulation $regulation): RegulationAnalysis
@@ -30,7 +25,23 @@ class RegulationAnalysisService
         return $this->generate($regulation);
     }
 
-    private function generate(Regulation $regulation): RegulationAnalysis
+    public function saveAnalysis(Regulation $regulation): ?RegulationAnalysis
+    {
+        $analysis = RegulationAnalysis::where('regulation_id', $regulation->id)->first();
+
+        if (! $analysis) {
+            return null;
+        }
+
+        $metadata = $analysis->metadata ?? [];
+        $metadata['is_saved'] = true;
+        $metadata['saved_at'] = now()->toIso8601String();
+        $analysis->update(['metadata' => $metadata]);
+
+        return $analysis->fresh()->load(['pasal', 'references']);
+    }
+
+    public function generate(Regulation $regulation): RegulationAnalysis
     {
         $regulation->loadMissing(['relatedRegulations.type', 'relatedRegulations.documents', 'documents']);
 
@@ -38,7 +49,7 @@ class RegulationAnalysisService
         $context = $this->buildContext($regulation, $relatedData);
 
         $parsedText = $regulation->isParsed() && $regulation->parsed_text
-            ? mb_substr($regulation->parsed_text, 0, self::MAX_TEXT_LENGTH)
+            ? $this->getContentText($regulation)
             : null;
 
         $extracted = $parsedText ? $this->extractRegulationsFromText($parsedText) : null;
@@ -66,6 +77,7 @@ class RegulationAnalysisService
                 'total_pasal' => count($extracted['pasal_structure'] ?? []),
                 'generated_at' => now()->toIso8601String(),
                 'ai_generated' => $aiResult !== null,
+                'is_saved' => false,
             ],
         ]);
 
@@ -102,6 +114,21 @@ class RegulationAnalysisService
         return $record->load(['pasal', 'references']);
     }
 
+    private function getContentText(Regulation $regulation): ?string
+    {
+        $text = $regulation->parsed_text;
+        $stats = $regulation->parse_stats;
+        $offset = $stats['page_offset'] ?? 0;
+
+        if ($offset > 0) {
+            $pages = explode("\n\n", $text);
+            $pages = array_slice($pages, $offset);
+            $text = implode("\n\n", $pages);
+        }
+
+        return mb_substr($text, 0, self::MAX_TEXT_LENGTH);
+    }
+
     private function extractRegulationsFromText(string $text): ?array
     {
         $providers = [
@@ -113,9 +140,9 @@ class RegulationAnalysisService
         ];
 
         $prompt = <<<PROMPT
-Anda adalah ekstraktor regulasi. Dari teks peraturan berikut, ekstrak:
+Anda adalah ekstraktor regulasi Indonesia. Dari teks peraturan berikut, ekstrak:
 
-1. SEMUA referensi ke peraturan lain yang disebut (cari pola seperti "Peraturan ... Nomor ...", "POJK", "UU", "PP", "Peraturan Pemerintah", dll)
+1. SEMUA referensi ke peraturan lain yang disebut — perhatikan bagian "Menimbang", "Mengingat", "MEMUTUSKAN", "Pasal", dan "Ketentuan". Cari pola seperti "Undang-Undang Nomor ...", "Peraturan Pemerintah Nomor ...", "Peraturan Presiden Nomor ...", "POJK Nomor ...", "PP Nomor ...", "UU Nomor ...", "Peraturan OJK Nomor ...", dll.
 2. Struktur Pasal/Pasal dalam teks
 3. Perubahan yang disebutkan (sisipan, perubahan, pencabutan pasal)
 
@@ -145,7 +172,7 @@ Kembalikan JSON SAJA (tanpa markdown, tanpa penjelasan) dengan format:
   "key_points": ["poin penting 1", "poin penting 2"]
 }
 
-Jika tidak ada data, kembalikan array kosong [].
+Jika tidak ada data, gunakan array kosong [] untuk "referenced_regulations" dan "pasal_structure".
 PROMPT;
 
         foreach ($providers as $provider) {
@@ -436,6 +463,104 @@ PROMPT;
         }
 
         return $sections;
+    }
+
+    public function matchReferencesWithDb(RegulationAnalysis $analysis): array
+    {
+        $results = [];
+
+        foreach ($analysis->references as $ref) {
+            $match = null;
+            $confidence = null;
+
+            if ($ref->number && $ref->year) {
+                $query = Regulation::where('year', $ref->year)
+                    ->where(function ($q) use ($ref) {
+                        $q->where('regulation_number', $ref->number)
+                            ->orWhere('regulation_number', 'like', "%{$ref->number}");
+                    });
+
+                if ($ref->name) {
+                    $nameClean = preg_replace('/\s+/', ' ', trim(mb_substr($ref->name, 0, 60)));
+                    $query->orWhere(function ($q) use ($nameClean, $ref) {
+                        $q->where('title', 'like', "%{$nameClean}%")
+                            ->where('year', $ref->year);
+                    });
+                }
+
+                $candidates = $query->with('type')->limit(5)->get();
+
+                if ($candidates->count() === 1) {
+                    $match = $candidates->first();
+                    $confidence = 'exact';
+                } elseif ($candidates->count() > 1) {
+                    $best = null;
+                    $bestScore = 0;
+                    foreach ($candidates as $c) {
+                        $score = 0;
+                        if ($c->regulation_number === $ref->number) {
+                            $score += 3;
+                        }
+                        if ($ref->name && mb_strpos(mb_strtolower($c->title), mb_strtolower(mb_substr($ref->name, 0, 30))) !== false) {
+                            $score += 2;
+                        }
+                        if ($c->year === (int) $ref->year) {
+                            $score += 1;
+                        }
+                        if ($score > $bestScore) {
+                            $bestScore = $score;
+                            $best = $c;
+                        }
+                    }
+                    if ($best && $bestScore >= 3) {
+                        $match = $best;
+                        $confidence = 'fuzzy';
+                    }
+                }
+            }
+
+            $results[] = [
+                'reference' => $ref,
+                'match' => $match,
+                'confidence' => $confidence,
+                'is_available' => $match !== null,
+            ];
+        }
+
+        return $results;
+    }
+
+    public function connectReferences(Regulation $regulation, array $referenceIds): int
+    {
+        $analysis = RegulationAnalysis::where('regulation_id', $regulation->id)->first();
+
+        if (! $analysis) {
+            return 0;
+        }
+
+        $matched = $this->matchReferencesWithDb($analysis);
+        $toConnect = [];
+
+        foreach ($matched as $item) {
+            if (in_array($item['reference']->id, $referenceIds) && $item['match']) {
+                $toConnect[] = $item['match']->id;
+            }
+        }
+
+        if (empty($toConnect)) {
+            return 0;
+        }
+
+        $existing = $regulation->relatedRegulations()->pluck('related_regulation_id')->toArray();
+        $new = array_diff($toConnect, $existing);
+
+        if (empty($new)) {
+            return 0;
+        }
+
+        $regulation->relatedRegulations()->attach($new);
+
+        return count($new);
     }
 
     private function fallbackAnalysis(array $relatedData): array

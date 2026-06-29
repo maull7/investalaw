@@ -372,7 +372,7 @@ PROMPT;
         $document = $bab->reviewDocument;
 
         $pages = $document->pages()
-            ->whereBetween('page_number', [$bab->start_page, $bab->end_page])
+            ->whereBetween('page_number', [$bab->pdf_page, $bab->pdf_end_page])
             ->orderBy('page_number')
             ->get();
         $text = $pages->pluck('content')->implode(' ');

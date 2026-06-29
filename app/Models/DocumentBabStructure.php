@@ -14,6 +14,9 @@ class DocumentBabStructure extends Model
         'name',
         'start_page',
         'end_page',
+        'toc_page',
+        'pdf_page',
+        'pdf_end_page',
         'sort_order',
         'level',
     ];

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
+use App\Jobs\ParseRegulationDocument;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use App\Models\UserActivityLog;
@@ -315,6 +316,13 @@ class RegulationController extends Controller
         ]);
     }
 
+    public function viewDocumentParsedText(RegulationDocument $document): View
+    {
+        abort_unless($document->isParsed(), 404);
+
+        return view('regulations.document-parsed-text', compact('document'));
+    }
+
     public function viewFile(Regulation $regulation): StreamedResponse
     {
         return Storage::disk('public')->response($regulation->file_path, null, [
@@ -355,5 +363,29 @@ class RegulationController extends Controller
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', $result['message']);
+    }
+
+    public function parseAllDocuments(Regulation $regulation): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        $regulation->load('documents');
+        $pending = $regulation->documents->reject(fn ($d) => $d->isParsed());
+
+        if ($pending->isEmpty()) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('info', 'Semua dokumen tambahan sudah diparse.');
+        }
+
+        $count = $pending->count();
+
+        foreach ($pending as $document) {
+            ParseRegulationDocument::dispatchAfterResponse($document);
+        }
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses {$count} dokumen tambahan dari regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('success', "Memproses {$count} dokumen tambahan secara background. Silakan refresh halaman untuk melihat hasil.");
     }
 }

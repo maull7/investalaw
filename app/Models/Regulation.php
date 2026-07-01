@@ -55,6 +55,19 @@ class Regulation extends Model
         return $this->parsed_at !== null;
     }
 
+    public function documentsParseProgress(): array
+    {
+        $total = $this->documents->count();
+        $parsed = $this->documents->filter(fn ($d) => $d->isParsed())->count();
+
+        return [
+            'total' => $total,
+            'parsed' => $parsed,
+            'pending' => $total - $parsed,
+            'percentage' => $total > 0 ? round(($parsed / $total) * 100) : 0,
+        ];
+    }
+
     public function parseStatusLabel(): string
     {
         return match ($this->parse_status) {

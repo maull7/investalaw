@@ -68,6 +68,20 @@ class RegulationController extends Controller
             $regulation->relatedRegulations()->sync($data['related_regulations']);
         }
 
+        $documentsInput = $data['documents'] ?? [];
+        foreach ($documentsInput as $i => $docData) {
+            $file = $request->file("documents.{$i}.file");
+            if ($file) {
+                $docPath = $file->store('regulation-documents', 'public');
+                RegulationDocument::create([
+                    'regulation_id' => $regulation->id,
+                    'name' => $docData['name'],
+                    'document_type' => $docData['document_type'],
+                    'file_path' => $docPath,
+                ]);
+            }
+        }
+
         UserActivityLog::log('created', Regulation::class, $regulation->id, "Menambahkan regulasi {$regulation->regulation_number} - {$regulation->title}");
 
         return redirect()->route('regulations.show', $regulation)
@@ -297,6 +311,35 @@ class RegulationController extends Controller
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', 'Dokumen tambahan berhasil dihapus.');
+    }
+
+    public function updateDocument(Request $request, RegulationDocument $document): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('upload_regulations'), 403);
+
+        $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'document_type' => ['required', 'string', 'max:255'],
+            'file' => ['nullable', 'file', 'mimes:pdf,docx,doc,xlsx,xls,pptx,ppt', 'max:20480'],
+        ]);
+
+        $updateData = [
+            'name' => $request->input('name'),
+            'document_type' => $request->input('document_type'),
+        ];
+
+        if ($request->hasFile('file')) {
+            Storage::disk('public')->delete($document->file_path);
+            $updateData['file_path'] = $request->file('file')->store('regulation-documents', 'public');
+        }
+
+        $document->update($updateData);
+
+        $regulation = $document->regulation;
+
+        UserActivityLog::log('updated', Regulation::class, $regulation->id, "Memperbarui dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
+
+        return redirect()->back()->with('success', 'Dokumen berhasil diperbarui.');
     }
 
     public function viewDocument(RegulationDocument $document): StreamedResponse

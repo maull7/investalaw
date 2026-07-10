@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
     Route::post('/regulations/{regulation}/parse-documents', [RegulationController::class, 'parseAllDocuments'])->name('regulations.documents.parse-all');
     Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
+    Route::put('/regulations/documents/{document}', [RegulationController::class, 'updateDocument'])->name('regulations.documents.update');
     Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
     Route::get('/regulations/documents/{document}/parsed-text', [RegulationController::class, 'viewDocumentParsedText'])->name('regulations.documents.parsed-text');

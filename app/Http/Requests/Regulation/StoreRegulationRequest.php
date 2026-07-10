@@ -26,6 +26,10 @@ class StoreRegulationRequest extends FormRequest
             'sub_categories.*' => ['exists:sub_categories,id'],
             'related_regulations' => ['nullable', 'array'],
             'related_regulations.*' => ['exists:regulations,id'],
+            'documents' => ['nullable', 'array'],
+            'documents.*.name' => ['required', 'string', 'max:255'],
+            'documents.*.document_type' => ['required', 'string', 'max:255'],
+            'documents.*.file' => ['required', 'file', 'mimes:pdf,docx,doc,xlsx,xls,pptx,ppt', 'max:20480'],
         ];
     }
 }

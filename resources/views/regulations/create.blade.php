@@ -15,7 +15,7 @@
                     </div>
                 </x-slot>
 
-                <form method="POST" action="{{ route('regulations.store') }}" enctype="multipart/form-data" class="space-y-6">
+                <form method="POST" action="{{ route('regulations.store') }}" enctype="multipart/form-data" class="space-y-6" @submit.prevent="submitForm">
                     @csrf
 
                     <div>
@@ -96,16 +96,40 @@
                             Peraturan Terkait
                             <span x-show="selectedRelated.length > 0" x-cloak class="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs" x-text="selectedRelated.length"></span>
                         </x-button>
-                        <span class="inline-flex items-center text-xs text-[#667085]">
-                            <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
-                            Dokumen Tambahan dapat diunggah setelah regulasi disimpan
-                        </span>
+                        <x-button type="button" variant="outline" size="md" @click="$dispatch('open-modal-add-document')">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12-3-3m0 0-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/></svg>
+                            Dokumen Tambahan
+                            <span x-show="documents.length > 0" x-cloak class="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs" x-text="documents.length"></span>
+                        </x-button>
                     </div>
 
                     {{-- Hidden inputs for related regulations --}}
                     <template x-for="rel in selectedRelated" :key="rel.id">
                         <input type="hidden" name="related_regulations[]" :value="rel.id">
                     </template>
+
+                    {{-- Dokumen Tambahan --}}
+                    <div x-show="documents.length > 0" x-cloak class="pt-3 border-t border-[#e7eaf0] space-y-3">
+                        <label class="block text-sm font-semibold text-[#071833] mb-1">Dokumen Tambahan</label>
+                        <template x-for="(doc, index) in documents" :key="index">
+                            <div class="flex items-start gap-3 p-3 rounded-xl bg-[#f6f8fb]">
+                                <div class="shrink-0 mt-1.5 w-8 h-8 rounded-lg bg-sky-50 text-sky-500 flex items-center justify-center">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-semibold text-[#071833]" x-text="doc.name"></p>
+                                    <p class="text-xs text-[#667085]" x-text="doc.document_type"></p>
+                                    <p class="text-xs text-[#667085] mt-0.5">
+                                        <span x-text="doc.file.name"></span>
+                                        <span x-text="`(${(doc.file.size / 1024 / 1024).toFixed(1)} MB)`"></span>
+                                    </p>
+                                </div>
+                                <button type="button" @click="removeDocument(index)" class="shrink-0 mt-1.5 p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
 
                     <div class="flex flex-col sm:flex-row gap-3 pt-3 border-t border-[#e7eaf0]">
                         <x-button type="submit" variant="primary" size="lg">Simpan Regulasi</x-button>
@@ -211,6 +235,38 @@
                 <x-button type="button" variant="outline" @click="$dispatch('close-modal-related-regulations')">Tutup</x-button>
             </x-slot>
         </x-modal>
+
+        {{-- Add Document Modal --}}
+        <x-modal name="add-document" title="Tambah Dokumen Tambahan" maxWidth="lg">
+            <form @submit.prevent="addDocument" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">Nama Dokumen <span class="text-[#c99a3e]">*</span></label>
+                    <input type="text" x-model="newDoc.name" required class="input-premium" placeholder="Contoh: Ringkasan Regulasi">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">Jenis Dokumen <span class="text-[#c99a3e]">*</span></label>
+                    <select x-model="newDoc.document_type" required class="select-premium">
+                        <option value="">-- Pilih Jenis --</option>
+                        <option value="Ringkasan Regulasi">Ringkasan Regulasi</option>
+                        <option value="Penjelasan Regulasi">Penjelasan Regulasi</option>
+                        <option value="Interpretasi Hukum">Interpretasi Hukum</option>
+                        <option value="FAQ">FAQ</option>
+                        <option value="Dokumen Sosialisasi">Dokumen Sosialisasi</option>
+                        <option value="Lampiran">Lampiran</option>
+                        <option value="Dokumen Pendukung">Dokumen Pendukung Lainnya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">File <span class="text-[#c99a3e]">*</span></label>
+                    <input type="file" x-ref="modalFile" @change="newDoc.file = $event.target.files[0]" required accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt" class="file-premium">
+                    <p class="mt-1.5 text-xs text-[#667085]">Format: PDF, DOCX, XLSX, PPTX (maks. 20MB)</p>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-[#e7eaf0]">
+                    <x-button type="button" variant="outline" @click="$dispatch('close-modal-add-document')">Batal</x-button>
+                    <x-button type="submit" variant="primary">Tambah</x-button>
+                </div>
+            </form>
+        </x-modal>
     </div>
 @endsection
 
@@ -224,6 +280,9 @@ function regulationForm(subCategoriesMap) {
         searchResults: [],
         searchLoading: false,
         pdfPreviewUrl: null,
+        documents: [],
+        newDoc: { name: '', document_type: '', file: null },
+        submitting: false,
 
         previewFile(event) {
             if (this.pdfPreviewUrl) {
@@ -234,6 +293,44 @@ function regulationForm(subCategoriesMap) {
                 this.pdfPreviewUrl = URL.createObjectURL(file);
             } else {
                 this.pdfPreviewUrl = null;
+            }
+        },
+
+        addDocument() {
+            if (!this.newDoc.name || !this.newDoc.document_type || !this.newDoc.file) return;
+            this.documents.push({ ...this.newDoc });
+            this.newDoc = { name: '', document_type: '', file: null };
+            if (this.$refs.modalFile) this.$refs.modalFile.value = '';
+            this.$dispatch('close-modal-add-document');
+        },
+
+        removeDocument(index) {
+            this.documents.splice(index, 1);
+        },
+
+        async submitForm(event) {
+            if (this.submitting) return;
+            this.submitting = true;
+
+            const form = event.target;
+            const formData = new FormData(form);
+
+            this.documents.forEach((doc, i) => {
+                formData.set(`documents[${i}][name]`, doc.name);
+                formData.set(`documents[${i}][document_type]`, doc.document_type);
+                formData.append(`documents[${i}][file]`, doc.file);
+            });
+
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData,
+                });
+
+                this.submitting = false;
+                window.location.href = response.url;
+            } catch (e) {
+                this.submitting = false;
             }
         },
 

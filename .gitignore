@@ -24,6 +24,7 @@
 /.agents
 /.claude
 /.coder
+/documentation
 _ide_helper.php
 Homestead.json
 Homestead.yaml

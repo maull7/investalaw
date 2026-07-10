@@ -475,50 +475,72 @@ PROMPT;
         foreach ($analysis->references as $ref) {
             $match = null;
             $confidence = null;
+            $candidates = collect();
 
+            // Strategy 1: number + year
             if ($ref->number && $ref->year) {
-                $query = Regulation::where('year', $ref->year)
+                $candidates = Regulation::where('year', $ref->year)
                     ->where(function ($q) use ($ref) {
                         $q->where('regulation_number', $ref->number)
-                            ->orWhere('regulation_number', 'like', "%{$ref->number}");
-                    });
+                            ->orWhere('regulation_number', 'like', "%{$ref->number}%");
+                    })
+                    ->with('type')
+                    ->limit(5)
+                    ->get();
+            }
 
-                if ($ref->name) {
-                    $nameClean = preg_replace('/\s+/', ' ', trim(mb_substr($ref->name, 0, 60)));
-                    $query->orWhere(function ($q) use ($nameClean, $ref) {
-                        $q->where('title', 'like', "%{$nameClean}%")
-                            ->where('year', $ref->year);
-                    });
+            // Strategy 2: name + year (title LIKE full name)
+            if ($candidates->isEmpty() && $ref->name && $ref->year) {
+                $nameClean = preg_replace('/\s+/', ' ', trim(mb_substr($ref->name, 0, 60)));
+                $candidates = Regulation::where('title', 'like', "%{$nameClean}%")
+                    ->where('year', $ref->year)
+                    ->with('type')
+                    ->limit(5)
+                    ->get();
+            }
+
+            // Strategy 3: number only (year might be wrong)
+            if ($candidates->isEmpty() && $ref->number) {
+                $candidates = Regulation::where('regulation_number', 'like', "%{$ref->number}%")
+                    ->with('type')
+                    ->limit(5)
+                    ->get();
+            }
+
+            // Strategy 4: name only (year might be wrong)
+            if ($candidates->isEmpty() && $ref->name) {
+                $nameClean = preg_replace('/\s+/', ' ', trim(mb_substr($ref->name, 0, 60)));
+                $candidates = Regulation::where('title', 'like', "%{$nameClean}%")
+                    ->with('type')
+                    ->limit(5)
+                    ->get();
+            }
+
+            if ($candidates->count() === 1) {
+                $match = $candidates->first();
+                $confidence = 'exact';
+            } elseif ($candidates->count() > 1) {
+                $best = null;
+                $bestScore = 0;
+                foreach ($candidates as $c) {
+                    $score = 0;
+                    if ($c->regulation_number === $ref->number) {
+                        $score += 3;
+                    }
+                    if ($ref->name && mb_strpos(mb_strtolower($c->title), mb_strtolower(mb_substr($ref->name, 0, 30))) !== false) {
+                        $score += 2;
+                    }
+                    if ($c->year === (int) $ref->year) {
+                        $score += 1;
+                    }
+                    if ($score > $bestScore) {
+                        $bestScore = $score;
+                        $best = $c;
+                    }
                 }
-
-                $candidates = $query->with('type')->limit(5)->get();
-
-                if ($candidates->count() === 1) {
-                    $match = $candidates->first();
-                    $confidence = 'exact';
-                } elseif ($candidates->count() > 1) {
-                    $best = null;
-                    $bestScore = 0;
-                    foreach ($candidates as $c) {
-                        $score = 0;
-                        if ($c->regulation_number === $ref->number) {
-                            $score += 3;
-                        }
-                        if ($ref->name && mb_strpos(mb_strtolower($c->title), mb_strtolower(mb_substr($ref->name, 0, 30))) !== false) {
-                            $score += 2;
-                        }
-                        if ($c->year === (int) $ref->year) {
-                            $score += 1;
-                        }
-                        if ($score > $bestScore) {
-                            $bestScore = $score;
-                            $best = $c;
-                        }
-                    }
-                    if ($best && $bestScore >= 3) {
-                        $match = $best;
-                        $confidence = 'fuzzy';
-                    }
+                if ($best && $bestScore >= 2) {
+                    $match = $best;
+                    $confidence = 'fuzzy';
                 }
             }
 

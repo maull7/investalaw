@@ -148,23 +148,38 @@
                 @else
                     <ul class="divide-y divide-[#f0f3f8]">
                         @foreach($regulation->documents as $doc)
-                            <li class="flex items-center gap-4 py-3">
-                                <div class="shrink-0 w-10 h-10 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center">
-                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-[#071833]">{{ $doc->name }}</p>
-                                    <p class="text-xs text-[#667085]">{{ $doc->document_type }}</p>
-                                </div>
-                                <div class="flex items-center gap-1.5">
-                                    <a href="{{ route('regulations.documents.view', $doc) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">View</a>
-                                    <form method="POST" action="{{ route('regulations.documents.destroy', $doc) }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-rose-600 hover:bg-rose-50 transition" title="Hapus" onclick="return confirm('Hapus dokumen ini?')">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+                            @php $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION); @endphp
+                            <li class="py-3 space-y-3">
+                                @if($ext === 'pdf')
+                                    <div class="rounded-xl overflow-hidden border border-[#e7eaf0] h-[200px] bg-[#f6f8fb]">
+                                        <iframe src="{{ route('regulations.documents.view', $doc) }}" class="w-full h-full" frameborder="0"></iframe>
+                                    </div>
+                                @endif
+                                <div class="flex items-center gap-4">
+                                    <div class="shrink-0 w-10 h-10 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z"/></svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-sm font-semibold text-[#071833]">{{ $doc->name }}</p>
+                                        <p class="text-xs text-[#667085]">{{ $doc->document_type }} · {{ strtoupper($ext) }}</p>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <button type="button" @click="openEditModal({{ Js::from(['id' => $doc->id, 'name' => $doc->name, 'document_type' => $doc->document_type]) }})" class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
+                                            Edit
                                         </button>
-                                    </form>
+                                        <a href="{{ route('regulations.documents.view', $doc) }}" target="_blank" class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                                            View
+                                        </a>
+                                        <form method="POST" action="{{ route('regulations.documents.destroy', $doc) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-rose-600 hover:bg-rose-50 transition" title="Hapus" onclick="return confirm('Hapus dokumen ini?')">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"/></svg>
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </li>
                         @endforeach
@@ -303,6 +318,40 @@
                 </div>
             </form>
         </x-modal>
+
+        {{-- Edit Document Modal --}}
+        <x-modal name="edit-document" title="Edit Dokumen Tambahan" maxWidth="lg">
+            <form method="POST" :action="`/regulations/documents/${editDocument?.id}`" enctype="multipart/form-data" class="space-y-5">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">Nama Dokumen <span class="text-[#c99a3e]">*</span></label>
+                    <input type="text" name="name" x-model="editDocument.name" required class="input-premium">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">Jenis Dokumen <span class="text-[#c99a3e]">*</span></label>
+                    <select name="document_type" x-model="editDocument.document_type" required class="select-premium">
+                        <option value="">-- Pilih Jenis --</option>
+                        <option value="Ringkasan Regulasi">Ringkasan Regulasi</option>
+                        <option value="Penjelasan Regulasi">Penjelasan Regulasi</option>
+                        <option value="Interpretasi Hukum">Interpretasi Hukum</option>
+                        <option value="FAQ">FAQ</option>
+                        <option value="Dokumen Sosialisasi">Dokumen Sosialisasi</option>
+                        <option value="Lampiran">Lampiran</option>
+                        <option value="Dokumen Pendukung">Dokumen Pendukung Lainnya</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-[#071833] mb-2">Ganti File <span class="text-[#667085] text-xs">(opsional)</span></label>
+                    <input type="file" name="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt" class="file-premium">
+                    <p class="mt-1.5 text-xs text-[#667085]">Kosongkan jika tidak ingin mengganti file.</p>
+                </div>
+                <div class="flex justify-end gap-3 pt-3 border-t border-[#e7eaf0]">
+                    <x-button type="button" variant="outline" @click="$dispatch('close-modal-edit-document')">Batal</x-button>
+                    <x-button type="submit" variant="primary">Simpan</x-button>
+                </div>
+            </form>
+        </x-modal>
     </div>
 @endsection
 
@@ -317,6 +366,7 @@ function regulationEditForm(subCategoriesMap, selectedSubIds, selectedRelated) {
         searchResults: [],
         searchLoading: false,
         pdfPreviewUrl: '{{ Storage::disk('public')->url($regulation->file_path) }}',
+        editDocument: null,
 
         previewFile(event) {
             if (this.pdfPreviewUrl && !this.pdfPreviewUrl.startsWith('http')) {
@@ -326,6 +376,11 @@ function regulationEditForm(subCategoriesMap, selectedSubIds, selectedRelated) {
             if (file && file.type === 'application/pdf') {
                 this.pdfPreviewUrl = URL.createObjectURL(file);
             }
+        },
+
+        openEditModal(doc) {
+            this.editDocument = { ...doc };
+            this.$dispatch('open-modal-edit-document');
         },
 
         init() {

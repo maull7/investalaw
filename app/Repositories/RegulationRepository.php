@@ -37,6 +37,23 @@ class RegulationRepository
             });
         }
 
+        if (! empty($filters['search_content'])) {
+            $searchContent = $filters['search_content'];
+
+            $query->where(function (Builder $q) use ($searchContent) {
+                $q->where('parsed_text', 'like', "%{$searchContent}%")
+                    ->orWhereHas('documents', function (Builder $docQuery) use ($searchContent) {
+                        $docQuery->where('parsed_text', 'like', "%{$searchContent}%");
+                    });
+            })
+                ->selectRaw('regulations.*, 
+                CASE 
+                    WHEN parsed_text LIKE ? THEN 1 
+                    ELSE 0 
+                END as relevance', ["%{$searchContent}%"])
+                ->limit(1);
+        }
+
         if (! empty($filters['year'])) {
             $query->where('year', $filters['year']);
         }
@@ -49,7 +66,9 @@ class RegulationRepository
             $query->where('category_id', $filters['category_id']);
         }
 
-        if ($sortField === 'regulation_type_id') {
+        if (! empty($filters['search_content'])) {
+            $query->orderByDesc('relevance');
+        } elseif ($sortField === 'regulation_type_id') {
             $query->orderBy(
                 RegulationType::select('level')
                     ->whereColumn('regulation_types.id', 'regulations.regulation_type_id'),
@@ -113,5 +132,22 @@ class RegulationRepository
             'types' => RegulationType::orderBy('level')->get(),
             'categories' => RegulationCategory::with(['subCategories' => fn ($q) => $q->where('is_active', true)])->orderBy('name')->get(),
         ];
+    }
+
+    public function buildSnippet(?string $text, string $keyword, int $length = 200): ?string
+    {
+        if (! $text || ! $keyword) {
+            return null;
+        }
+
+        $pos = mb_stripos($text, $keyword);
+        if ($pos === false) {
+            return mb_substr($text, 0, $length).'...';
+        }
+
+        $start = max(0, $pos - 100);
+        $snippet = mb_substr($text, $start, $length);
+
+        return ($start > 0 ? '...' : '').$snippet.'...';
     }
 }

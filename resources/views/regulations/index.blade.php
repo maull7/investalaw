@@ -18,28 +18,34 @@
 
     {{-- Filters --}}
     <x-card class="mt-6">
-        <form method="GET" action="{{ route('regulations.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div class="lg:col-span-2">
-                <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="input-premium" placeholder="Cari nomor atau judul regulasi...">
+        <form method="GET" action="{{ route('regulations.index') }}" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="lg:col-span-2">
+                    <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="input-premium" placeholder="Cari nomor atau judul regulasi...">
+                </div>
+                <select name="year" class="select-premium">
+                    <option value="">Semua Tahun</option>
+                    @foreach($filterOptions['years'] as $year)
+                        <option value="{{ $year }}" {{ ($filters['year'] ?? '') == $year ? 'selected' : '' }}>{{ $year }}</option>
+                    @endforeach
+                </select>
+                <select name="type_id" class="select-premium">
+                    <option value="">Semua Jenis</option>
+                    @foreach($filterOptions['types'] as $type)
+                        <option value="{{ $type->id }}" {{ ($filters['type_id'] ?? '') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
+                    @endforeach
+                </select>
+                <div class="flex gap-2">
+                    <x-button type="submit" variant="primary" size="md" class="flex-1">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                        Cari
+                    </x-button>
+                    <x-button href="{{ route('regulations.index') }}" variant="outline" size="md">Reset</x-button>
+                </div>
             </div>
-            <select name="year" class="select-premium">
-                <option value="">Semua Tahun</option>
-                @foreach($filterOptions['years'] as $year)
-                    <option value="{{ $year }}" {{ ($filters['year'] ?? '') == $year ? 'selected' : '' }}>{{ $year }}</option>
-                @endforeach
-            </select>
-            <select name="type_id" class="select-premium">
-                <option value="">Semua Jenis</option>
-                @foreach($filterOptions['types'] as $type)
-                    <option value="{{ $type->id }}" {{ ($filters['type_id'] ?? '') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
-                @endforeach
-            </select>
-            <div class="flex gap-2">
-                <x-button type="submit" variant="primary" size="md" class="flex-1">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
-                    Cari
-                </x-button>
-                <x-button href="{{ route('regulations.index') }}" variant="outline" size="md">Reset</x-button>
+            <div class="border-t border-[#e7eaf0] pt-4">
+                <label for="search_content" class="block text-sm font-semibold text-[#071833] mb-2">Cari dalam Isi Dokumen</label>
+                <input type="text" name="search_content" id="search_content" value="{{ $filters['search_content'] ?? '' }}" class="input-premium" placeholder="Cari kata dalam isi dokumen regulasi...">
             </div>
         </form>
     </x-card>
@@ -86,11 +92,28 @@
                                 <td>
                                     <a href="{{ route('regulations.show', $reg) }}" class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
                                 </td>
-                                <td>
-                                    <a href="{{ route('regulations.file', $reg) }}" target="_blank" title="{{ $reg->title }}" class="text-sm text-[#071833] hover:text-[#c99a3e] transition block truncate max-w-xs">
-                                        {{ Str::limit($reg->title, 60) }}
-                                    </a>
-                                </td>
+                                 <td>
+                                     <div>
+                                         <a href="{{ route('regulations.file', $reg) }}" target="_blank" title="{{ $reg->title }}" class="text-sm font-medium text-[#071833] hover:text-[#c99a3e] transition">
+                                             {{ Str::limit($reg->title, 60) }}
+                                         </a>
+                                         @if(!empty($filters['search_content']) && $reg->parsed_text)
+                                             @php
+                                                 $snippet = app(\App\Repositories\RegulationRepository::class)->buildSnippet($reg->parsed_text, $filters['search_content'], 250);
+                                             @endphp
+                                             @if($snippet)
+                                                 <div class="mt-2 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                                                     <div class="flex items-start gap-2">
+                                                         <svg class="w-4 h-4 text-yellow-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                                                         <div class="text-xs text-[#854d0e] leading-relaxed">
+                                                             {!! preg_replace('/(' . preg_quote($filters['search_content'], '/') . ')/iu', '<mark class="bg-yellow-300 text-[#071833] font-semibold px-1 py-0.5 rounded">$1</mark>', e($snippet)) !!}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             @endif
+                                         @endif
+                                     </div>
+                                 </td>
                                 <td>
                                     @if($reg->type)
                                         <x-badge :color="$reg->type->levelBadgeColor()">{{ $reg->type->name }}</x-badge>

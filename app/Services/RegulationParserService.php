@@ -53,13 +53,12 @@ class RegulationParserService
             return $this->result('error', 'File tidak ditemukan.');
         }
 
-        set_time_limit(300);
+        set_time_limit(600);
 
-        $pdfType = $this->detectPdfType($regulation->file_path);
-        $pages = $this->documentParser->extractAllPagesText($regulation->file_path);
+        $pages = $this->ocrRegulation($regulation);
 
         if (empty($pages)) {
-            return $this->result('error', 'Gagal mengekstrak teks dari PDF.');
+            return $this->result('error', 'Gagal mengekstrak teks dari PDF (OCR).');
         }
 
         $totalPages = count($pages);
@@ -69,24 +68,26 @@ class RegulationParserService
 
         $fullText = collect($pages)->pluck('text')->implode("\n\n");
 
-        $parseStatus = $percentParsed >= 100 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
+        $parseStatus = $percentParsed >= 95 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
 
-        // ponytail: detect first BAB page to compute content offset
         $contentStartPage = $this->detectContentStartPage($pages);
         $pageOffset = $contentStartPage ? $contentStartPage - 1 : 0;
 
         $stats = [
-            'pdf_type' => $pdfType,
+            'pdf_type' => 'image',
             'total_pages' => $totalPages,
             'parsed_pages' => $parsedCount,
             'empty_pages' => $totalPages - $parsedCount,
             'percent_parsed' => $percentParsed,
-            'normal_pages' => $pdfType === 'text' ? $parsedCount : 0,
-            'ocr_pages' => $pdfType === 'image' ? $parsedCount : 0,
+            'normal_pages' => 0,
+            'ocr_pages' => $parsedCount,
             'char_total' => array_sum(array_column($pages, 'char_count')),
-            'used_ocr' => $pdfType === 'image',
+            'used_ocr' => true,
             'content_start_page' => $contentStartPage,
             'page_offset' => $pageOffset,
+            'ocr_engine' => 'tesseract',
+            'ocr_dpi' => 200,
+            'ocr_langs' => 'ind+eng',
         ];
 
         $regulation->update([
@@ -96,7 +97,7 @@ class RegulationParserService
             'parse_stats' => $stats,
         ]);
 
-        return $this->result('success', 'Regulasi berhasil diparse.', $stats, $fullText);
+        return $this->result('success', 'Regulasi berhasil diparse (OCR).', $stats, $fullText);
     }
 
     private function sanitizeUtf8(string $text): string
@@ -281,6 +282,45 @@ class RegulationParserService
             return $result;
         } catch (\Exception $e) {
             Log::warning("OCR document failed: {$e->getMessage()}");
+
+            return [];
+        } finally {
+            array_map('unlink', glob($tmpDir.'/*'));
+            @rmdir($tmpDir);
+        }
+    }
+
+    private function ocrRegulation(Regulation $regulation): array
+    {
+        $fullPath = Storage::disk('public')->path($regulation->file_path);
+
+        $tmpDir = sys_get_temp_dir().'/ocr_reg_'.md5($fullPath).'_'.time();
+        @mkdir($tmpDir, 0755, true);
+
+        try {
+            exec('pdftoppm -png -r 200 '.escapeshellarg($fullPath).' '.escapeshellarg($tmpDir.'/page'), $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                return [];
+            }
+
+            $images = glob($tmpDir.'/page-*.png');
+            sort($images);
+
+            $result = [];
+            foreach ($images as $index => $image) {
+                $text = (new TesseractOCR($image))->lang('ind', 'eng')->psm(6)->run();
+                $text = trim($text);
+                $result[] = [
+                    'page' => $index + 1,
+                    'text' => $text,
+                    'char_count' => mb_strlen($text),
+                ];
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            Log::warning("OCR regulation failed: {$e->getMessage()}");
 
             return [];
         } finally {

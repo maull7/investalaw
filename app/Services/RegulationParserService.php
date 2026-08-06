@@ -124,55 +124,7 @@ class RegulationParserService
 
     public function parseDocument(RegulationDocument $document): array
     {
-        $fullPath = Storage::disk('public')->path($document->file_path);
-
-        if (! file_exists($fullPath)) {
-            return $this->result('error', 'File tidak ditemukan.');
-        }
-
-        set_time_limit(300);
-
-        $pdfType = $this->detectPdfType($document->file_path);
-
-        if ($pdfType !== 'text') {
-            return $this->result('error', 'Dokumen tambahan hanya bisa diparse jika berformat teks.');
-        }
-
-        $pages = $this->documentParser->extractAllPagesText($document->file_path);
-
-        if (empty($pages)) {
-            return $this->result('error', 'Gagal mengekstrak teks dari dokumen.');
-        }
-
-        $totalPages = count($pages);
-        $parsedPages = array_filter($pages, fn ($p) => $p['char_count'] > 0);
-        $parsedCount = count($parsedPages);
-        $percentParsed = $totalPages > 0 ? round(($parsedCount / $totalPages) * 100) : 0;
-
-        $fullText = collect($pages)->pluck('text')->implode("\n\n");
-
-        $parseStatus = $percentParsed >= 100 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
-
-        $stats = [
-            'pdf_type' => $pdfType,
-            'total_pages' => $totalPages,
-            'parsed_pages' => $parsedCount,
-            'empty_pages' => $totalPages - $parsedCount,
-            'percent_parsed' => $percentParsed,
-            'normal_pages' => $pdfType === 'text' ? $parsedCount : 0,
-            'ocr_pages' => $pdfType === 'image' ? $parsedCount : 0,
-            'char_total' => array_sum(array_column($pages, 'char_count')),
-            'used_ocr' => $pdfType === 'image',
-        ];
-
-        $document->update([
-            'parsed_at' => now(),
-            'parse_status' => $parseStatus,
-            'parsed_text' => $this->sanitizeUtf8($fullText),
-            'parse_stats' => $stats,
-        ]);
-
-        return $this->result('success', 'Dokumen berhasil diparse.', $stats, $fullText);
+        return $this->parseDocumentChoice($document, $this->resolveMethod($document->file_path));
     }
 
     public function parseDocumentChoice(RegulationDocument $document, string $method): array
@@ -185,11 +137,16 @@ class RegulationParserService
 
         set_time_limit(300);
 
-        if ($method === 'ocr') {
-            $pages = $this->ocrDocument($document);
-        } else {
-            $pages = $this->documentParser->extractAllPagesText($document->file_path);
+        $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+
+        if (! in_array($ext, ['pdf', 'docx'])) {
+            return $this->result('error', 'Format file tidak didukung. Hanya PDF dan DOCX.');
         }
+
+        $pages = match ($ext) {
+            'docx' => $this->extractDocxText($fullPath),
+            'pdf' => $this->extractPdfPages($document, $method),
+        };
 
         if (empty($pages)) {
             return $this->result('error', 'Gagal mengekstrak teks.');
@@ -204,17 +161,20 @@ class RegulationParserService
 
         $parseStatus = $percentParsed >= 100 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
 
+        $pdfType = $ext === 'pdf' ? ($method === 'ocr' ? 'image' : 'text') : $ext;
+
         $stats = [
-            'pdf_type' => $method,
+            'pdf_type' => $pdfType,
             'total_pages' => $totalPages,
             'parsed_pages' => $parsedCount,
             'empty_pages' => $totalPages - $parsedCount,
             'percent_parsed' => $percentParsed,
-            'normal_pages' => $method === 'text' ? $parsedCount : 0,
-            'ocr_pages' => $method === 'ocr' ? $parsedCount : 0,
+            'normal_pages' => in_array($pdfType, ['text', 'docx']) ? $parsedCount : 0,
+            'ocr_pages' => $pdfType === 'image' ? $parsedCount : 0,
             'char_total' => array_sum(array_column($pages, 'char_count')),
-            'used_ocr' => $method === 'ocr',
+            'used_ocr' => $pdfType === 'image',
             'method' => $method,
+            'doc_type' => $ext,
         ];
 
         $document->update([
@@ -225,6 +185,69 @@ class RegulationParserService
         ]);
 
         return $this->result('success', 'Dokumen berhasil diparse.', $stats, $fullText);
+    }
+
+    private function resolveMethod(string $path): string
+    {
+        if (strtolower(pathinfo($path, PATHINFO_EXTENSION)) === 'docx') {
+            return 'text';
+        }
+
+        return $this->detectPdfType($path) === 'text' ? 'text' : 'ocr';
+    }
+
+    private function extractPdfPages(RegulationDocument $document, string $method): array
+    {
+        if ($method === 'ocr') {
+            return $this->ocrDocument($document);
+        }
+
+        $pages = $this->documentParser->extractAllPagesText($document->file_path);
+
+        if ($this->hasContent($pages)) {
+            return $pages;
+        }
+
+        // ponytail: normal text extraction produced nothing -> fallback to OCR (scanned PDF)
+        return $this->ocrDocument($document);
+    }
+
+    private function hasContent(array $pages): bool
+    {
+        foreach ($pages as $page) {
+            if (($page['char_count'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function extractDocxText(string $fullPath): array
+    {
+        $zip = new \ZipArchive;
+
+        if ($zip->open($fullPath) !== true) {
+            return [];
+        }
+
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+
+        if ($xml === false) {
+            return [];
+        }
+
+        $text = str_replace(['</w:p>', '</w:tr>'], ["\n", "\n"], $xml);
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_XML1, 'UTF-8');
+        $text = preg_replace('/[ \t]+/', ' ', $text);
+        $text = preg_replace('/\n\s*\n+/', "\n", trim($text));
+
+        return [[
+            'page' => 1,
+            'text' => $text,
+            'char_count' => mb_strlen($text),
+        ]];
     }
 
     private function ocrDocument(RegulationDocument $document): array

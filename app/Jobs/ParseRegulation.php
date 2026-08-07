@@ -41,12 +41,20 @@ class ParseRegulation implements ShouldQueue
         }
 
         $last = -1;
-        $result = $parser->parseRegulation($regulation, function (int $percent) use ($regulation, &$last) {
-            if ($percent === 100 || ($percent - $last) >= 10) {
-                $last = $percent;
-                $regulation->fresh()?->update(['parse_progress' => $percent]);
-            }
-        });
+
+        try {
+            $result = $parser->parseRegulation($regulation, function (int $percent) use ($regulation, &$last) {
+                if ($percent === 100 || ($percent - $last) >= 10) {
+                    $last = $percent;
+                    $regulation->fresh()?->update(['parse_progress' => $percent]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error("ParseRegulation exception for regulation {$regulation->id}: {$e->getMessage()}");
+            $regulation->fresh()?->update(['parse_status' => null, 'parse_progress' => null]);
+
+            throw $e;
+        }
 
         if (! $result['success']) {
             Log::warning("ParseRegulation job failed for regulation {$regulation->id}: {$result['message']}");
@@ -57,5 +65,6 @@ class ParseRegulation implements ShouldQueue
     public function failed(\Throwable $e): void
     {
         Log::error("ParseRegulation job failed for regulation {$this->regulation->id}: {$e->getMessage()}");
+        $this->regulation->fresh()?->update(['parse_status' => null, 'parse_progress' => null]);
     }
 }

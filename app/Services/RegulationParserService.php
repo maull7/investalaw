@@ -273,7 +273,12 @@ class RegulationParserService
 
             $result = [];
             foreach ($images as $index => $image) {
-                $text = (new TesseractOCR($image))->lang('ind', 'eng')->run();
+                try {
+                    $text = (new TesseractOCR($image))->lang('ind', 'eng')->run();
+                } catch (\Throwable $e) {
+                    Log::warning("OCR page {$index} failed: {$e->getMessage()}");
+                    $text = '';
+                }
                 $text = trim($text);
                 $result[] = [
                     'page' => $index + 1,
@@ -317,7 +322,12 @@ class RegulationParserService
 
             $result = [];
             foreach ($images as $index => $image) {
-                $text = (new TesseractOCR($image))->lang('ind', 'eng')->psm(6)->run();
+                try {
+                    $text = (new TesseractOCR($image))->lang('ind', 'eng')->psm(6)->run();
+                } catch (\Throwable $e) {
+                    Log::warning("OCR regulation page {$index} failed: {$e->getMessage()}");
+                    $text = '';
+                }
                 $text = trim($text);
                 $result[] = [
                     'page' => $index + 1,

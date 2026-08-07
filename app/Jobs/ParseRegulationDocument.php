@@ -41,12 +41,20 @@ class ParseRegulationDocument implements ShouldQueue
         }
 
         $last = -1;
-        $result = $parser->parseDocumentChoice($document, 'text', function (int $percent) use ($document, &$last) {
-            if ($percent === 100 || ($percent - $last) >= 10) {
-                $last = $percent;
-                $document->fresh()?->update(['parse_progress' => $percent]);
-            }
-        });
+
+        try {
+            $result = $parser->parseDocumentChoice($document, 'text', function (int $percent) use ($document, &$last) {
+                if ($percent === 100 || ($percent - $last) >= 10) {
+                    $last = $percent;
+                    $document->fresh()?->update(['parse_progress' => $percent]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error("ParseRegulationDocument exception for doc {$document->id}: {$e->getMessage()}");
+            $document->fresh()?->update(['parse_status' => null, 'parse_progress' => null]);
+
+            throw $e;
+        }
 
         if (! $result['success']) {
             Log::warning("ParseRegulationDocument job failed for doc {$document->id}: {$result['message']}");
@@ -57,5 +65,6 @@ class ParseRegulationDocument implements ShouldQueue
     public function failed(\Throwable $e): void
     {
         Log::error("ParseRegulationDocument job failed for doc {$this->document->id}: {$e->getMessage()}");
+        $this->document->fresh()?->update(['parse_status' => null, 'parse_progress' => null]);
     }
 }

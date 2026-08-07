@@ -36,7 +36,23 @@
         </div>
     </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+@php
+    $hasParsing = $regulation->parse_status === 'parsing'
+        || $regulation->documents->contains(fn ($d) => $d->parse_status === 'parsing');
+    $extractProcessing = $regulation->isAiProcessing('extract');
+@endphp
+
+    @if($extractProcessing)
+        <div class="mb-4 flex items-center gap-3 rounded-2xl bg-blue-50 ring-1 ring-blue-200 px-5 py-3">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+            <p class="text-sm font-bold text-blue-800">Ekstraksi peraturan terkait sedang diproses. Halaman refresh otomatis saat selesai.</p>
+        </div>
+        <script>setTimeout(() => location.reload(), 4000);</script>
+    @endif
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6"
+         x-data="regulationParseProgress('{{ route('regulations.parse-progress', $regulation) }}', {{ $hasParsing ? 'true' : 'false' }})"
+         x-init="start()">
         <div class="lg:col-span-2 space-y-6">
             {{-- Metadata --}}
             <x-card id="metadata-card">
@@ -108,13 +124,34 @@
                             <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkait</h3>
                             <p class="text-xs text-[#667085] mt-0.5">Regulasi yang saling berkaitan</p>
                         </div>
-                        <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulation->relatedRegulations->count() }} item</span>
+                        <div class="flex items-center gap-2">
+                            @if(auth()->user()->hasPermission('upload_regulations'))
+                                @if($extractProcessing)
+                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 ring-1 ring-blue-200">
+                                        <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+                                        Memproses...
+                                    </span>
+                                @else
+                                    <form method="POST" action="{{ route('regulations.extract-references', $regulation) }}">
+                                        @csrf
+                                        <x-button type="submit" variant="primary" size="sm">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                                            Ekstrak Peraturan Terkait
+                                        </x-button>
+                                    </form>
+                                @endif
+                            @endif
+                            <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulation->relatedRegulations->count() }} item</span>
+                        </div>
                     </div>
                 </x-slot>
                 @if($regulation->relatedRegulations->isEmpty())
-                    <div class="text-center py-10">
-                        <p class="text-sm text-[#667085]">Belum ada peraturan terkait.</p>
-                    </div>
+                    @php $extractedTerkait = $regulation->relatedReferences->where('relationship', '!=', 'dicabut'); @endphp
+                    @if($extractedTerkait->isEmpty())
+                        <div class="text-center py-10">
+                            <p class="text-sm text-[#667085]">Belum ada peraturan terkait.</p>
+                        </div>
+                    @endif
                 @else
                     <ul class="divide-y divide-[#f0f3f8]">
                         @foreach($regulation->relatedRegulations as $related)
@@ -135,6 +172,85 @@
                             </li>
                         @endforeach
                     </ul>
+                @endif
+
+                @php
+                    $extractedRefs = $regulation->relatedReferences;
+                    $terkait = $extractedRefs->where('relationship', '!=', 'dicabut');
+                @endphp
+
+                @if($regulation->isParsed() && $terkait->isNotEmpty())
+                    <div class="border-t border-[#e7eaf0]">
+                        <div class="px-6 pt-5 pb-2">
+                            <h4 class="text-sm font-bold text-[#071833]">Peraturan Terkait <span class="text-[#667085] font-semibold">(hasil ekstraksi)</span></h4>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="table-premium">
+                                <thead>
+                                    <tr>
+                                        <th class="text-left">Nama / Nomor</th>
+                                        <th class="text-center">Tahun</th>
+                                        <th class="text-center">Hubungan</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($terkait as $ref)
+                                        <tr>
+                                            <td>
+                                                <p class="text-sm font-semibold text-[#071833]">{{ $ref->name }}</p>
+                                                @if($ref->number)<p class="text-xs text-[#667085]">Nomor: {{ $ref->number }}</p>@endif
+                                            </td>
+                                            <td class="text-center text-sm font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</td>
+                                            <td class="text-center">
+                                                <x-badge :color="match($ref->relationship) { 'diubah' => 'amber', 'dicabut' => 'rose', default => 'blue' }">{{ $ref->relationship }}</x-badge>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+            </x-card>
+
+            {{-- Revoked Regulations --}}
+            @php $revoked = $regulation->relatedReferences->where('relationship', 'dicabut'); @endphp
+            <x-card :padding="false">
+                <x-slot name="header">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-[#071833]">Peraturan dicabut dan dinyatakan tidak berlaku</h3>
+                            <p class="text-xs text-[#667085] mt-0.5">Regulasi yang dicabut oleh regulasi ini</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $revoked->count() }} item</span>
+                    </div>
+                </x-slot>
+                @if($revoked->isEmpty())
+                    <div class="text-center py-10">
+                        <p class="text-sm text-[#667085]">Belum ada peraturan dicabut.</p>
+                    </div>
+                @else
+                    <div class="overflow-x-auto">
+                        <table class="table-premium">
+                            <thead>
+                                <tr>
+                                    <th class="text-left">Nama / Nomor</th>
+                                    <th class="text-center">Tahun</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($revoked as $ref)
+                                    <tr>
+                                        <td>
+                                            <p class="text-sm font-semibold text-[#071b33]">{{ $ref->name }}</p>
+                                            @if($ref->number)<p class="text-xs text-[#667085]">Nomor: {{ $ref->number }}</p>@endif
+                                        </td>
+                                        <td class="text-center text-sm font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 @endif
             </x-card>
 
@@ -218,10 +334,21 @@
                                     <p class="text-xs text-[#667085] mt-0.5">{{ $doc->document_type }} &middot; {{ strtoupper($ext) }}
                                         @if($doc->isParsed())
                                             <span class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">{{ $doc->parseStatusLabel() }}</span>
+                                        @elseif($doc->parse_status === 'parsing')
+                                            <span class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">Parsing</span>
                                         @else
                                             <span class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500">Belum diparse</span>
                                         @endif
                                     </p>
+                                    @if($doc->parse_status === 'parsing')
+                                        <div class="mt-2 flex items-center gap-2">
+                                            <div class="flex-1 h-1.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
+                                                <div class="h-full bg-[#c99a3e] rounded-full transition-all duration-500"
+                                                     :style="`width: ${docProgress({{ $doc->id }}) ?? {{ $doc->parse_progress ?? 0 }}}%`"></div>
+                                            </div>
+                                            <span class="text-[10px] font-bold text-[#667085]" x-text="(docProgress({{ $doc->id }}) ?? {{ $doc->parse_progress ?? 0 }}) + '%'"></span>
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     @if($doc->isParsed())
@@ -366,6 +493,18 @@
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
                             Lihat Hasil Parse
                         </a>
+                    @elseif($regulation->parse_status === 'parsing')
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between px-1 text-xs font-semibold text-[#667085]">
+                                <span x-text="display < 5 ? 'Menyiapkan dokumen...' : 'Memproses halaman...'"></span>
+                                <span class="text-[#071833]" x-text="display + '%'"></span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
+                                <div class="h-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-full transition-all duration-500"
+                                     :style="`width: ${display}%`"></div>
+                            </div>
+                            <p class="text-[10px] text-[#b0b8c5] px-1">Berjalan di background. Halaman otomatis refresh saat selesai.</p>
+                        </div>
                     @else
                         <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
                             @csrf
@@ -440,3 +579,49 @@
         </x-slot>
     </x-modal>
 @endsection
+
+@push('scripts')
+<script>
+function regulationParseProgress(url, shouldStart) {
+    return {
+        display: {{ $regulation->parse_progress ?? 0 }},
+        main: { progress: null, status: '', parsedAt: null },
+        docs: [],
+        timer: null,
+        started: false,
+        start() {
+            if (!shouldStart || this.started) return;
+            this.started = true;
+            this.poll();
+            this.timer = setInterval(() => this.poll(), 2000);
+        },
+        docProgress(id) {
+            const found = this.docs.find((d) => d.id === id);
+            return found ? found.progress : null;
+        },
+        async poll() {
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                this.main = data.regulation;
+                this.docs = data.documents || [];
+                const stillParsing = this.main.status === 'parsing'
+                    || (data.documents || []).some((d) => d.status === 'parsing');
+                if (!stillParsing) {
+                    this.display = 100;
+                    clearInterval(this.timer);
+                    location.reload();
+                    return;
+                }
+                const real = this.main.progress ?? 0;
+                if (real > this.display) {
+                    this.display = real;
+                } else if (real === 0) {
+                    this.display = Math.min(85, this.display + 4);
+                }
+            } catch (e) {}
+        },
+    };
+}
+</script>
+@endpush

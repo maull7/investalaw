@@ -129,7 +129,7 @@ class RegulationAnalysisService
         return mb_substr($text, 0, self::MAX_TEXT_LENGTH);
     }
 
-    private function extractRegulationsFromText(string $text): ?array
+    public function extractRegulationsFromText(string $text): ?array
     {
         $providers = [
             'openai' => [
@@ -219,6 +219,79 @@ PROMPT;
         }
 
         return null;
+    }
+
+    public function extractDatesFromText(string $text): array
+    {
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $prompt = <<<PROMPT
+Anda adalah ekstraktor tanggal dari teks peraturan Indonesia. Dari bagian akhir dokumen (footer/penandatanganan) berikut, temukan:
+1. Tanggal ditetapkan (tanggal penetapan/pengesahan)
+2. Tanggal diundangkan
+
+TEKS:
+{$text}
+
+Kembalikan JSON SAJA (tanpa markdown) dengan format:
+{
+  "tanggal_tetapkan": "YYYY-MM-DD",
+  "tanggal_diundangkan": "YYYY-MM-DD"
+}
+
+Gunakan null jika tidak ditemukan. Format tanggal wajib ISO 8601 (YYYY-MM-DD). Tulis tanggal secara literal (misal "2026-06-23") tanpa teks lain.
+PROMPT;
+
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 512,
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+
+                if (empty($content)) {
+                    continue;
+                }
+
+                $decoded = json_decode($content, true);
+
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    continue;
+                }
+
+                return $decoded;
+            } catch (\Throwable $e) {
+                report($e);
+
+                continue;
+            }
+        }
+
+        return ['tanggal_tetapkan' => null, 'tanggal_diundangkan' => null];
     }
 
     private function collectRelatedData(Regulation $regulation): array

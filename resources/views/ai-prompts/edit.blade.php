@@ -20,20 +20,15 @@
                     @method('PUT')
 
                     <div>
-                        <label for="type" class="block text-sm font-semibold text-[#071833] mb-2">Type <span
+                        <label for="type_prompt_id" class="block text-sm font-semibold text-[#071833] mb-2">Type <span
                                 class="text-[#c99a3e]">*</span></label>
-                        <select name="type" id="type" required class="select-premium">
+                        <select name="type_prompt_id" id="type_prompt_id" required class="select-premium">
                             <option value="">-- Pilih Type --</option>
-                            <option value="analisa" {{ old('type', $aiPrompt->type) === 'analisa' ? 'selected' : '' }}>
-                                Analisa</option>
-                            <option value="review" {{ old('type', $aiPrompt->type) === 'review' ? 'selected' : '' }}>Review
-                            </option>
-                            <option value="rekomendasi"
-                                {{ old('type', $aiPrompt->type) === 'rekomendasi' ? 'selected' : '' }}>Rekomendasi</option>
-                            <option value="validitas" {{ old('type', $aiPrompt->type) === 'validitas' ? 'selected' : '' }}>
-                                Validitas</option>
+                            @foreach($typePrompts as $type)
+                                <option value="{{ $type->id }}" {{ old('type_prompt_id', $aiPrompt->type_prompt_id) == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
+                            @endforeach
                         </select>
-                        @error('type')
+                        @error('type_prompt_id')
                             <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
                         @enderror
                     </div>

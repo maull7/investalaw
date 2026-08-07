@@ -4,6 +4,19 @@
 @section('header', 'AI Summaries')
 
 @section('content')
+    @php
+        $summaryProcessing = collect(array_keys($types))->first(fn ($key) => $document->isAiProcessing('summary:'.$key));
+    @endphp
+    @if($summaryProcessing)
+        <div class="mb-6 flex items-center gap-3 rounded-2xl bg-blue-50 ring-1 ring-blue-200 px-5 py-4">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+            <div>
+                <p class="text-sm font-bold text-blue-800">AI Summary ({{ $types[$summaryProcessing]['label'] ?? $summaryProcessing }}) sedang diproses di background</p>
+                <p class="text-xs text-blue-600 mt-0.5">Halaman akan refresh otomatis saat selesai.</p>
+            </div>
+        </div>
+        <script>setTimeout(() => location.reload(), 4000);</script>
+    @endif
     <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
         <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/15 blur-3xl"></div>
         <div class="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -25,23 +38,35 @@
         </div>
     </section>
 
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+    <div class="mt-6" x-data="{ typeFilter: '' }">
+        <div class="flex items-center gap-3">
+            <label for="type_filter" class="text-sm font-semibold text-[#071833]">Filter Type Prompt</label>
+            <select id="type_filter" x-model="typeFilter" class="select-premium max-w-xs">
+                <option value="">Semua Type</option>
+                @foreach($types as $typeKey => $type)
+                    <option value="{{ $typeKey }}">{{ $type['label'] }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
         @php
-            $types = [
-                'analisa' => ['label' => 'Analisa', 'desc' => 'Analisa dokumen terhadap peraturan terkait', 'icon' => 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'],
-                'review' => ['label' => 'Review', 'desc' => 'Review kesesuaian dokumen dengan peraturan', 'icon' => 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z'],
-                'rekomendasi' => ['label' => 'Rekomendasi', 'desc' => 'Review dan rekomendasi penambahan klausul', 'icon' => 'M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.153.212 2.25.52 3.117.938M18.75 4.97V12m0 0v7.03m0-7.03c0 1.544-1.227 2.797-2.25 3.02M4.5 4.97V12m0 0v7.03m0-7.03c0-1.544 1.227-2.797 2.25-3.02'],
-                'validitas' => ['label' => 'Validitas', 'desc' => 'Validasi dokumen berdasarkan ketentuan', 'icon' => 'M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z'],
+            $icons = [
+                'analisa' => 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+                'review' => 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+                'rekomendasi' => 'M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.153.212 2.25.52 3.117.938M18.75 4.97V12m0 0v7.03m0-7.03c0 1.544-1.227 2.797-2.25 3.02M4.5 4.97V12m0 0v7.03m0-7.03c0-1.544 1.227-2.797 2.25-3.02',
+                'validitas' => 'M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z',
             ];
         @endphp
 
-        @foreach($types as $key => $type)
-            <x-card>
+        @foreach($types as $typeKey => $type)
+            @php $typeProcessing = $document->isAiProcessing('summary:'.$typeKey); @endphp
+            <x-card x-show="typeFilter === '' || typeFilter === '{{ $typeKey }}'">
                 <x-slot name="header">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-xl bg-[#f6f8fb] ring-1 ring-[#e7eaf0] flex items-center justify-center text-[#c99a3e]">
                             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $type['icon'] }}"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icons[$typeKey] ?? $icons['review'] }}"/>
                             </svg>
                         </div>
                         <div>
@@ -52,8 +77,8 @@
                 </x-slot>
 
                 <div>
-                    @if(isset($summaries[$key]))
-                        @php $summary = $summaries[$key]; @endphp
+                    @if(isset($summaries[$typeKey]))
+                        @php $summary = $summaries[$typeKey]; @endphp
                         <div class="text-sm text-[#667085] leading-relaxed line-clamp-4">{{ Str::limit($summary->summary, 300) }}</div>
                         <div class="mt-3 flex items-center gap-2 text-xs text-[#667085]">
                             <span class="px-2 py-0.5 rounded-full bg-[#f6f8fb] text-[10px] font-semibold uppercase">{{ $summary->provider_used }}</span>
@@ -64,30 +89,45 @@
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
                                 Lihat
                             </a>
+                            @if($typeProcessing)
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-blue-700 bg-blue-50 ring-1 ring-blue-200">
+                                    <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+                                    Memproses...
+                                </span>
+                            @else
                             <form method="POST" action="{{ route('ai-summaries.generate', $document) }}" class="inline">
                                 @csrf
-                                <input type="hidden" name="type" value="{{ $key }}">
+                                <input type="hidden" name="type" value="{{ $typeKey }}">
                                 <button type="submit" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] hover:brightness-110 transition">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
                                     Generate Ulang
                                 </button>
                             </form>
+                            @endif
                         </div>
                     @else
                         <p class="text-sm text-[#667085]">Belum ada summary untuk {{ $type['label'] }}.</p>
                         <div class="mt-4">
+                            @if($typeProcessing)
+                                <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-blue-700 bg-blue-50 ring-1 ring-blue-200">
+                                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+                                    Memproses...
+                                </span>
+                            @else
                             <form method="POST" action="{{ route('ai-summaries.generate', $document) }}" class="inline">
                                 @csrf
-                                <input type="hidden" name="type" value="{{ $key }}">
+                                <input type="hidden" name="type" value="{{ $typeKey }}">
                                 <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] hover:brightness-110 transition">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                                     Generate {{ $type['label'] }}
                                 </button>
                             </form>
+                            @endif
                         </div>
                     @endif
                 </div>
             </x-card>
         @endforeach
+        </div>
     </div>
 @endsection

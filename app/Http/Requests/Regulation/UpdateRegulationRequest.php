@@ -26,6 +26,8 @@ class UpdateRegulationRequest extends FormRequest
             'sub_categories.*' => ['exists:sub_categories,id'],
             'related_regulations' => ['nullable', 'array'],
             'related_regulations.*' => ['exists:regulations,id'],
+            'tanggal_tetapkan' => ['nullable', 'date'],
+            'tanggal_diundangkan' => ['nullable', 'date'],
         ];
     }
 }

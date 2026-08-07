@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AiPrompt;
+use App\Models\TypePrompt;
 use Illuminate\Database\Seeder;
 
 class AiPromptSeeder extends Seeder
@@ -133,9 +134,11 @@ REKOMENDASI VALIDASI
         ];
 
         foreach ($prompts as $prompt) {
+            $type = TypePrompt::where('slug', $prompt['type'])->first();
+
             AiPrompt::updateOrCreate(
                 ['type' => $prompt['type']],
-                $prompt
+                array_merge($prompt, ['type_prompt_id' => $type?->id])
             );
         }
     }

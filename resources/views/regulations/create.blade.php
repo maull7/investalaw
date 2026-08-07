@@ -52,6 +52,27 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div>
+                            <label for="tanggal_tetapkan" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal
+                                DiTetapkan</label>
+                            <input type="date" name="tanggal_tetapkan" id="tanggal_tetapkan"
+                                value="{{ old('tanggal_tetapkan') }}" class="input-premium">
+                            @error('tanggal_tetapkan')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="tanggal_diundangkan" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal
+                                DiUndangkan</label>
+                            <input type="date" name="tanggal_diundangkan" id="tanggal_diundangkan"
+                                value="{{ old('tanggal_diundangkan') }}" class="input-premium">
+                            @error('tanggal_diundangkan')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
                     <div>
                         <label for="title" class="block text-sm font-semibold text-[#071833] mb-2">Judul Regulasi <span
                                 class="text-[#c99a3e]">*</span></label>

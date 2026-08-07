@@ -45,7 +45,7 @@ class RegulationParserService
         }
     }
 
-    public function parseRegulation(Regulation $regulation): array
+    public function parseRegulation(Regulation $regulation, ?callable $progress = null): array
     {
         $fullPath = Storage::disk('public')->path($regulation->file_path);
 
@@ -55,7 +55,7 @@ class RegulationParserService
 
         set_time_limit(600);
 
-        $pages = $this->ocrRegulation($regulation);
+        $pages = $this->ocrRegulation($regulation, $progress);
 
         if (empty($pages)) {
             return $this->result('error', 'Gagal mengekstrak teks dari PDF (OCR).');
@@ -95,6 +95,7 @@ class RegulationParserService
             'parse_status' => $parseStatus,
             'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
+            'parse_progress' => 100,
         ]);
 
         return $this->result('success', 'Regulasi berhasil diparse (OCR).', $stats, $fullText);
@@ -128,7 +129,7 @@ class RegulationParserService
         return $this->parseDocumentChoice($document, $this->resolveMethod($document->file_path));
     }
 
-    public function parseDocumentChoice(RegulationDocument $document, string $method): array
+    public function parseDocumentChoice(RegulationDocument $document, string $method, ?callable $progress = null): array
     {
         $fullPath = Storage::disk('public')->path($document->file_path);
 
@@ -146,7 +147,7 @@ class RegulationParserService
 
         $pages = match ($ext) {
             'docx' => $this->extractDocxText($fullPath),
-            'pdf' => $this->extractPdfPages($document, $method),
+            'pdf' => $this->extractPdfPages($document, $method, $progress),
         };
 
         if (empty($pages)) {
@@ -183,6 +184,7 @@ class RegulationParserService
             'parse_status' => $parseStatus,
             'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
+            'parse_progress' => 100,
         ]);
 
         return $this->result('success', 'Dokumen berhasil diparse.', $stats, $fullText);
@@ -197,10 +199,10 @@ class RegulationParserService
         return $this->detectPdfType($path) === 'text' ? 'text' : 'ocr';
     }
 
-    private function extractPdfPages(RegulationDocument $document, string $method): array
+    private function extractPdfPages(RegulationDocument $document, string $method, ?callable $progress = null): array
     {
         if ($method === 'ocr') {
-            return $this->ocrDocument($document);
+            return $this->ocrDocument($document, $progress);
         }
 
         $pages = $this->documentParser->extractAllPagesText($document->file_path);
@@ -210,7 +212,7 @@ class RegulationParserService
         }
 
         // ponytail: normal text extraction produced nothing -> fallback to OCR (scanned PDF)
-        return $this->ocrDocument($document);
+        return $this->ocrDocument($document, $progress);
     }
 
     private function hasContent(array $pages): bool
@@ -251,7 +253,7 @@ class RegulationParserService
         ]];
     }
 
-    private function ocrDocument(RegulationDocument $document): array
+    private function ocrDocument(RegulationDocument $document, ?callable $progress = null): array
     {
         $fullPath = Storage::disk('public')->path($document->file_path);
 
@@ -267,6 +269,7 @@ class RegulationParserService
 
             $images = glob($tmpDir.'/page-*.png');
             sort($images);
+            $total = count($images);
 
             $result = [];
             foreach ($images as $index => $image) {
@@ -277,6 +280,10 @@ class RegulationParserService
                     'text' => $text,
                     'char_count' => mb_strlen($text),
                 ];
+
+                if ($progress) {
+                    $progress((int) round((($index + 1) / max(1, $total)) * 100), 'OCR page '.($index + 1).'/'.$total);
+                }
             }
 
             return $result;
@@ -290,7 +297,7 @@ class RegulationParserService
         }
     }
 
-    private function ocrRegulation(Regulation $regulation): array
+    private function ocrRegulation(Regulation $regulation, ?callable $progress = null): array
     {
         $fullPath = Storage::disk('public')->path($regulation->file_path);
 
@@ -306,6 +313,7 @@ class RegulationParserService
 
             $images = glob($tmpDir.'/page-*.png');
             sort($images);
+            $total = count($images);
 
             $result = [];
             foreach ($images as $index => $image) {
@@ -316,6 +324,10 @@ class RegulationParserService
                     'text' => $text,
                     'char_count' => mb_strlen($text),
                 ];
+
+                if ($progress) {
+                    $progress((int) round((($index + 1) / max(1, $total)) * 100), 'OCR page '.($index + 1).'/'.$total);
+                }
             }
 
             return $result;

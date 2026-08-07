@@ -1,0 +1,49 @@
+# Referensi systemd unit untuk Horizon (production).
+# Sesuaikan User/Group dan WorkingDirectory dengan path deploy aplikasi.
+#
+# Install:
+#   sudo cp deploy/investalaw-horizon.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now investalaw-horizon
+#
+# Deploy berikutnya (setelah push kode baru):
+#   php artisan horizon:terminate        # graceful restart worker
+#   sudo systemctl restart investalaw-horizon   # backstop
+#
+# Cek status/log:
+#   sudo systemctl status investalaw-horizon
+#   sudo journalctl -u investalaw-horizon -f
+
+[Unit]
+Description=Laravel Horizon queue worker (investalaw)
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/investalaw
+ExecStart=/usr/bin/php /var/www/investalaw/artisan horizon
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=3
+KillSignal=SIGTERM
+KillMode=process
+TimeoutStopSec=120
+# Cegah hot-restart loop bila redis sesaat terganggu
+StartLimitIntervalSec=120
+StartLimitBurst=5
+# Banyak koneksi redis/queue + batas resource
+LimitNOFILE=65536
+TasksMax=1024
+MemoryMax=4G
+StandardOutput=journal
+StandardError=journal
+# Hardening
+ProtectSystem=full
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

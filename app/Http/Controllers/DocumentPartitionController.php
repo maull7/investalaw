@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ExtractReviewDocumentReferences;
+use App\Jobs\GeneratePartitionAnalyses;
+use App\Models\AiJobStatus;
 use App\Models\DocumentBabStructure;
 use App\Models\DocumentPartition;
 use App\Models\PartitionAnalysis;
 use App\Models\ReviewDocument;
+use App\Models\UserActivityLog;
 use App\Services\AiService;
 use App\Services\BabStructureService;
 use App\Services\DocumentParser;
@@ -24,7 +28,7 @@ class DocumentPartitionController extends Controller
         private readonly BabStructureService $babStructureService,
         private readonly DocumentParser $documentParser,
         private readonly AiService $aiService,
-        private readonly TocExtractorService $tocExtractorService
+        private readonly TocExtractorService $tocExtractorService,
     ) {}
 
     public function index(ReviewDocument $reviewDocument): View
@@ -37,6 +41,7 @@ class DocumentPartitionController extends Controller
             'partitions' => fn ($q) => $q->roots(),
             'partitions.analysis',
             'regulations',
+            'relatedReferences',
         ]);
 
         $babTree = $this->babStructureService->getTree($reviewDocument);
@@ -118,10 +123,8 @@ class DocumentPartitionController extends Controller
     {
         abort_if($request->user()->isSubAdmin(), 403);
 
-        set_time_limit(300);
-
         $request->validate([
-            'type' => ['required', 'string', 'in:analisa,review,rekomendasi,validitas'],
+            'type' => ['required', 'string', 'exists:type_prompts,slug'],
             'partition_ids' => ['nullable', 'array'],
             'partition_ids.*' => ['integer', 'exists:document_partitions,id'],
         ]);
@@ -135,26 +138,24 @@ class DocumentPartitionController extends Controller
 
         $partitionIds = $request->input('partition_ids');
 
-        $query = $reviewDocument->partitions()
-            ->whereNull('parent_id')
-            ->when($partitionIds, fn ($q) => $q->whereIn('id', $partitionIds));
+        AiJobStatus::begin($reviewDocument, 'partitions');
+        GeneratePartitionAnalyses::dispatch($reviewDocument, $type, $partitionIds);
 
-        if ($query->count() === 0) {
-            return redirect()->route('partitions.index', $reviewDocument)
-                ->with('error', 'Tidak ada partisi yang dipilih.');
-        }
+        return redirect()->route('partitions.index', $reviewDocument)
+            ->with('info', 'Analisa AI sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
+    }
 
-        try {
-            $this->aiService->generateAllPartitionAnalyses($reviewDocument, $type, $partitionIds);
+    public function extractRegulations(Request $request, ReviewDocument $reviewDocument): RedirectResponse
+    {
+        abort_if($request->user()->isSubAdmin(), 403);
 
-            $count = $partitionIds ? count($partitionIds) : $query->count();
+        AiJobStatus::begin($reviewDocument, 'extract');
+        ExtractReviewDocumentReferences::dispatch($reviewDocument);
 
-            return redirect()->route('partitions.index', $reviewDocument)
-                ->with('success', "Analisa AI selesai ({$count} partisi).");
-        } catch (\Exception $e) {
-            return redirect()->route('partitions.index', $reviewDocument)
-                ->with('error', 'Gagal menjalankan analisa AI: '.$e->getMessage());
-        }
+        UserActivityLog::log('extracted', ReviewDocument::class, $reviewDocument->id, "Memproses tarik regulasi terkait dari dokumen {$reviewDocument->title}");
+
+        return redirect()->route('partitions.index', $reviewDocument)
+            ->with('info', 'Tarik regulasi sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
     }
 
     public function saveAnalysis(Request $request, ReviewDocument $reviewDocument, DocumentPartition $documentPartition): RedirectResponse

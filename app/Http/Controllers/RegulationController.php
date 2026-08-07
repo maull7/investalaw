@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
+use App\Jobs\ExtractRegulationReferences;
+use App\Jobs\GenerateRegulationAnalysis;
+use App\Jobs\ParseRegulation;
 use App\Jobs\ParseRegulationDocument;
+use App\Models\AiJobStatus;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use App\Models\UserActivityLog;
@@ -58,6 +62,8 @@ class RegulationController extends Controller
             'year' => $data['year'],
             'effective_date' => $data['effective_date'] ?? null,
             'file_path' => $filePath,
+            'tanggal_tetapkan' => $data['tanggal_tetapkan'] ?? null,
+            'tanggal_diundangkan' => $data['tanggal_diundangkan'] ?? null,
         ]);
 
         if (! empty($data['sub_categories'])) {
@@ -116,6 +122,8 @@ class RegulationController extends Controller
             'category_id' => $data['category_id'],
             'year' => $data['year'],
             'effective_date' => $data['effective_date'] ?? null,
+            'tanggal_tetapkan' => $data['tanggal_tetapkan'] ?? null,
+            'tanggal_diundangkan' => $data['tanggal_diundangkan'] ?? null,
         ];
 
         if ($request->hasFile('file')) {
@@ -144,17 +152,13 @@ class RegulationController extends Controller
 
     public function generateAnalysis(Regulation $regulation): RedirectResponse
     {
-        $analysis = $this->regulationAnalysisService->generate($regulation);
+        AiJobStatus::begin($regulation, 'analysis');
+        GenerateRegulationAnalysis::dispatch($regulation);
 
         UserActivityLog::log('generated', Regulation::class, $regulation->id, "Menghasilkan analisis AI untuk regulasi {$regulation->regulation_number}");
 
-        if (! $analysis) {
-            return redirect()->route('regulations.analyze', $regulation)
-                ->with('error', 'Gagal menghasilkan analisis.');
-        }
-
         return redirect()->route('regulations.analyze', $regulation)
-            ->with('success', 'Analisis berhasil dihasilkan. Klik "Simpan Analisis" untuk menyimpan hasil.');
+            ->with('info', 'Analisis sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
     }
 
     public function saveAnalysis(Regulation $regulation): RedirectResponse
@@ -226,12 +230,13 @@ class RegulationController extends Controller
 
     public function reanalyze(Regulation $regulation): RedirectResponse
     {
-        $this->regulationAnalysisService->regenerate($regulation);
+        AiJobStatus::begin($regulation, 'analysis');
+        GenerateRegulationAnalysis::dispatch($regulation, true);
 
         UserActivityLog::log('reanalyzed', Regulation::class, $regulation->id, "Melakukan re-analisis AI untuk regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.analyze', $regulation)
-            ->with('success', 'Analisis berhasil diperbarui. Klik "Simpan Analisis" untuk menyimpan hasil.');
+            ->with('info', 'Re-analisis sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
     }
 
     public function destroy(Regulation $regulation): RedirectResponse
@@ -378,17 +383,19 @@ class RegulationController extends Controller
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        $result = $this->regulationParserService->parseRegulation($regulation);
-
-        if (! $result['success']) {
+        if ($regulation->isParsed()) {
             return redirect()->route('regulations.show', $regulation)
-                ->with('error', $result['message']);
+                ->with('info', 'Regulasi sudah diparse.');
         }
 
-        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse teks regulasi {$regulation->regulation_number}");
+        $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
+
+        ParseRegulation::dispatch($regulation);
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses parse teks regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
-            ->with('success', $result['message']);
+            ->with('success', 'Parse regulasi sedang diproses di background. Silakan refresh halaman untuk melihat hasil.');
     }
 
     public function parseDocument(Regulation $regulation, RegulationDocument $document): RedirectResponse
@@ -423,12 +430,44 @@ class RegulationController extends Controller
         $count = $pending->count();
 
         foreach ($pending as $document) {
-            ParseRegulationDocument::dispatchAfterResponse($document);
+            $document->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
+            ParseRegulationDocument::dispatch($document);
         }
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses {$count} dokumen tambahan dari regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
             ->with('success', "Memproses {$count} dokumen tambahan secara background. Silakan refresh halaman untuk melihat hasil.");
+    }
+
+    public function parseProgress(Regulation $regulation): JsonResponse
+    {
+        $regulation->loadMissing('documents');
+
+        return response()->json([
+            'regulation' => [
+                'progress' => $regulation->parse_progress,
+                'status' => $regulation->parse_status,
+                'parsed_at' => $regulation->parsed_at?->toIso8601String(),
+            ],
+            'documents' => $regulation->documents->map(fn ($d) => [
+                'id' => $d->id,
+                'progress' => $d->parse_progress,
+                'status' => $d->parse_status,
+            ]),
+        ]);
+    }
+
+    public function extractReferences(Regulation $regulation): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        AiJobStatus::begin($regulation, 'extract');
+        ExtractRegulationReferences::dispatch($regulation);
+
+        UserActivityLog::log('extracted', Regulation::class, $regulation->id, "Memproses ekstraksi peraturan terkait dari {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('info', 'Ekstraksi peraturan terkait sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
     }
 }

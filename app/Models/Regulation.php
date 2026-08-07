@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats'])]
+#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats', 'parse_progress', 'tanggal_tetapkan', 'tanggal_diundangkan'])]
 class Regulation extends Model
 {
     use HasFactory, SoftDeletes;
@@ -48,6 +48,25 @@ class Regulation extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(RegulationDocument::class);
+    }
+
+    /** @return HasMany<RegulationRelatedReference, Regulation> */
+    public function relatedReferences(): HasMany
+    {
+        return $this->hasMany(RegulationRelatedReference::class);
+    }
+
+    public function aiStatus(string $action): ?AiJobStatus
+    {
+        return AiJobStatus::where('model_type', $this->getMorphClass())
+            ->where('model_id', $this->getKey())
+            ->where('action', $action)
+            ->first();
+    }
+
+    public function isAiProcessing(string $action): bool
+    {
+        return ($this->aiStatus($action)?->status ?? null) === 'processing';
     }
 
     public function isParsed(): bool
@@ -91,6 +110,7 @@ class Regulation extends Model
         return match ($this->parse_status) {
             'complete' => 'Complete',
             'incomplete' => 'InComplete',
+            'parsing' => 'Parsing',
             default => 'Not Parsed',
         };
     }
@@ -100,6 +120,7 @@ class Regulation extends Model
         return match ($this->parse_status) {
             'complete' => 'emerald',
             'incomplete' => 'amber',
+            'parsing' => 'blue',
             default => 'gray',
         };
     }
@@ -109,8 +130,11 @@ class Regulation extends Model
         return [
             'year' => 'integer',
             'effective_date' => 'date',
+            'tanggal_tetapkan' => 'date',
+            'tanggal_diundangkan' => 'date',
             'parsed_at' => 'datetime',
             'parse_stats' => 'array',
+            'parse_progress' => 'integer',
         ];
     }
 }

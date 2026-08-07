@@ -97,6 +97,7 @@ class RegulationRepository
             'subCategories',
             'relatedRegulations.type',
             'documents',
+            'relatedReferences',
         ])->findOrFail($id);
     }
 

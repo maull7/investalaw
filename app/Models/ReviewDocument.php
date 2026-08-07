@@ -88,6 +88,25 @@ class ReviewDocument extends Model
         return $this->hasMany(DocumentPage::class);
     }
 
+    /** @return HasMany<ReviewDocumentRelatedReference, ReviewDocument> */
+    public function relatedReferences(): HasMany
+    {
+        return $this->hasMany(ReviewDocumentRelatedReference::class);
+    }
+
+    public function aiStatus(string $action): ?AiJobStatus
+    {
+        return AiJobStatus::where('model_type', $this->getMorphClass())
+            ->where('model_id', $this->getKey())
+            ->where('action', $action)
+            ->first();
+    }
+
+    public function isAiProcessing(string $action): bool
+    {
+        return ($this->aiStatus($action)?->status ?? null) === 'processing';
+    }
+
     public function isParsed(): bool
     {
         return $this->parsed_at !== null;

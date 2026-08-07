@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\RegulationDocument;
 use App\Services\RegulationParserService;
-use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 class ParseRegulationDocument implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $queue = 'parsing';
 
     public $timeout = 600;
 
@@ -25,16 +26,31 @@ class ParseRegulationDocument implements ShouldQueue
 
     public function handle(RegulationParserService $parser): void
     {
-        $this->document->refresh();
+        $document = $this->document->fresh();
 
-        if ($this->document->isParsed()) {
+        if (! $document) {
             return;
         }
 
-        $result = $parser->parseDocumentChoice($this->document, 'text');
+        if ($document->isParsed() && $document->parse_progress === 100) {
+            return;
+        }
+
+        if ($document->parse_status !== 'parsing') {
+            $document->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
+        }
+
+        $last = -1;
+        $result = $parser->parseDocumentChoice($document, 'text', function (int $percent) use ($document, &$last) {
+            if ($percent === 100 || ($percent - $last) >= 10) {
+                $last = $percent;
+                $document->fresh()?->update(['parse_progress' => $percent]);
+            }
+        });
 
         if (! $result['success']) {
-            Log::warning("ParseRegulationDocument job failed for doc {$this->document->id}: {$result['message']}");
+            Log::warning("ParseRegulationDocument job failed for doc {$document->id}: {$result['message']}");
+            $document->fresh()?->update(['parse_status' => null, 'parse_progress' => null]);
         }
     }
 

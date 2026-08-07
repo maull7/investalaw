@@ -4,6 +4,17 @@
 @section('header', 'Analisis Regulasi')
 
 @section('content')
+    @php $isAnalysisProcessing = $regulation->isAiProcessing('analysis'); @endphp
+    @if($isAnalysisProcessing)
+        <div class="mb-6 flex items-center gap-3 rounded-2xl bg-blue-50 ring-1 ring-blue-200 px-5 py-4">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+            <div>
+                <p class="text-sm font-bold text-blue-800">Analisis sedang diproses di background</p>
+                <p class="text-xs text-blue-600 mt-0.5">Halaman akan refresh otomatis saat selesai.</p>
+            </div>
+        </div>
+        <script>setTimeout(() => location.reload(), 4000);</script>
+    @endif
     @php $isSaved = $analysis && (($analysis->metadata['is_saved'] ?? false) || ($analysis->metadata['saved'] ?? false)); @endphp
     <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
         <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/18 blur-3xl"></div>

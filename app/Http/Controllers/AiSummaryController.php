@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateAiSummary;
+use App\Models\AiJobStatus;
 use App\Models\AiSummary;
 use App\Models\ReviewDocument;
+use App\Models\TypePrompt;
 use App\Services\AiService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,9 +24,18 @@ class AiSummaryController extends Controller
 
         $reviewDocument->load('aiSummaries');
 
+        $types = TypePrompt::where('is_active', true)->orderBy('name')->get()
+            ->mapWithKeys(fn (TypePrompt $type) => [
+                $type->slug => [
+                    'label' => $type->name,
+                    'desc' => $type->description ?? 'Generate analisis tipe '.$type->name,
+                ],
+            ]);
+
         return view('ai-summaries.index', [
             'document' => $reviewDocument,
             'summaries' => $reviewDocument->aiSummaries->keyBy('type'),
+            'types' => $types,
         ]);
     }
 
@@ -31,7 +43,7 @@ class AiSummaryController extends Controller
     {
         abort_if($request->user()->isSubAdmin(), 403);
 
-        $request->validate(['type' => ['required', 'string', 'in:analisa,review,rekomendasi,validitas']]);
+        $request->validate(['type' => ['required', 'string', 'exists:type_prompts,slug']]);
 
         $type = $request->input('type');
 
@@ -47,15 +59,11 @@ class AiSummaryController extends Controller
                 ->with('error', 'Regulasi berikut belum diparse: '.$unparsedRegs->pluck('regulation_number')->implode(', ').'. Parse terlebih dahulu di menu Regulasi.');
         }
 
-        try {
-            $summary = $this->aiService->generateSummary($reviewDocument, $type);
+        AiJobStatus::begin($reviewDocument, 'summary:'.$type);
+        GenerateAiSummary::dispatch($reviewDocument, $type);
 
-            return redirect()->route('ai-summaries.show', [$reviewDocument, $summary])
-                ->with('success', 'AI Summary berhasil digenerate menggunakan '.$summary->provider_used.'.');
-        } catch (\Exception $e) {
-            return redirect()->route('ai-summaries.index', $reviewDocument)
-                ->with('error', 'Gagal generate AI Summary: '.$e->getMessage());
-        }
+        return redirect()->route('ai-summaries.index', $reviewDocument)
+            ->with('info', 'AI Summary sedang diproses di background. Halaman akan refresh otomatis saat selesai.');
     }
 
     public function show(ReviewDocument $reviewDocument, AiSummary $aiSummary): View

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['regulation_id', 'name', 'document_type', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats'])]
+#[Fillable(['regulation_id', 'name', 'document_type', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats', 'parse_progress'])]
 class RegulationDocument extends Model
 {
     use HasFactory;
@@ -28,6 +28,7 @@ class RegulationDocument extends Model
         return match ($this->parse_status) {
             'complete' => 'Complete',
             'incomplete' => 'InComplete',
+            'parsing' => 'Parsing',
             default => 'Not Parsed',
         };
     }
@@ -37,6 +38,7 @@ class RegulationDocument extends Model
         return match ($this->parse_status) {
             'complete' => 'emerald',
             'incomplete' => 'amber',
+            'parsing' => 'blue',
             default => 'gray',
         };
     }
@@ -46,6 +48,7 @@ class RegulationDocument extends Model
         return [
             'parsed_at' => 'datetime',
             'parse_stats' => 'array',
+            'parse_progress' => 'integer',
         ];
     }
 }

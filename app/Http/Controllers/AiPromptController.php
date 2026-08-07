@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AiPrompt;
+use App\Models\TypePrompt;
 use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ class AiPromptController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_prompts'), 403);
 
-        $prompts = AiPrompt::orderBy('type')->get();
+        $prompts = AiPrompt::with('typePrompt')->orderBy('type')->get();
 
         return view('ai-prompts.index', compact('prompts'));
     }
@@ -23,7 +24,9 @@ class AiPromptController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_prompts'), 403);
 
-        return view('ai-prompts.create');
+        $typePrompts = TypePrompt::orderBy('name')->get();
+
+        return view('ai-prompts.create', compact('typePrompts'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -31,14 +34,17 @@ class AiPromptController extends Controller
         abort_if($request->user()->isSubAdmin() && ! $request->user()->hasPermission('manage_prompts'), 403);
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'max:50', 'unique:ai_prompts,type'],
+            'type_prompt_id' => ['required', 'exists:type_prompts,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'prompt_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $typePrompt = TypePrompt::findOrFail($validated['type_prompt_id']);
+
         $prompt = AiPrompt::create([
-            'type' => $validated['type'],
+            'type_prompt_id' => $typePrompt->id,
+            'type' => $typePrompt->slug,
             'title' => $validated['title'] ?? null,
             'prompt_text' => $validated['prompt_text'],
             'is_active' => $validated['is_active'] ?? true,
@@ -54,7 +60,9 @@ class AiPromptController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_prompts'), 403);
 
-        return view('ai-prompts.edit', compact('aiPrompt'));
+        $typePrompts = TypePrompt::where('is_active', true)->orderBy('name')->get();
+
+        return view('ai-prompts.edit', compact('aiPrompt', 'typePrompts'));
     }
 
     public function update(Request $request, AiPrompt $aiPrompt): RedirectResponse
@@ -62,14 +70,17 @@ class AiPromptController extends Controller
         abort_if($request->user()->isSubAdmin() && ! $request->user()->hasPermission('manage_prompts'), 403);
 
         $validated = $request->validate([
-            'type' => ['required', 'string', 'max:50', 'unique:ai_prompts,type,'.$aiPrompt->id],
+            'type_prompt_id' => ['required', 'exists:type_prompts,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'prompt_text' => ['required', 'string'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
+        $typePrompt = TypePrompt::findOrFail($validated['type_prompt_id']);
+
         $aiPrompt->update([
-            'type' => $validated['type'],
+            'type_prompt_id' => $typePrompt->id,
+            'type' => $typePrompt->slug,
             'title' => $validated['title'] ?? null,
             'prompt_text' => $validated['prompt_text'],
             'is_active' => $validated['is_active'] ?? true,

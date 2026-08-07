@@ -13,6 +13,7 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewDocumentController;
 use App\Http\Controllers\ReviewReportController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\TypePromptController;
 use App\Http\Controllers\UserController;
 use App\Models\Regulation;
 use App\Models\ReviewDocument;
@@ -56,6 +57,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
     Route::resource('regulations', RegulationController::class);
     Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
+    Route::get('/regulations/{regulation}/parse-progress', [RegulationController::class, 'parseProgress'])->name('regulations.parse-progress');
+    Route::post('/regulations/{regulation}/extract-references', [RegulationController::class, 'extractReferences'])->name('regulations.extract-references');
     Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
     Route::post('/regulations/{regulation}/parse-documents', [RegulationController::class, 'parseAllDocuments'])->name('regulations.documents.parse-all');
     Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
@@ -110,6 +113,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/review-documents/{reviewDocument}/partitions/parsed-text', [DocumentPartitionController::class, 'showParsedText'])->name('partitions.parsed-text');
     Route::get('/review-documents/{reviewDocument}/partitions/regulations', [DocumentPartitionController::class, 'showRegulations'])->name('partitions.regulations');
     Route::post('/review-documents/{reviewDocument}/partitions/analyse', [DocumentPartitionController::class, 'generateAnalysis'])->name('partitions.analyse')->middleware('throttle:3,1');
+    Route::post('/review-documents/{reviewDocument}/partitions/extract-regulations', [DocumentPartitionController::class, 'extractRegulations'])->name('partitions.extract-regulations');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/analysis', [DocumentPartitionController::class, 'saveAnalysis'])->name('partitions.save-analysis');
     Route::post('/review-documents/{reviewDocument}/partitions/{documentPartition}/detect-structure', [DocumentPartitionController::class, 'detectStructure'])->name('partitions.detect-structure')->middleware('throttle:3,1');
     Route::post('/review-documents/{reviewDocument}/bab-structures/{documentBabStructure}/detect', [DocumentPartitionController::class, 'detectStructure'])->name('bab-structures.detect')->middleware('throttle:3,1');
@@ -120,6 +124,7 @@ Route::middleware('auth')->group(function () {
 
     // AI Prompts management
     Route::resource('ai-prompts', AiPromptController::class);
+    Route::resource('type-prompts', TypePromptController::class);
 
     // TEMP DEBUG: Show regulation text directly
     Route::get('/debug-reg-text/{id}', function ($id) {

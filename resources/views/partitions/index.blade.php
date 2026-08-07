@@ -8,6 +8,20 @@
 @endphp
 
 @section('content')
+    @php
+        $extractProcessing = $document->isAiProcessing('extract');
+        $partitionsAiProcessing = $document->isAiProcessing('partitions');
+    @endphp
+    @if($extractProcessing || $partitionsAiProcessing)
+        <div class="mb-6 flex items-center gap-3 rounded-2xl bg-blue-50 ring-1 ring-blue-200 px-5 py-4">
+            <svg class="w-5 h-5 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+            <div>
+                <p class="text-sm font-bold text-blue-800">{{ $extractProcessing ? 'Tarik regulasi' : 'Analisa AI per-partisi' }} sedang diproses di background</p>
+                <p class="text-xs text-blue-600 mt-0.5">Halaman akan refresh otomatis saat selesai.</p>
+            </div>
+        </div>
+        <script>setTimeout(() => location.reload(), 4000);</script>
+    @endif
     <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
         <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/15 blur-3xl"></div>
         <div class="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
@@ -71,9 +85,9 @@
 
         {{-- Tab: Partitions Content --}}
         <div x-show="activeTab === 'partitions'" x-cloak>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {{-- Left Sidebar --}}
-                <div class="space-y-6">
+                <div class="space-y-6 lg:col-span-2">
                     {{-- Partition Configuration --}}
                     <x-card>
                         <x-slot name="header">
@@ -345,7 +359,7 @@
                 </div>
 
                 {{-- Right: PDF Viewer --}}
-                <div class="lg:col-span-2">
+                <div class="lg:col-span-3">
                     <x-card :padding="false">
                         <x-slot name="header">
                             <div class="flex items-center justify-between">
@@ -383,6 +397,70 @@
                                 <input type="number" min="1" :max="totalPages" @change="goToPage(parseInt($event.target.value))" class="input-premium !py-1.5 !text-xs w-20">
                             </div>
                         </div>
+                    </x-card>
+
+                    {{-- Regulasi Terkait --}}
+                    <x-card class="mt-6">
+                        <x-slot name="header">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h3 class="text-lg font-bold text-[#071833]">Regulasi Terkait</h3>
+                                    <p class="text-xs text-[#667085] mt-0.5">Regulasi yang ditarik dari isi dokumen yang sudah diparse</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $document->relatedReferences->count() }} item</span>
+                                    @if($extractProcessing)
+                                        <span class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 ring-1 ring-blue-200">
+                                            <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg>
+                                            Memproses...
+                                        </span>
+                                    @else
+                                        <form method="POST" action="{{ route('partitions.extract-regulations', $document) }}">
+                                            @csrf
+                                            <x-button type="submit" variant="primary" size="md">
+                                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                                                Tarik Regulasi
+                                            </x-button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </div>
+                        </x-slot>
+                        @if($document->relatedReferences->isEmpty())
+                            <div class="text-center py-12 px-4">
+                                <div class="mx-auto w-14 h-14 rounded-2xl bg-[#f6f8fb] flex items-center justify-center text-[#c99a3e] mb-3">
+                                    <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.04a4.5 4.5 0 0 0-1.242-7.244l-4.5-4.5a4.5 4.5 0 0 0-6.364 6.364L4.34 8.598"/></svg>
+                                </div>
+                                <p class="text-sm text-[#667085]">Belum ada regulasi terkait.</p>
+                                <p class="text-xs text-[#b0b8c5] mt-1">Pastikan dokumen sudah diparse, lalu klik <strong class="text-[#071833]">Tarik Regulasi</strong>.</p>
+                            </div>
+                        @else
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-[#e7eaf0] text-left text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                            <th class="py-3 px-4">Nama / Nomor</th>
+                                            <th class="py-3 px-4 text-center w-24">Tahun</th>
+                                            <th class="py-3 px-4 text-center w-32">Hubungan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-[#e7eaf0]">
+                                        @foreach($document->relatedReferences as $ref)
+                                            <tr class="hover:bg-[#f6f8fb]/60 transition">
+                                                <td class="py-3.5 px-4">
+                                                    <p class="text-sm font-semibold text-[#071833]">{{ $ref->name }}</p>
+                                                    @if($ref->number)<p class="text-xs text-[#667085] mt-0.5">Nomor: {{ $ref->number }}</p>@endif
+                                                </td>
+                                                <td class="py-3.5 px-4 text-center text-sm font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</td>
+                                                <td class="py-3.5 px-4 text-center">
+                                                    <x-badge :color="match($ref->relationship) { 'dicabut' => 'rose', 'diubah' => 'amber', default => 'blue' }">{{ $ref->relationship }}</x-badge>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
                     </x-card>
                 </div>
             </div>

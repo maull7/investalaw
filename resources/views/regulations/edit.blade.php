@@ -67,6 +67,26 @@
                                 <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
                             @enderror
                         </div>
+                        <div>
+                            <label for="tanggal_tetapkan" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal
+                                DiTetapkan</label>
+                            <input type="date" name="tanggal_tetapkan" id="tanggal_tetapkan"
+                                value="{{ old('tanggal_tetapkan', $regulation->tanggal_tetapkan?->format('Y-m-d')) }}"
+                                class="input-premium">
+                            @error('tanggal_tetapkan')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="tanggal_diundangkan" class="block text-sm font-semibold text-[#071833] mb-2">Tanggal
+                                DiUndangkan</label>
+                            <input type="date" name="tanggal_diundangkan" id="tanggal_diundangkan"
+                                value="{{ old('tanggal_diundangkan', $regulation->tanggal_diundangkan?->format('Y-m-d')) }}"
+                                class="input-premium">
+                            @error('tanggal_diundangkan')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     <div>

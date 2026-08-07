@@ -30,6 +30,8 @@ class StoreRegulationRequest extends FormRequest
             'documents.*.name' => ['required', 'string', 'max:255'],
             'documents.*.document_type' => ['required', 'string', 'max:255'],
             'documents.*.file' => ['required', 'file', 'mimes:pdf,docx,doc,xlsx,xls,pptx,ppt', 'max:20480'],
+            'tanggal_tetapkan' => ['nullable', 'date'],
+            'tanggal_diundangkan' => ['nullable', 'date'],
         ];
     }
 }

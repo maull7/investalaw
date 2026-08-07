@@ -28,7 +28,7 @@
                     @forelse($prompts as $prompt)
                         <tr class="hover:bg-[#f6f8fb] transition">
                             <td class="py-3.5 px-4">
-                                <span class="px-2.5 py-0.5 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#071833] capitalize">{{ $prompt->type }}</span>
+                                <span class="px-2.5 py-0.5 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#071833] capitalize">{{ $prompt->typePrompt?->name ?? $prompt->type }}</span>
                             </td>
                             <td class="py-3.5 px-4 font-semibold text-[#071833]">{{ $prompt->title ?? '-' }}</td>
                             <td class="py-3.5 px-4 text-[#667085] max-w-xs truncate">{{ Str::limit($prompt->prompt_text, 80) }}</td>

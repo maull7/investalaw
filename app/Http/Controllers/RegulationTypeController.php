@@ -71,4 +71,18 @@ class RegulationTypeController extends Controller
         return redirect()->route('regulation-types.index')
             ->with('success', 'Jenis regulasi berhasil dihapus.');
     }
+
+    public function toggle(RegulationType $regulationType): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('manage_types'), 403);
+
+        $regulationType->is_active = ! $regulationType->is_active;
+        $regulationType->save();
+
+        $action = $regulationType->is_active ? 'activated' : 'deactivated';
+        UserActivityLog::log($action, RegulationType::class, $regulationType->id, "Mengubah status jenis regulasi {$regulationType->name} menjadi ".($regulationType->is_active ? 'aktif' : 'nonaktif'));
+
+        return redirect()->route('regulation-types.index')
+            ->with('success', 'Status jenis regulasi berhasil diperbarui.');
+    }
 }

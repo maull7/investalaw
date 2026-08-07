@@ -68,6 +68,24 @@ class Regulation extends Model
         ];
     }
 
+    public function searchOccurrenceCount(string $keyword): int
+    {
+        $keyword = mb_strtolower($keyword);
+        $count = 0;
+
+        if ($this->parsed_text && mb_stripos($this->parsed_text, $keyword) !== false) {
+            $count += mb_substr_count(mb_strtolower($this->parsed_text), $keyword);
+        }
+
+        foreach ($this->documents as $document) {
+            if ($document->parsed_text && mb_stripos($document->parsed_text, $keyword) !== false) {
+                $count += mb_substr_count(mb_strtolower($document->parsed_text), $keyword);
+            }
+        }
+
+        return $count;
+    }
+
     public function parseStatusLabel(): string
     {
         return match ($this->parse_status) {

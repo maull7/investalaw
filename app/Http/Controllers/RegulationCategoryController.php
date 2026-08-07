@@ -198,7 +198,7 @@ class RegulationCategoryController extends Controller
 
         UserActivityLog::log('toggled', SubCategory::class, $subCategory->id, ($subCategory->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." sub kategori {$subCategory->name}");
 
-        return redirect()->route('regulation-categories.show', $subCategory->category)
+        return redirect()->back()
             ->with('success', 'Status sub category berhasil diperbarui.');
     }
 

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'level'])]
+#[Fillable(['name', 'level', 'is_active'])]
 class RegulationType extends Model
 {
     use HasFactory, SoftDeletes;

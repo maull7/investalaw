@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sub-categories', [SubCategoryController::class, 'store'])->name('sub-categories.create');
 
     // Regulation Types
+    Route::patch('/regulation-types/{regulationType}/toggle', [RegulationTypeController::class, 'toggle'])->name('regulation-types.toggle');
     Route::resource('regulation-types', RegulationTypeController::class);
 
     // Regulations

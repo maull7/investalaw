@@ -129,7 +129,7 @@ class RegulationRepository
     public function getFormOptions(): array
     {
         return [
-            'types' => RegulationType::orderBy('level')->get(),
+            'types' => RegulationType::where('is_active', true)->orderBy('level')->get(),
             'categories' => RegulationCategory::with(['subCategories' => fn ($q) => $q->where('is_active', true)])->orderBy('name')->get(),
         ];
     }

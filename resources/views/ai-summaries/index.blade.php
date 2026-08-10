@@ -5,7 +5,7 @@
 
 @section('content')
     @php
-        $summaryProcessing = collect(array_keys($types))->first(fn ($key) => $document->isAiProcessing('summary:'.$key));
+        $summaryProcessing = collect($types->keys())->first(fn ($key) => $document->isAiProcessing('summary:'.$key));
     @endphp
     @if($summaryProcessing)
         <div class="mb-6 flex items-center gap-3 rounded-2xl bg-blue-50 ring-1 ring-blue-200 px-5 py-4">

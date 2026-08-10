@@ -30,6 +30,11 @@ class ReviewDocumentController extends Controller
         $this->authorize('viewAny', ReviewDocument::class);
 
         $filters = $request->only(['status', 'search']);
+
+        if (! $request->user()->isAdmin() && ! $request->user()->isSubAdmin() && ! $request->user()->isReviewer()) {
+            $filters['user_id'] = $request->user()->id;
+        }
+
         $documents = $this->reviewDocumentRepository->search($filters);
         $statuses = ReviewStatus::cases();
         $aiTypes = [
@@ -144,5 +149,13 @@ class ReviewDocumentController extends Controller
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline',
         ]);
+    }
+
+    public function viewer(ReviewDocument $reviewDocument): View
+    {
+        abort_if(auth()->user()->isSubAdmin(), 403);
+        $this->authorize('view', $reviewDocument);
+
+        return view('review-documents.viewer', compact('reviewDocument'));
     }
 }

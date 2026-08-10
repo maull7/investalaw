@@ -32,7 +32,7 @@ class ParseRegulationDocument implements ShouldQueue
             return;
         }
 
-        if ($document->isParsed() && $document->parse_progress === 100) {
+        if ($document->parse_status === 'complete') {
             return;
         }
 

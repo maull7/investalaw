@@ -163,7 +163,8 @@
                 </x-button>
 
                 <p class="text-center text-xs text-[#667085]">
-                    Protected by enterprise-grade encryption &middot; SOC 2 ready
+                    Belum punya akun?
+                    <a href="{{ route('register') }}" class="font-semibold text-[#c99a3e] hover:text-[#8c6a25] transition">Daftar</a>
                 </p>
             </form>
         </div>

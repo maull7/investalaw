@@ -31,10 +31,17 @@ class ReviewController extends Controller
 
         if ($user->isReviewer()) {
             $filters['reviewer_id'] = $user->id;
+        } elseif (! $user->isAdmin()) {
+            $filters['document_user_id'] = $user->id;
         }
 
         $reviews = $this->reviewRepository->search($filters);
-        $documents = ReviewDocument::select('id', 'title')->whereIn('status', ['submitted', 'reviewed'])->latest()->get();
+
+        $documentsQuery = ReviewDocument::select('id', 'title')->whereIn('status', ['submitted', 'reviewed']);
+        if (! $user->isAdmin() && ! $user->isReviewer()) {
+            $documentsQuery->where('user_id', $user->id);
+        }
+        $documents = $documentsQuery->latest()->get();
 
         return view('reviews.index', compact('reviews', 'documents'));
     }

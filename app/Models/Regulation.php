@@ -56,6 +56,12 @@ class Regulation extends Model
         return $this->hasMany(RegulationRelatedReference::class);
     }
 
+    /** @return HasMany<RegulationAiResult, Regulation> */
+    public function aiResults(): HasMany
+    {
+        return $this->hasMany(RegulationAiResult::class);
+    }
+
     public function aiStatus(string $action): ?AiJobStatus
     {
         return AiJobStatus::where('model_type', $this->getMorphClass())
@@ -77,7 +83,7 @@ class Regulation extends Model
     public function documentsParseProgress(): array
     {
         $total = $this->documents->count();
-        $parsed = $this->documents->filter(fn ($d) => $d->isParsed())->count();
+        $parsed = $this->documents->filter(fn ($d) => $d->parse_status === 'complete')->count();
 
         return [
             'total' => $total,

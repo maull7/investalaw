@@ -319,14 +319,13 @@
                                 <h3 class="text-base font-bold text-[#071833]">Analisa AI Per-Partisi</h3>
                             </x-slot>
                             <p class="text-sm text-[#667085] mb-4">AI akan menganalisa setiap partisi secara terpisah terhadap regulasi acuan.</p>
-                            <form method="POST" action="{{ route('partitions.analyse', $document) }}" x-data="{ aiType: 'analisa' }">
+                            <form method="POST" action="{{ route('partitions.analyse', $document) }}" x-data="{ aiType: '{{ $promptTypes->first()->slug ?? 'analisa' }}' }">
                                 @csrf
                                 <div class="flex gap-2">
                                     <select name="type" x-model="aiType" class="select-premium flex-1 !text-xs">
-                                        <option value="analisa">Analisa</option>
-                                        <option value="review">Review</option>
-                                        <option value="rekomendasi">Rekomendasi</option>
-                                        <option value="validitas">Validitas</option>
+                                        @foreach($promptTypes as $promptType)
+                                            <option value="{{ $promptType->slug }}">{{ $promptType->name }}</option>
+                                        @endforeach
                                     </select>
                                     <x-button type="submit" variant="primary" size="sm">
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"/></svg>

@@ -218,149 +218,152 @@
         </div>
 
         {{-- Quick Actions --}}
-        <div>
-            <x-card>
-                <x-slot name="header">
-                    <div>
-                        <h3 class="text-lg font-bold text-[#071833]">Quick Actions</h3>
-                        <p class="text-xs text-[#667085] mt-0.5">Shortcuts to common workflows</p>
-                    </div>
-                </x-slot>
-
-                <div class="space-y-3">
-                    <a href="{{ route('review-documents.create') }}"
-                        class="group flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-[#c99a3e]/8 to-transparent ring-1 ring-[#c99a3e]/15 hover:from-[#c99a3e]/15 hover:ring-[#c99a3e]/30 transition">
-                        <div
-                            class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#c99a3e] to-[#e6c06a] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(201,154,62,.3)]">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-[#071833]">Upload Document</p>
-                            <p class="text-xs text-[#667085] mt-0.5">Submit a new file for review</p>
-                        </div>
-                        <svg class="w-4 h-4 text-[#667085] group-hover:text-[#c99a3e] group-hover:translate-x-1 transition"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-
-                    <a href="{{ route('regulation-categories.create') }}"
-                        class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
-                        <div
-                            class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#071b3a] to-[#0b2a55] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(7,27,58,.2)]">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-[#071833]">Add Category</p>
-                            <p class="text-xs text-[#667085] mt-0.5">Create a new regulation category</p>
-                        </div>
-                        <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-                    <a href="{{ route('sub-categories.create') }}"
-                        class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
-                        <div
-                            class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#071b3a] to-[#0b2a55] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(7,27,58,.2)]">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-[#071833]">Add Sub Category</p>
-                            <p class="text-xs text-[#667085] mt-0.5">Create a new sub category</p>
-                        </div>
-                        <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-
-                    <a href="{{ route('reviews.index') }}"
-                        class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
-                        <div
-                            class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,.25)]">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9 12h6m-6 3h4M5 6h14v15l-3-2-2 2-2-2-2 2-2-2-3 2V6Z" />
-                            </svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-[#071833]">Browse Reviews</p>
-                            <p class="text-xs text-[#667085] mt-0.5">Explore compliance reports</p>
-                        </div>
-                        <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                    </a>
-                </div>
-            </x-card>
-
-            {{-- Compliance breakdown mini-chart --}}
-            <div class="mt-6">
+        @if (Auth()->user()->role == 'admin')
+            <div>
                 <x-card>
                     <x-slot name="header">
                         <div>
-                            <h3 class="text-lg font-bold text-[#071833]">Pipeline Snapshot</h3>
-                            <p class="text-xs text-[#667085] mt-0.5">Distribution of document statuses</p>
+                            <h3 class="text-lg font-bold text-[#071833]">Quick Actions</h3>
+                            <p class="text-xs text-[#667085] mt-0.5">Shortcuts to common workflows</p>
                         </div>
                     </x-slot>
-                    @php
-                        $total = max($stats['total_documents'], 1);
-                        $approvedPct = round(($stats['approved_documents'] / $total) * 100);
-                        $pendingPct = round(($stats['pending_documents'] / $total) * 100);
-                        $reviewsPct =
-                            $stats['total_documents'] > 0
-                                ? round(($stats['total_reviews'] / $stats['total_documents']) * 100)
-                                : 0;
-                    @endphp
-                    <div class="space-y-5">
-                        <div>
-                            <div class="flex justify-between text-xs mb-1.5">
-                                <span class="font-semibold text-[#071833]">Approved</span>
-                                <span class="font-bold text-emerald-600">{{ $approvedPct }}%</span>
+
+                    <div class="space-y-3">
+                        <a href="{{ route('review-documents.create') }}"
+                            class="group flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-[#c99a3e]/8 to-transparent ring-1 ring-[#c99a3e]/15 hover:from-[#c99a3e]/15 hover:ring-[#c99a3e]/30 transition">
+                            <div
+                                class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#c99a3e] to-[#e6c06a] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(201,154,62,.3)]">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                </svg>
                             </div>
-                            <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
-                                <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all"
-                                    style="width: {{ $approvedPct }}%"></div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-[#071833]">Upload Document</p>
+                                <p class="text-xs text-[#667085] mt-0.5">Submit a new file for review</p>
                             </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs mb-1.5">
-                                <span class="font-semibold text-[#071833]">Pending Review</span>
-                                <span class="font-bold text-amber-600">{{ $pendingPct }}%</span>
+                            <svg class="w-4 h-4 text-[#667085] group-hover:text-[#c99a3e] group-hover:translate-x-1 transition"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+
+                        <a href="{{ route('regulation-categories.create') }}"
+                            class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
+                            <div
+                                class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#071b3a] to-[#0b2a55] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(7,27,58,.2)]">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                                </svg>
                             </div>
-                            <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
-                                <div class="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500 transition-all"
-                                    style="width: {{ $pendingPct }}%"></div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-[#071833]">Add Category</p>
+                                <p class="text-xs text-[#667085] mt-0.5">Create a new regulation category</p>
                             </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs mb-1.5">
-                                <span class="font-semibold text-[#071833]">Review Coverage</span>
-                                <span class="font-bold text-[#c99a3e]">{{ min($reviewsPct, 100) }}%</span>
+                            <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                        <a href="{{ route('sub-categories.create') }}"
+                            class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
+                            <div
+                                class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#071b3a] to-[#0b2a55] text-white flex items-center justify-center shadow-[0_8px_20px_rgba(7,27,58,.2)]">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
+                                </svg>
                             </div>
-                            <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
-                                <div class="h-full rounded-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] transition-all"
-                                    style="width: {{ min($reviewsPct, 100) }}%"></div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-[#071833]">Add Sub Category</p>
+                                <p class="text-xs text-[#667085] mt-0.5">Create a new sub category</p>
                             </div>
-                        </div>
+                            <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+
+                        <a href="{{ route('reviews.index') }}"
+                            class="group flex items-center gap-4 p-4 rounded-2xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#071b3a]/30 hover:bg-[#f6f8fb] transition">
+                            <div
+                                class="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white flex items-center justify-center shadow-[0_8px_20px_rgba(16,185,129,.25)]">
+                                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M9 12h6m-6 3h4M5 6h14v15l-3-2-2 2-2-2-2 2-2-2-3 2V6Z" />
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-semibold text-[#071833]">Browse Reviews</p>
+                                <p class="text-xs text-[#667085] mt-0.5">Explore compliance reports</p>
+                            </div>
+                            <svg class="w-4 h-4 text-[#667085] group-hover:text-[#071833] group-hover:translate-x-1 transition"
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
                     </div>
                 </x-card>
+
+                {{-- Compliance breakdown mini-chart --}}
+                <div class="mt-6">
+                    <x-card>
+                        <x-slot name="header">
+                            <div>
+                                <h3 class="text-lg font-bold text-[#071833]">Pipeline Snapshot</h3>
+                                <p class="text-xs text-[#667085] mt-0.5">Distribution of document statuses</p>
+                            </div>
+                        </x-slot>
+                        @php
+                            $total = max($stats['total_documents'], 1);
+                            $approvedPct = round(($stats['approved_documents'] / $total) * 100);
+                            $pendingPct = round(($stats['pending_documents'] / $total) * 100);
+                            $reviewsPct =
+                                $stats['total_documents'] > 0
+                                    ? round(($stats['total_reviews'] / $stats['total_documents']) * 100)
+                                    : 0;
+                        @endphp
+                        <div class="space-y-5">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1.5">
+                                    <span class="font-semibold text-[#071833]">Approved</span>
+                                    <span class="font-bold text-emerald-600">{{ $approvedPct }}%</span>
+                                </div>
+                                <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all"
+                                        style="width: {{ $approvedPct }}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1.5">
+                                    <span class="font-semibold text-[#071833]">Pending Review</span>
+                                    <span class="font-bold text-amber-600">{{ $pendingPct }}%</span>
+                                </div>
+                                <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500 transition-all"
+                                        style="width: {{ $pendingPct }}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-xs mb-1.5">
+                                    <span class="font-semibold text-[#071833]">Review Coverage</span>
+                                    <span class="font-bold text-[#c99a3e]">{{ min($reviewsPct, 100) }}%</span>
+                                </div>
+                                <div class="h-2 rounded-full bg-[#f6f8fb] overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] transition-all"
+                                        style="width: {{ min($reviewsPct, 100) }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </x-card>
+                </div>
             </div>
-        </div>
+        @endif
+
     </section>
 @endsection

@@ -39,6 +39,10 @@
             </div>
 
             <div class="shrink-0 flex flex-wrap gap-2">
+                <a href="{{ route('review-documents.viewer', $document) }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-[#071833] bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] hover:brightness-110 transition">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                    Baca PDF Viewer
+                </a>
                 <a href="{{ route('review-documents.view-file', $document) }}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold text-[#071833] bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] hover:brightness-110 transition">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6 9.75-9.75M15 3h6v6"/></svg>
                     Open File

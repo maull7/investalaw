@@ -12,6 +12,10 @@ class ReviewDocumentRepository
     {
         $query = ReviewDocument::with(['user', 'regulations.type', 'regulations.category']);
 
+        if (! empty($filters['user_id'])) {
+            $query->where('user_id', $filters['user_id']);
+        }
+
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }

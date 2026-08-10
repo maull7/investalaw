@@ -18,6 +18,10 @@ class ReviewRepository
             $query->where('reviewer_id', $filters['reviewer_id']);
         }
 
+        if (! empty($filters['document_user_id'])) {
+            $query->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $filters['document_user_id']));
+        }
+
         if (! empty($filters['review_document_id'])) {
             $query->where('review_document_id', $filters['review_document_id']);
         }

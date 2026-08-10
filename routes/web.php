@@ -4,6 +4,7 @@ use App\Http\Controllers\AiPreviewController;
 use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentPartitionController;
 use App\Http\Controllers\RegulationCategoryController;
@@ -27,6 +28,8 @@ Route::get('/', function () {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
+    Route::get('/register', [RegisterController::class, 'create'])->name('register');
+    Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1');
 });
 // //
 Route::middleware('auth')->group(function () {
@@ -66,7 +69,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
     Route::get('/regulations/documents/{document}/parsed-text', [RegulationController::class, 'viewDocumentParsedText'])->name('regulations.documents.parsed-text');
-    Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewFile'])->name('regulations.file');
+    Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
+    Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
     Route::get('/regulations/{regulation}/analyze', [RegulationController::class, 'analyze'])->name('regulations.analyze');
     Route::post('/regulations/{regulation}/analyze/generate', [RegulationController::class, 'generateAnalysis'])->name('regulations.analyze.generate');
     Route::post('/regulations/{regulation}/analyze/save', [RegulationController::class, 'saveAnalysis'])->name('regulations.analyze.save');
@@ -75,10 +79,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/regulations/{regulation}/analyze/babs', [RegulationController::class, 'analyzeBabs'])->name('regulations.analyze.babs');
     Route::post('/regulations/{regulation}/analyze/bab/{index}', [RegulationController::class, 'analyzeSingleBab'])->name('regulations.analyze.bab');
     Route::get('/regulations/{regulation}/analyze/babs-list', [RegulationController::class, 'babList'])->name('regulations.analyze.babs-list');
+    Route::post('/regulations/{regulation}/generate-ai', [RegulationController::class, 'generateAi'])->name('regulations.generate-ai');
 
     Route::resource('review-documents', ReviewDocumentController::class);
     Route::post('/review-documents/{reviewDocument}/submit', [ReviewDocumentController::class, 'submit'])->name('review-documents.submit');
     Route::get('/review-documents/{reviewDocument}/file', [ReviewDocumentController::class, 'viewFile'])->name('review-documents.view-file');
+    Route::get('/review-documents/{reviewDocument}/viewer', [ReviewDocumentController::class, 'viewer'])->name('review-documents.viewer');
 
     Route::get('/reviews/{reviewDocument}/create', [ReviewController::class, 'create'])->name('reviews.create');
     Route::resource('reviews', ReviewController::class)->except(['create']);

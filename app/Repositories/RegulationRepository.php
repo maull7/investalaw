@@ -98,6 +98,7 @@ class RegulationRepository
             'relatedRegulations.type',
             'documents',
             'relatedReferences',
+            'aiResults',
         ])->findOrFail($id);
     }
 

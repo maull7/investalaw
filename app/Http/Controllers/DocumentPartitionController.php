@@ -9,6 +9,7 @@ use App\Models\DocumentBabStructure;
 use App\Models\DocumentPartition;
 use App\Models\PartitionAnalysis;
 use App\Models\ReviewDocument;
+use App\Models\TypePrompt;
 use App\Models\UserActivityLog;
 use App\Services\AiService;
 use App\Services\BabStructureService;
@@ -56,6 +57,7 @@ class DocumentPartitionController extends Controller
             'babTree' => $babTree,
             'parsedBabIds' => $parsedBabIds,
             'allParsed' => $allParsed,
+            'promptTypes' => TypePrompt::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 

@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Jobs\ExtractRegulationReferences;
+use App\Jobs\GenerateRegulationAiResult;
 use App\Jobs\GenerateRegulationAnalysis;
 use App\Jobs\ParseRegulation;
 use App\Jobs\ParseRegulationDocument;
 use App\Models\AiJobStatus;
+use App\Models\AiPrompt;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use App\Models\UserActivityLog;
@@ -41,7 +43,7 @@ class RegulationController extends Controller
 
     public function create(): View
     {
-        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('upload_regulations'), 403);
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
         $options = $this->regulationRepository->getFormOptions();
 
@@ -50,6 +52,8 @@ class RegulationController extends Controller
 
     public function store(StoreRegulationRequest $request): RedirectResponse
     {
+        abort_unless($request->user()->hasPermission('upload_regulations'), 403);
+
         $data = $request->validated();
 
         $filePath = $request->file('file')->store('regulations', 'public');
@@ -97,13 +101,33 @@ class RegulationController extends Controller
     public function show(Regulation $regulation): View
     {
         $regulation = $this->regulationRepository->findByIdWithRelations($regulation->id);
+        $aiPrompt = AiPrompt::all();
 
-        return view('regulations.show', compact('regulation'));
+        return view('regulations.show', compact('regulation', 'aiPrompt'));
+    }
+
+    public function generateAi(Request $request, Regulation $regulation): RedirectResponse
+    {
+        abort_unless($request->user()->hasPermission('upload_regulations'), 403);
+
+        $validated = $request->validate([
+            'ai_prompt_id' => ['required', 'integer', 'exists:ai_prompts,id'],
+        ]);
+
+        $prompt = AiPrompt::findOrFail($validated['ai_prompt_id']);
+
+        AiJobStatus::begin($regulation, 'regulation-ai');
+        GenerateRegulationAiResult::dispatch($regulation, $prompt);
+
+        UserActivityLog::log('generated', Regulation::class, $regulation->id, "Menjalankan Generate AI ({$prompt->title}) untuk regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('info', 'Generate AI sedang diproses di background (queue). Halaman akan refresh otomatis saat selesai.');
     }
 
     public function edit(Regulation $regulation): View
     {
-        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('upload_regulations'), 403);
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
         $options = $this->regulationRepository->getFormOptions();
         $regulation->load(['subCategories', 'relatedRegulations.type']);
@@ -113,6 +137,7 @@ class RegulationController extends Controller
 
     public function update(UpdateRegulationRequest $request, Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $data = $request->validated();
 
         $updateData = [
@@ -152,6 +177,7 @@ class RegulationController extends Controller
 
     public function generateAnalysis(Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         AiJobStatus::begin($regulation, 'analysis');
         GenerateRegulationAnalysis::dispatch($regulation);
 
@@ -163,6 +189,7 @@ class RegulationController extends Controller
 
     public function saveAnalysis(Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $result = $this->regulationAnalysisService->saveAnalysis($regulation);
 
         if (! $result) {
@@ -178,6 +205,7 @@ class RegulationController extends Controller
 
     public function connectReferences(Request $request, Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $validated = $request->validate([
             'reference_ids' => ['required', 'array'],
             'reference_ids.*' => ['integer', 'exists:regulation_analysis_references,id'],
@@ -202,6 +230,7 @@ class RegulationController extends Controller
 
     public function analyzeBabs(Request $request, Regulation $regulation): JsonResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $results = $this->regulationAnalysisService->analyzeByBabs($regulation);
 
         return response()->json($results);
@@ -209,6 +238,7 @@ class RegulationController extends Controller
 
     public function analyzeSingleBab(Request $request, Regulation $regulation, int $index): JsonResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $result = $this->regulationAnalysisService->analyzeBabByIndex($regulation, $index);
 
         return response()->json($result);
@@ -216,6 +246,7 @@ class RegulationController extends Controller
 
     public function babList(Regulation $regulation): JsonResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $text = $this->regulationAnalysisService->getContentText($regulation);
         if (! $text) {
             return response()->json(['babs' => []]);
@@ -230,6 +261,7 @@ class RegulationController extends Controller
 
     public function reanalyze(Regulation $regulation): RedirectResponse
     {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         AiJobStatus::begin($regulation, 'analysis');
         GenerateRegulationAnalysis::dispatch($regulation, true);
 
@@ -379,13 +411,20 @@ class RegulationController extends Controller
         ]);
     }
 
+    public function viewer(Regulation $regulation): View
+    {
+        abort_unless($regulation->file_path, 404);
+
+        return view('regulations.viewer', compact('regulation'));
+    }
+
     public function parseRegulation(Regulation $regulation): RedirectResponse
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        if ($regulation->isParsed()) {
+        if ($regulation->parse_status === 'complete') {
             return redirect()->route('regulations.show', $regulation)
-                ->with('info', 'Regulasi sudah diparse.');
+                ->with('info', 'Regulasi sudah diparse lengkap.');
         }
 
         $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
@@ -420,7 +459,7 @@ class RegulationController extends Controller
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
         $regulation->load('documents');
-        $pending = $regulation->documents->reject(fn ($d) => $d->isParsed());
+        $pending = $regulation->documents->reject(fn ($d) => $d->parse_status === 'complete');
 
         if ($pending->isEmpty()) {
             return redirect()->route('regulations.show', $regulation)

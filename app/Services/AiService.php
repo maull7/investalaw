@@ -10,6 +10,7 @@ use App\Models\DocumentParsedText;
 use App\Models\DocumentPartition;
 use App\Models\PartitionAnalysis;
 use App\Models\Regulation;
+use App\Models\RegulationAiResult;
 use App\Models\ReviewDocument;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -41,6 +42,37 @@ class AiService
             'prompt_text' => $prompt->prompt_text,
             'summary' => $result['content'],
             'raw_response' => $result['raw'] ?? null,
+            'provider_used' => $result['provider'],
+            'model_used' => $result['model'],
+        ]);
+    }
+
+    public function generateRegulationPrompt(Regulation $regulation, AiPrompt $prompt): RegulationAiResult
+    {
+        $text = $regulation->parsed_text;
+
+        if (! $text) {
+            $text = $regulation->documents()
+                ->whereNotNull('parsed_text')
+                ->pluck('parsed_text')
+                ->implode("\n");
+        }
+
+        $messages = [
+            ['role' => 'system', 'content' => $prompt->prompt_text],
+            ['role' => 'user', 'content' => $text
+                ?: "Regulasi: {$regulation->regulation_number} - {$regulation->title} ({$regulation->year})\n\n(Teks regulasi belum diparse, gunakan informasi di atas sebagai dasar analisa)."],
+        ];
+
+        $result = $this->callAi($messages);
+
+        return RegulationAiResult::create([
+            'regulation_id' => $regulation->id,
+            'type_prompt_id' => $prompt->type_prompt_id,
+            'type' => $prompt->type,
+            'prompt_title' => $prompt->title,
+            'prompt_text' => $prompt->prompt_text,
+            'result' => $result['content'],
             'provider_used' => $result['provider'],
             'model_used' => $result['model'],
         ]);

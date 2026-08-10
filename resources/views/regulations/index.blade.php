@@ -11,12 +11,14 @@
             <p class="mt-1.5 text-sm text-[#667085]">Kelola seluruh regulasi dengan metadata lengkap untuk analisis
                 kepatuhan.</p>
         </div>
+        @if(auth()->user()->hasPermission('upload_regulations'))
         <x-button href="{{ route('regulations.create') }}" variant="primary">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
             Tambah Regulasi
         </x-button>
+        @endif
     </div>
 
     {{-- Filters --}}
@@ -27,6 +29,14 @@
                     <input type="text" name="search" value="{{ $filters['search'] ?? '' }}" class="input-premium"
                         placeholder="Cari nomor atau judul regulasi...">
                 </div>
+                <select name="category_id" class="select-premium">
+                    <option value="">Semua Kategori</option>
+                    @foreach ($filterOptions['categories'] as $category)
+                        <option value="{{ $category->id }}"
+                            {{ ($filters['category_id'] ?? '') == $category->id ? 'selected' : '' }}>{{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
                 <select name="year" class="select-premium">
                     <option value="">Semua Tahun</option>
                     @foreach ($filterOptions['years'] as $year)
@@ -41,15 +51,15 @@
                             {{ ($filters['type_id'] ?? '') == $type->id ? 'selected' : '' }}>{{ $type->name }}</option>
                     @endforeach
                 </select>
+
                 <div class="flex gap-2">
-                    <x-button type="submit" variant="primary" size="md" class="flex-1">
+                    <x-button type="submit" variant="primary" size="md">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
                         </svg>
                         Cari
                     </x-button>
-                    <x-button href="{{ route('regulations.index') }}" variant="outline" size="md">Reset</x-button>
                 </div>
             </div>
             <div class="border-t border-[#e7eaf0] pt-4">
@@ -74,8 +84,10 @@
                 </div>
                 <p class="mt-4 text-base font-bold text-[#071833]">Belum ada regulasi</p>
                 <p class="mt-1 text-sm text-[#667085]">Tambahkan regulasi pertama Anda untuk memulai pengelolaan.</p>
+                @if(auth()->user()->hasPermission('upload_regulations'))
                 <x-button href="{{ route('regulations.create') }}" variant="primary" size="sm" class="mt-5">Tambah
                     Regulasi</x-button>
+                @endif
             </div>
         @else
             <div class="overflow-x-auto">
@@ -203,6 +215,7 @@
                                             </svg>
                                             Detail
                                         </x-button>
+                                        @if(auth()->user()->hasPermission('upload_regulations'))
                                         <x-button href="{{ route('regulations.edit', $reg) }}" variant="outline"
                                             size="sm">
                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
@@ -212,6 +225,7 @@
                                             </svg>
                                             Edit
                                         </x-button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

@@ -15,6 +15,9 @@ use App\Http\Controllers\ReviewDocumentController;
 use App\Http\Controllers\ReviewReportController;
 use App\Http\Controllers\SubCategoryController;
 use App\Http\Controllers\TypePromptController;
+use App\Http\Controllers\User\RegulationCategoryUserController;
+use App\Http\Controllers\User\RegulationTypeUserController;
+use App\Http\Controllers\User\SubCategoryUserController;
 use App\Http\Controllers\UserController;
 use App\Models\Regulation;
 use App\Models\ReviewDocument;
@@ -24,62 +27,29 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('index');
 });
-// //
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1');
 });
-// //
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('regulation-categories', RegulationCategoryController::class);
-    Route::post('/regulation-categories/{regulationCategory}/upload', [RegulationCategoryController::class, 'uploadFile'])->name('regulation-categories.upload-file');
-    Route::delete('/regulation-categories/file/{file}', [RegulationCategoryController::class, 'deleteFile'])->name('regulation-categories.delete-file');
-    Route::get('/regulation-categories/file/{file}/view', [RegulationCategoryController::class, 'viewFile'])->name('regulation-categories.view-file');
+    Route::prefix('user')->group(function () {
+        Route::get('/regulation-categories', [RegulationCategoryUserController::class, 'index'])->name('user.regulation-categories.index');
+        Route::get('/regulation-categories/{regulationCategory}', [RegulationCategoryUserController::class, 'show'])->name('user.regulation-categories.show');
 
-    // Sub Category management
-    Route::post('/regulation-categories/{regulationCategory}/sub-categories', [RegulationCategoryController::class, 'storeSubCategory'])->name('sub-categories.store');
-    Route::put('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'updateSubCategory'])->name('sub-categories.update');
-    Route::patch('/sub-categories/{subCategory}/toggle', [RegulationCategoryController::class, 'toggleSubCategory'])->name('sub-categories.toggle');
-    Route::delete('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'destroySubCategory'])->name('sub-categories.destroy');
+        Route::get('/sub-categories', [SubCategoryUserController::class, 'index'])->name('user.sub-categories.index');
+        Route::get('/sub-categories/{subCategory}', [SubCategoryUserController::class, 'show'])->name('user.sub-categories.show');
 
-    // Sub Category index page
-    Route::get('/sub-categories', [SubCategoryController::class, 'index'])->name('sub-categories.index');
-    Route::post('/sub-categories', [SubCategoryController::class, 'store'])->name('sub-categories.create');
-
-    // Regulation Types
-    Route::patch('/regulation-types/{regulationType}/toggle', [RegulationTypeController::class, 'toggle'])->name('regulation-types.toggle');
-    Route::resource('regulation-types', RegulationTypeController::class);
-
-    // Regulations
-    Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
-    Route::resource('regulations', RegulationController::class);
-    Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
-    Route::get('/regulations/{regulation}/parse-progress', [RegulationController::class, 'parseProgress'])->name('regulations.parse-progress');
-    Route::post('/regulations/{regulation}/extract-references', [RegulationController::class, 'extractReferences'])->name('regulations.extract-references');
-    Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
-    Route::post('/regulations/{regulation}/parse-documents', [RegulationController::class, 'parseAllDocuments'])->name('regulations.documents.parse-all');
-    Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
-    Route::put('/regulations/documents/{document}', [RegulationController::class, 'updateDocument'])->name('regulations.documents.update');
-    Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
-    Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
-    Route::get('/regulations/documents/{document}/parsed-text', [RegulationController::class, 'viewDocumentParsedText'])->name('regulations.documents.parsed-text');
-    Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
-    Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
-    Route::get('/regulations/{regulation}/analyze', [RegulationController::class, 'analyze'])->name('regulations.analyze');
-    Route::post('/regulations/{regulation}/analyze/generate', [RegulationController::class, 'generateAnalysis'])->name('regulations.analyze.generate');
-    Route::post('/regulations/{regulation}/analyze/save', [RegulationController::class, 'saveAnalysis'])->name('regulations.analyze.save');
-    Route::post('/regulations/{regulation}/analyze/connect-references', [RegulationController::class, 'connectReferences'])->name('regulations.analyze.connect-references');
-    Route::post('/regulations/{regulation}/reanalyze', [RegulationController::class, 'reanalyze'])->name('regulations.reanalyze');
-    Route::post('/regulations/{regulation}/analyze/babs', [RegulationController::class, 'analyzeBabs'])->name('regulations.analyze.babs');
-    Route::post('/regulations/{regulation}/analyze/bab/{index}', [RegulationController::class, 'analyzeSingleBab'])->name('regulations.analyze.bab');
-    Route::get('/regulations/{regulation}/analyze/babs-list', [RegulationController::class, 'babList'])->name('regulations.analyze.babs-list');
-    Route::post('/regulations/{regulation}/generate-ai', [RegulationController::class, 'generateAi'])->name('regulations.generate-ai');
+        Route::get('/regulation-types', [RegulationTypeUserController::class, 'index'])->name('user.regulation-types.index');
+        Route::get('/regulation-types/{regulationType}', [RegulationTypeUserController::class, 'show'])->name('user.regulation-types.show');
+    });
 
     Route::resource('review-documents', ReviewDocumentController::class);
     Route::post('/review-documents/{reviewDocument}/submit', [ReviewDocumentController::class, 'submit'])->name('review-documents.submit');
@@ -94,9 +64,6 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reports/{review}', [ReviewReportController::class, 'show'])->name('reports.show');
     Route::get('/reports/{review}/pdf', [ReviewReportController::class, 'exportPdf'])->name('reports.pdf');
-
-    // User management
-    Route::resource('users', UserController::class);
 
     // AI Summaries
     Route::post('/review-documents/{reviewDocument}/ai-summaries/generate', [AiSummaryController::class, 'generate'])->name('ai-summaries.generate')->middleware('throttle:3,1');
@@ -128,59 +95,108 @@ Route::middleware('auth')->group(function () {
     Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf')->middleware('throttle:3,1');
     Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/content', [DocumentPartitionController::class, 'showPartitionContent'])->name('partitions.content');
 
-    // AI Prompts management
-    Route::resource('ai-prompts', AiPromptController::class);
-    Route::resource('type-prompts', TypePromptController::class);
+    // Regulations browsing (accessible by all authenticated roles)
+    Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
+    Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
+    Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');
+    Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
+    Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
+    Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
 
-    // TEMP DEBUG: Show regulation text directly
-    Route::get('/debug-reg-text/{id}', function ($id) {
-        $reg = Regulation::find($id);
-        if (! $reg || ! $reg->parsed_text) {
-            return 'No text';
-        }
+    // Admin management routes (admin & sub_admin only)
+    Route::middleware('role:admin,sub_admin')->group(function () {
+        Route::resource('regulation-categories', RegulationCategoryController::class);
+        Route::post('/regulation-categories/{regulationCategory}/upload', [RegulationCategoryController::class, 'uploadFile'])->name('regulation-categories.upload-file');
+        Route::delete('/regulation-categories/file/{file}', [RegulationCategoryController::class, 'deleteFile'])->name('regulation-categories.delete-file');
+        Route::get('/regulation-categories/file/{file}/view', [RegulationCategoryController::class, 'viewFile'])->name('regulation-categories.view-file');
 
-        return '<pre>'.e(mb_substr($reg->parsed_text, 0, 1000)).'</pre>';
-    })->name('debug.reg-text');
+        Route::post('/regulation-categories/{regulationCategory}/sub-categories', [RegulationCategoryController::class, 'storeSubCategory'])->name('sub-categories.store');
+        Route::put('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'updateSubCategory'])->name('sub-categories.update');
+        Route::patch('/sub-categories/{subCategory}/toggle', [RegulationCategoryController::class, 'toggleSubCategory'])->name('sub-categories.toggle');
+        Route::delete('/sub-categories/{subCategory}', [RegulationCategoryController::class, 'destroySubCategory'])->name('sub-categories.destroy');
 
-    // TEMP DEBUG: Test parsed-text view directly
-    Route::get('/debug-parsed-view', function () {
-        try {
-            $user = User::first();
-            Auth::login($user);
-            $rd = ReviewDocument::find(2);
+        Route::get('/sub-categories', [SubCategoryController::class, 'index'])->name('sub-categories.index');
+        Route::post('/sub-categories', [SubCategoryController::class, 'store'])->name('sub-categories.create');
 
-            $debug = [];
-            $debug[] = 'User: '.auth()->user()->name;
-            $debug[] = "Doc: {$rd->id} - {$rd->title}";
-            $debug[] = 'Regs count: '.$rd->regulations()->count();
-            $debug[] = 'isParsed: '.($rd->isParsed() ? 'yes' : 'no');
+        Route::patch('/regulation-types/{regulationType}/toggle', [RegulationTypeController::class, 'toggle'])->name('regulation-types.toggle');
+        Route::resource('regulation-types', RegulationTypeController::class);
 
-            $reg = $rd->regulations()->first();
-            if ($reg) {
-                $debug[] = "Reg {$reg->id}: parsed=".($reg->isParsed() ? 'yes' : 'no').' text_len='.mb_strlen($reg->parsed_text ?? '');
+        // Regulations write/parse/analyze (admin & sub_admin)
+        Route::resource('regulations', RegulationController::class)->except(['index', 'show']);
+        Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
+        Route::get('/regulations/{regulation}/parse-progress', [RegulationController::class, 'parseProgress'])->name('regulations.parse-progress');
+        Route::post('/regulations/{regulation}/extract-references', [RegulationController::class, 'extractReferences'])->name('regulations.extract-references');
+        Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
+        Route::post('/regulations/{regulation}/parse-documents', [RegulationController::class, 'parseAllDocuments'])->name('regulations.documents.parse-all');
+        Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
+        Route::put('/regulations/documents/{document}', [RegulationController::class, 'updateDocument'])->name('regulations.documents.update');
+        Route::delete('/regulations/documents/{document}', [RegulationController::class, 'deleteDocument'])->name('regulations.documents.destroy');
+        Route::get('/regulations/documents/{document}/parsed-text', [RegulationController::class, 'viewDocumentParsedText'])->name('regulations.documents.parsed-text');
+        Route::get('/regulations/{regulation}/analyze', [RegulationController::class, 'analyze'])->name('regulations.analyze');
+        Route::post('/regulations/{regulation}/analyze/generate', [RegulationController::class, 'generateAnalysis'])->name('regulations.analyze.generate');
+        Route::post('/regulations/{regulation}/analyze/save', [RegulationController::class, 'saveAnalysis'])->name('regulations.analyze.save');
+        Route::post('/regulations/{regulation}/analyze/connect-references', [RegulationController::class, 'connectReferences'])->name('regulations.analyze.connect-references');
+        Route::post('/regulations/{regulation}/reanalyze', [RegulationController::class, 'reanalyze'])->name('regulations.reanalyze');
+        Route::post('/regulations/{regulation}/analyze/babs', [RegulationController::class, 'analyzeBabs'])->name('regulations.analyze.babs');
+        Route::post('/regulations/{regulation}/analyze/bab/{index}', [RegulationController::class, 'analyzeSingleBab'])->name('regulations.analyze.bab');
+        Route::get('/regulations/{regulation}/analyze/babs-list', [RegulationController::class, 'babList'])->name('regulations.analyze.babs-list');
+        Route::post('/regulations/{regulation}/generate-ai', [RegulationController::class, 'generateAi'])->name('regulations.generate-ai');
+
+        Route::get('users/register', [UserController::class, 'userFromRegister'])->name('manage.users.from-register');
+        Route::resource('users', UserController::class);
+
+        Route::resource('ai-prompts', AiPromptController::class);
+        Route::resource('type-prompts', TypePromptController::class);
+
+        // TEMP DEBUG
+        Route::get('/debug-reg-text/{id}', function ($id) {
+            $reg = Regulation::find($id);
+            if (! $reg || ! $reg->parsed_text) {
+                return 'No text';
             }
 
-            $result = app(DocumentPartitionController::class)->showParsedText($rd);
-            $debug[] = 'Controller returned: '.get_class($result);
-            $debug[] = 'View name: '.$result->getName();
+            return '<pre>'.e(mb_substr($reg->parsed_text, 0, 1000)).'</pre>';
+        })->name('debug.reg-text');
 
-            $data = $result->getData();
-            $debug[] = 'Regulations in view data: '.count($data['regulations'] ?? []);
-            if (! empty($data['regulations'])) {
-                $debug[] = 'First reg has_text: '.($data['regulations'][0]['has_text'] ? 'yes' : 'no');
-                $debug[] = 'First reg main_parsed: '.($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
-                $debug[] = 'First reg main_chars: '.$data['regulations'][0]['main_chars'];
+        Route::get('/debug-parsed-view', function () {
+            try {
+                $user = User::first();
+                Auth::login($user);
+                $rd = ReviewDocument::find(2);
+
+                $debug = [];
+                $debug[] = 'User: '.auth()->user()->name;
+                $debug[] = "Doc: {$rd->id} - {$rd->title}";
+                $debug[] = 'Regs count: '.$rd->regulations()->count();
+                $debug[] = 'isParsed: '.($rd->isParsed() ? 'yes' : 'no');
+
+                $reg = $rd->regulations()->first();
+                if ($reg) {
+                    $debug[] = "Reg {$reg->id}: parsed=".($reg->isParsed() ? 'yes' : 'no').' text_len='.mb_strlen($reg->parsed_text ?? '');
+                }
+
+                $result = app(DocumentPartitionController::class)->showParsedText($rd);
+                $debug[] = 'Controller returned: '.get_class($result);
+                $debug[] = 'View name: '.$result->getName();
+
+                $data = $result->getData();
+                $debug[] = 'Regulations in view data: '.count($data['regulations'] ?? []);
+                if (! empty($data['regulations'])) {
+                    $debug[] = 'First reg has_text: '.($data['regulations'][0]['has_text'] ? 'yes' : 'no');
+                    $debug[] = 'First reg main_parsed: '.($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
+                    $debug[] = 'First reg main_chars: '.$data['regulations'][0]['main_chars'];
+                }
+
+                $html = $result->render();
+                $debug[] = 'HTML length: '.strlen($html);
+                $debug[] = 'Has Regulasi Acuan: '.(strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
+                $debug[] = 'Has File Regulasi Utama: '.(strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
+                $debug[] = 'Has OTORITAS: '.(strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
+
+                return response('<pre>'.implode("\n", $debug).'</pre>');
+            } catch (Exception $e) {
+                return response('ERROR: '.$e->getMessage()."\nFile: ".$e->getFile().':'.$e->getLine());
             }
-
-            $html = $result->render();
-            $debug[] = 'HTML length: '.strlen($html);
-            $debug[] = 'Has Regulasi Acuan: '.(strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
-            $debug[] = 'Has File Regulasi Utama: '.(strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
-            $debug[] = 'Has OTORITAS: '.(strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
-
-            return response('<pre>'.implode("\n", $debug).'</pre>');
-        } catch (Exception $e) {
-            return response('ERROR: '.$e->getMessage()."\nFile: ".$e->getFile().':'.$e->getLine());
-        }
-    })->name('debug.parsed-view');
+        })->name('debug.parsed-view');
+    });
 });

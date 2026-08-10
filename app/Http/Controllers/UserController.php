@@ -20,7 +20,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
-            ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
+            ->when($request->search, fn($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
             ->latest()
             ->paginate(20);
 
@@ -70,13 +70,13 @@ class UserController extends Controller
 
         $data['permissions'] = $data['permissions'] ?? [];
 
-        $changes = collect($data)->except('permissions')->filter(fn ($val, $key) => $val != $user->$key);
+        $changes = collect($data)->except('permissions')->filter(fn($val, $key) => $val != $user->$key);
 
         $user->update($data);
 
         $desc = "Memperbarui user {$user->name}";
         if ($changes->isNotEmpty()) {
-            $desc .= ' ('.$changes->keys()->implode(', ').')';
+            $desc .= ' (' . $changes->keys()->implode(', ') . ')';
         }
 
         UserActivityLog::log('updated', User::class, $user->id, $desc);
@@ -99,5 +99,15 @@ class UserController extends Controller
 
         return redirect()->route('users.index')
             ->with('success', 'User berhasil dihapus.');
+    }
+    public function userFromRegister(Request $request): View
+    {
+        $users = User::query()
+            ->when($request->search, fn($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
+            ->where('role', 'user')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+        return view('users.from-register', compact('users'));
     }
 }

@@ -852,6 +852,7 @@
         </div>
 
         <aside class="space-y-6">
+            @if (auth()->user()->hasPermission('upload_regulations'))
             {{-- File Regulasi --}}
             <x-card>
                 <x-slot name="header">
@@ -1018,6 +1019,7 @@
                     </x-button>
                 </div>
             </x-card>
+            @endif
 
             {{-- Hierarchy Info --}}
             <x-card>

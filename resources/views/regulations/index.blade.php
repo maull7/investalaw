@@ -11,13 +11,13 @@
             <p class="mt-1.5 text-sm text-[#667085]">Kelola seluruh regulasi dengan metadata lengkap untuk analisis
                 kepatuhan.</p>
         </div>
-        @if(auth()->user()->hasPermission('upload_regulations'))
-        <x-button href="{{ route('regulations.create') }}" variant="primary">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            Tambah Regulasi
-        </x-button>
+        @if (auth()->user()->hasPermission('upload_regulations'))
+            <x-button href="{{ route('regulations.create') }}" variant="primary">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Tambah Regulasi
+            </x-button>
         @endif
     </div>
 
@@ -84,9 +84,10 @@
                 </div>
                 <p class="mt-4 text-base font-bold text-[#071833]">Belum ada regulasi</p>
                 <p class="mt-1 text-sm text-[#667085]">Tambahkan regulasi pertama Anda untuk memulai pengelolaan.</p>
-                @if(auth()->user()->hasPermission('upload_regulations'))
-                <x-button href="{{ route('regulations.create') }}" variant="primary" size="sm" class="mt-5">Tambah
-                    Regulasi</x-button>
+                @if (auth()->user()->hasPermission('upload_regulations'))
+                    <x-button href="{{ route('regulations.create') }}" variant="primary" size="sm"
+                        class="mt-5">Tambah
+                        Regulasi</x-button>
                 @endif
             </div>
         @else
@@ -215,16 +216,16 @@
                                             </svg>
                                             Detail
                                         </x-button>
-                                        @if(auth()->user()->hasPermission('upload_regulations'))
-                                        <x-button href="{{ route('regulations.edit', $reg) }}" variant="outline"
-                                            size="sm">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M16.862 4.487 18.55 2.8a2.121 2.121 0 1 1 3 3L19.863 7.487m-3-3L8.25 13.1l-1.5 4.5 4.5-1.5 8.613-8.613m-3-3 3 3" />
-                                            </svg>
-                                            Edit
-                                        </x-button>
+                                        @if (auth()->user()->hasPermission('upload_regulations'))
+                                            <x-button href="{{ route('regulations.edit', $reg) }}" variant="outline"
+                                                size="sm">
+                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                                                    stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M16.862 4.487 18.55 2.8a2.121 2.121 0 1 1 3 3L19.863 7.487m-3-3L8.25 13.1l-1.5 4.5 4.5-1.5 8.613-8.613m-3-3 3 3" />
+                                                </svg>
+                                                Edit
+                                            </x-button>
                                         @endif
                                     </div>
                                 </td>

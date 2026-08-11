@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
     // Regulations browsing (accessible by all authenticated roles)
     Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
     Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
+    Route::get('/regulations/create', [RegulationController::class, 'create'])->name('regulations.create');
     Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');
     Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
     Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
@@ -122,7 +123,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('regulation-types', RegulationTypeController::class);
 
         // Regulations write/parse/analyze (admin & sub_admin)
-        Route::resource('regulations', RegulationController::class)->except(['index', 'show']);
+        Route::resource('regulations', RegulationController::class)->except(['index', 'show', 'create']);
         Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
         Route::get('/regulations/{regulation}/parse-progress', [RegulationController::class, 'parseProgress'])->name('regulations.parse-progress');
         Route::post('/regulations/{regulation}/extract-references', [RegulationController::class, 'extractReferences'])->name('regulations.extract-references');

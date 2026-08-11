@@ -12,6 +12,7 @@ use App\Jobs\ParseRegulationDocument;
 use App\Models\AiJobStatus;
 use App\Models\AiPrompt;
 use App\Models\Regulation;
+use App\Models\RegulationChatMessage;
 use App\Models\RegulationDocument;
 use App\Models\UserActivityLog;
 use App\Repositories\RegulationRepository;
@@ -102,8 +103,14 @@ class RegulationController extends Controller
     {
         $regulation = $this->regulationRepository->findByIdWithRelations($regulation->id);
         $aiPrompt = AiPrompt::all();
+        $chatMessages = RegulationChatMessage::where('regulation_id', $regulation->id)
+            ->where('user_id', auth()->id())
+            ->latest()
+            ->limit(100)
+            ->get()
+            ->reverse();
 
-        return view('regulations.show', compact('regulation', 'aiPrompt'));
+        return view('regulations.show', compact('regulation', 'aiPrompt', 'chatMessages'));
     }
 
     public function generateAi(Request $request, Regulation $regulation): RedirectResponse
@@ -121,7 +128,7 @@ class RegulationController extends Controller
 
         UserActivityLog::log('generated', Regulation::class, $regulation->id, "Menjalankan Generate AI ({$prompt->title}) untuk regulasi {$regulation->regulation_number}");
 
-        return redirect()->route('regulations.show', $regulation)
+        return redirect()->route('regulations.show', [$regulation, 'tab' => 'short-review'])
             ->with('info', 'Generate AI sedang diproses di background (queue). Halaman akan refresh otomatis saat selesai.');
     }
 

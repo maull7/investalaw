@@ -24,8 +24,8 @@
         <div class="lg:col-span-2">
             @unless (auth()->user()->hasCompletedProfile())
                 <div class="mb-6 flex items-start gap-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-5 py-4">
-                    <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="2">
+                    <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                     </svg>
@@ -46,17 +46,23 @@
                         <div>
                             <label for="institution" class="block text-sm font-semibold text-[#071833] mb-2">Institusi
                                 <span class="text-rose-500">*</span></label>
-                            <input type="text" name="institution" id="institution" value="{{ old('institution', auth()->user()->institution) }}"
-                                required class="input-premium" placeholder="Nama kantor / institusi">
-                            @error('institution')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                            <input type="text" name="institution" id="institution"
+                                value="{{ old('institution', auth()->user()->institution) }}" required class="input-premium"
+                                placeholder="Nama kantor / institusi">
+                            @error('institution')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
                             <label for="position" class="block text-sm font-semibold text-[#071833] mb-2">Jabatan
                                 <span class="text-rose-500">*</span></label>
-                            <input type="text" name="position" id="position" value="{{ old('position', auth()->user()->position) }}"
-                                required class="input-premium" placeholder="Contoh: Compliance Officer">
-                            @error('position')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                            <input type="text" name="position" id="position"
+                                value="{{ old('position', auth()->user()->position) }}" required class="input-premium"
+                                placeholder="Contoh: Compliance Officer">
+                            @error('position')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
@@ -65,25 +71,31 @@
                             <select name="province" id="province" required class="input-premium">
                                 <option value="">Pilih provinsi</option>
                                 @foreach (config('provinces') as $province)
-                                    <option value="{{ $province }}"
-                                        @selected(old('province', auth()->user()->province) === $province)>{{ $province }}</option>
+                                    <option value="{{ $province }}" @selected(old('province', auth()->user()->province) === $province)>{{ $province }}
+                                    </option>
                                 @endforeach
                             </select>
-                            @error('province')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                            @error('province')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
                         </div>
 
                         <div>
                             <label for="phone" class="block text-sm font-semibold text-[#071833] mb-2">No. Telepon
                                 <span class="text-rose-500">*</span></label>
-                            <input type="tel" name="phone" id="phone" value="{{ old('phone', auth()->user()->phone) }}"
-                                required class="input-premium" placeholder="08xxxxxxxxxx">
-                            @error('phone')<p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>@enderror
+                            <input type="tel" name="phone" id="phone"
+                                value="{{ old('phone', auth()->user()->phone) }}" required class="input-premium"
+                                placeholder="08xxxxxxxxxx">
+                            @error('phone')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
 
                     <div class="mt-6 flex items-center justify-end gap-3">
                         @if (auth()->user()->hasCompletedProfile())
-                            <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white transition">
+                            <a href="{{ route('dashboard') }}"
+                                class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white transition">
                                 Kembali
                             </a>
                         @endif
@@ -91,6 +103,9 @@
                     </div>
                 </form>
             </x-card>
+
+            {{-- Paket & Harga --}}
+
         </div>
 
         <div>
@@ -100,19 +115,87 @@
                 </x-slot>
                 <div class="space-y-4">
                     <div class="flex items-start gap-3">
-                        <span class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        <span
+                            class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
                         </span>
-                        <p class="text-sm text-[#667085] leading-relaxed">Memungkinkan pendampingan hukum yang disesuaikan dengan profil kelembagaan Anda.</p>
+                        <p class="text-sm text-[#667085] leading-relaxed">Memungkinkan pendampingan hukum yang disesuaikan
+                            dengan profil kelembagaan Anda.</p>
                     </div>
                     <div class="flex items-start gap-3">
-                        <span class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                        <span
+                            class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
                         </span>
-                        <p class="text-sm text-[#667085] leading-relaxed">Memverifikasi identitas untuk keamanan dan kepercayaan dalam setiap transaksi.</p>
+                        <p class="text-sm text-[#667085] leading-relaxed">Memverifikasi identitas untuk keamanan dan
+                            kepercayaan dalam setiap transaksi.</p>
                     </div>
                 </div>
             </x-card>
         </div>
+    </div>
+    <div>
+        <x-card :padding="false" class="mt-6">
+            <x-slot name="header">
+                <div>
+                    <h3 class="text-lg font-bold text-[#071833]">Paket &amp; Harga</h3>
+                    <p class="text-xs text-[#667085] mt-0.5">Promo paket pendampingan InvestaLaw untuk Anda.</p>
+                </div>
+            </x-slot>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6">
+                {{-- Dasar --}}
+                <div class="rounded-2xl border border-[#e7eaf0] bg-white p-5 flex flex-col">
+                    <p class="text-sm font-bold text-[#071833]">Dasar</p>
+                    <p class="text-[10px] text-[#667085] mt-0.5">Individu &amp; pemantauan kepatuhan</p>
+                    <p class="mt-4 text-3xl font-bold text-[#071833]">Rp<span class="text-[#c99a3e]">5</span>jt
+                        <span class="text-xs font-semibold text-[#667085]">/bulan</span>
+                    </p>
+                    <ul class="mt-4 space-y-1.5 text-xs text-[#667085] flex-1">
+                        <li>Legal check regulasi dasar</li>
+                        <li>Review 1 dokumen/bulan</li>
+                        <li>Konsultasi email</li>
+                    </ul>
+                </div>
+                {{-- Bisnis --}}
+                <div
+                    class="relative rounded-2xl border-2 border-[#c99a3e]/50 bg-navy-gradient text-white p-5 flex flex-col">
+                    <span
+                        class="absolute top-0 right-0 bg-gradient-to-r from-[#c99a3e] to-[#b17c24] text-white text-[10px] font-bold uppercase px-3 py-1 rounded-bl-xl">Paling
+                        Populer</span>
+                    <p class="text-sm font-bold">Bisnis</p>
+                    <p class="text-[10px] text-white/60 mt-0.5">Perusahaan &amp; manajer investasi</p>
+                    <p class="mt-4 text-3xl font-bold">Rp<span class="text-[#e6c06a]">12,5</span>jt
+                        <span class="text-xs font-semibold text-white/60">/bulan</span>
+                    </p>
+                    <ul class="mt-4 space-y-1.5 text-xs text-white/80 flex-1">
+                        <li>Review hingga 5 dokumen/bulan</li>
+                        <li>Konsultasi telepon &amp; email</li>
+                        <li>Pendampingan aksi korporasi</li>
+                    </ul>
+                </div>
+                {{-- Enterprise --}}
+                <div class="rounded-2xl border border-[#e7eaf0] bg-white p-5 flex flex-col">
+                    <p class="text-sm font-bold text-[#071833]">Enterprise</p>
+                    <p class="text-[10px] text-[#667085] mt-0.5">Grup usaha &amp; transaksi kompleks</p>
+                    <p class="mt-4 text-3xl font-bold text-[#071833]">Custom</p>
+                    <ul class="mt-4 space-y-1.5 text-xs text-[#667085] flex-1">
+                        <li>Review tanpa batas</li>
+                        <li>Dedicated legal counsel</li>
+                        <li>Due diligence &amp; transaksi besar</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="px-6 pb-6">
+                <a href="{{ url('/#paket') }}"
+                    class="inline-flex items-center justify-center w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                    Lihat detail paket di halaman utama
+                </a>
+            </div>
+        </x-card>
     </div>
 @endsection

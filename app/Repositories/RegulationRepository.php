@@ -8,6 +8,7 @@ use App\Models\RegulationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class RegulationRepository
 {
@@ -38,19 +39,18 @@ class RegulationRepository
         }
 
         if (! empty($filters['search_content'])) {
-            $searchContent = $filters['search_content'];
+            $parsed = $this->parseSearchTerm((string) $filters['search_content']);
+            [$whereFragment, $whereBindings] = $this->contentMatch('regulations', $parsed['term'], $parsed['exact']);
+            [$relevanceFragment, $relevanceBindings] = $this->contentMatch('regulations', $parsed['term'], $parsed['exact']);
 
-            $query->where(function (Builder $q) use ($searchContent) {
-                $q->where('parsed_text', 'like', "%{$searchContent}%")
-                    ->orWhereHas('documents', function (Builder $docQuery) use ($searchContent) {
-                        $docQuery->where('parsed_text', 'like', "%{$searchContent}%");
-                    });
+            $query->where(function (Builder $q) use ($whereFragment, $whereBindings, $parsed) {
+                $q->whereRaw("{$whereFragment}", $whereBindings);
+                [$docFragment, $docBindings] = $this->contentMatch('regulation_documents', $parsed['term'], $parsed['exact']);
+                $q->orWhereHas('documents', function (Builder $docQuery) use ($docFragment, $docBindings) {
+                    $docQuery->whereRaw("{$docFragment}", $docBindings);
+                });
             })
-                ->selectRaw('regulations.*, 
-                CASE 
-                    WHEN parsed_text LIKE ? THEN 1 
-                    ELSE 0 
-                END as relevance', ["%{$searchContent}%"])
+                ->selectRaw("regulations.*, CASE WHEN {$relevanceFragment} THEN 1 ELSE 0 END as relevance", $relevanceBindings)
                 ->limit(1);
         }
 
@@ -136,13 +136,62 @@ class RegulationRepository
         ];
     }
 
+    /**
+     * @return array{term: string, exact: bool}
+     */
+    private function parseSearchTerm(string $raw): array
+    {
+        if (str_starts_with($raw, '"') && str_ends_with($raw, '"')) {
+            $inner = trim(mb_substr($raw, 1, -1));
+
+            if ($inner !== '') {
+                return ['term' => $inner, 'exact' => true];
+            }
+        }
+
+        return ['term' => $raw, 'exact' => false];
+    }
+
+    /**
+     * Build a prepared SQL fragment that matches a term inside a parsed_text column.
+     *
+     * @return array{0: string, 1: array<int, string>}
+     */
+    private function contentMatch(string $table, string $term, bool $exact): array
+    {
+        $column = "{$table}.parsed_text";
+
+        if (! $exact) {
+            return ["{$column} LIKE ?", ["%{$term}%"]];
+        }
+
+        $escaped = preg_replace('/\s+/u', ' ', trim($term));
+        $escaped = preg_quote($escaped, '/');
+
+        // ponytail: sqlite used only by the test suite; MySQL/REGEXP is the production path
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return ["(' ' || {$column} || ' ') LIKE ?", ["% {$escaped} %"]];
+        }
+
+        return ["{$column} REGEXP ?", ["\\b{$escaped}\\b"]];
+    }
+
     public function buildSnippet(?string $text, string $keyword, int $length = 200): ?string
     {
         if (! $text || ! $keyword) {
             return null;
         }
 
-        $pos = mb_stripos($text, $keyword);
+        $parsed = $this->parseSearchTerm($keyword);
+
+        if ($parsed['exact']) {
+            $escaped = preg_quote(preg_replace('/\s+/u', ' ', trim($parsed['term'])), '/');
+            preg_match("/\b{$escaped}\b/iu", $text, $matches, PREG_OFFSET_CAPTURE);
+            $pos = $matches[0][1] ?? false;
+        } else {
+            $pos = mb_stripos($text, $keyword);
+        }
+
         if ($pos === false) {
             return mb_substr($text, 0, $length).'...';
         }

@@ -9,6 +9,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentPartitionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegulationCategoryController;
+use App\Http\Controllers\RegulationChatController;
 use App\Http\Controllers\RegulationController;
 use App\Http\Controllers\RegulationTypeController;
 use App\Http\Controllers\ReviewController;
@@ -43,6 +44,7 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/compliance-monitoring', [DashboardController::class, 'compliance'])->name('compliance.monitoring');
 
     Route::prefix('user')->group(function () {
         Route::get('/regulation-categories', [RegulationCategoryUserController::class, 'index'])->name('user.regulation-categories.index');
@@ -104,6 +106,7 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
     Route::get('/regulations/create', [RegulationController::class, 'create'])->name('regulations.create');
     Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');
+    Route::post('/regulations/{regulation}/chat', [RegulationChatController::class, 'ask'])->name('regulations.chat.ask')->middleware('throttle:10,1');
     Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
     Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');

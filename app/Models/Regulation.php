@@ -95,20 +95,35 @@ class Regulation extends Model
 
     public function searchOccurrenceCount(string $keyword): int
     {
-        $keyword = mb_strtolower($keyword);
-        $count = 0;
+        $exact = str_starts_with($keyword, '"') && str_ends_with($keyword, '"');
+        $term = $keyword;
 
-        if ($this->parsed_text && mb_stripos($this->parsed_text, $keyword) !== false) {
-            $count += mb_substr_count(mb_strtolower($this->parsed_text), $keyword);
+        if ($exact) {
+            $term = trim(mb_substr($keyword, 1, -1));
         }
 
-        foreach ($this->documents as $document) {
-            if ($document->parsed_text && mb_stripos($document->parsed_text, $keyword) !== false) {
-                $count += mb_substr_count(mb_strtolower($document->parsed_text), $keyword);
+        $count = 0;
+
+        foreach ([$this->parsed_text, ...$this->documents->pluck('parsed_text')] as $text) {
+            if (! $text) {
+                continue;
             }
+
+            $count += $this->countInText($text, $term, $exact);
         }
 
         return $count;
+    }
+
+    private function countInText(string $text, string $term, bool $exact): int
+    {
+        if (! $exact) {
+            return mb_substr_count(mb_strtolower($text), mb_strtolower($term));
+        }
+
+        $escaped = preg_quote(preg_replace('/\s+/u', ' ', trim($term)), '/');
+
+        return preg_match_all("/\b{$escaped}\b/iu", $text) ?: 0;
     }
 
     public function parseStatusLabel(): string

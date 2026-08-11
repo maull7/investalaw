@@ -59,14 +59,44 @@ class RegulationsSearchContentCountTest extends TestCase
             ->assertDontSee('Jumlah Temuan');
     }
 
-    private function makeRegulation(string $parsedText): Regulation
+    public function test_quoted_term_matches_word_not_substring(): void
     {
-        $type = RegulationType::create(['name' => 'POJK']);
+        $this->makeRegulation('Bank wajib menyusun laporan secara berkala. Perbankan dilarang bertindak tanpa izin.');
+
+        $this->actingAs($this->user())->get(route('regulations.index', ['search_content' => '"Bank"']))
+            ->assertOk()
+            ->assertSee('Jumlah Temuan')
+            ->assertSee('1');
+    }
+
+    public function test_quoted_phrase_matches_whole_words_in_sequence(): void
+    {
+        $this->makeRegulation('Produk reksa dana wajib didaftarkan ke OJK.', 'Regulasi Cocok');
+        Regulation::create([
+            'regulation_number' => 'POJK/02/2026',
+            'title' => 'Regulasi Tidak Cocok',
+            'regulation_type_id' => RegulationType::create(['name' => 'POJK', 'level' => 1])->id,
+            'category_id' => RegulationCategory::create(['name' => 'Kontrak Investasi Kolektif'])->id,
+            'year' => 2026,
+            'file_path' => 'regulations/fixture.pdf',
+            'parsed_text' => 'Produk reksa danai wajib diawasi.',
+            'parsed_at' => now(),
+        ]);
+
+        $this->actingAs($this->user())->get(route('regulations.index', ['search_content' => '"reksa dana"']))
+            ->assertOk()
+            ->assertSee('Regulasi Cocok')
+            ->assertDontSee('Regulasi Tidak Cocok');
+    }
+
+    private function makeRegulation(string $parsedText, string $title = 'Regulasi Test'): Regulation
+    {
+        $type = RegulationType::create(['name' => 'POJK', 'level' => 1]);
         $category = RegulationCategory::create(['name' => 'Kontrak Investasi Kolektif']);
 
         return Regulation::create([
             'regulation_number' => 'POJK/01/2026',
-            'title' => 'Regulasi Test',
+            'title' => $title,
             'regulation_type_id' => $type->id,
             'category_id' => $category->id,
             'year' => 2026,

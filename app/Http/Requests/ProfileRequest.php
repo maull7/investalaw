@@ -21,7 +21,7 @@ class ProfileRequest extends FormRequest
             'institution' => ['required', 'string', 'max:255'],
             'position' => ['required', 'string', 'max:255'],
             'province' => ['required', 'string', Rule::in(config('provinces'))],
-            'phone' => ['required', 'string'],
+            'phone' => ['required', 'string', 'regex:/^(\+62|62|0)8[0-9]{7,12}$/'],
         ];
     }
 
@@ -36,6 +36,7 @@ class ProfileRequest extends FormRequest
             'province.required' => 'Asal provinsi wajib dipilih.',
             'province.in' => 'Provinsi tidak valid.',
             'phone.required' => 'No. telepon wajib diisi.',
+            'phone.regex' => 'Format nomor telepon tidak valid (contoh: 081234567890).',
         ];
     }
 }

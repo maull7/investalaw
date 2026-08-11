@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 
 class ParseRegulationDocument implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, SerializesModels;
 
     public $queue = 'parsing';
 

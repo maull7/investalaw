@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Category Details')
-@section('header', $regulationCategory->name)
+@section('title', 'Type Category Details')
+@section('header', $regulationType->name)
 
 @section('content')
     {{-- Hero --}}
@@ -13,18 +13,18 @@
                 <span
                     class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-bold rounded-full bg-[#c99a3e]/20 ring-1 ring-[#c99a3e]/30 text-[#e6c06a] uppercase tracking-wider">
                     <span class="w-1 h-1 rounded-full bg-[#e6c06a]"></span>
-                    Regulation Category
+                    Type Category
                 </span>
-                <h2 class="mt-4 text-3xl font-bold tracking-tight">{{ $regulationCategory->name }}</h2>
-                @if ($regulationCategory->description)
-                    <p class="mt-3 text-white/70 leading-relaxed max-w-3xl">{{ $regulationCategory->description }}</p>
+                <h2 class="mt-4 text-3xl font-bold tracking-tight">{{ $regulationType->name }}</h2>
+                @if ($regulationType->description)
+                    <p class="mt-3 text-white/70 leading-relaxed max-w-3xl">{{ $regulationType->description }}</p>
                 @endif
             </div>
 
             <div class="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
                 <p class="text-[11px] font-semibold tracking-[0.16em] uppercase text-white/55">Regulasi</p>
                 <div class="mt-3 flex items-baseline gap-2">
-                    <p class="text-4xl font-bold text-white">{{ $regulationCategory->regulations->count() }}</p>
+                    <p class="text-4xl font-bold text-white">{{ $regulationType->regulations->count() }}</p>
                     <span class="text-sm text-white/65">regulasi</span>
                 </div>
                 <p class="text-xs text-white/55 mt-2">Daftar regulasi di bawah kategori ini.</p>
@@ -36,24 +36,24 @@
         <div class="lg:col-span-2 space-y-6">
             <x-card>
                 <x-slot name="header">
-                    <h3 class="text-lg font-bold text-[#071833]">Category Information</h3>
+                    <h3 class="text-lg font-bold text-[#071833]">Regulation Type Information</h3>
                 </x-slot>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Name</dt>
-                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulationCategory->name }}</dd>
+                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulationType->name }}</dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Created</dt>
                         <dd class="mt-1.5 text-sm font-semibold text-[#071833]">
-                            {{ $regulationCategory->created_at->format('d F Y') }}
+                            {{ $regulationType->created_at->format('d F Y') }}
                         </dd>
                     </div>
                 </dl>
-                @if ($regulationCategory->description)
+                @if ($regulationType->description)
                     <div class="mt-6 pt-6 border-t border-[#e7eaf0]">
                         <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Description</p>
-                        <p class="mt-2 text-sm text-[#071833] leading-relaxed">{{ $regulationCategory->description }}</p>
+                        <p class="mt-2 text-sm text-[#071833] leading-relaxed">{{ $regulationType->description }}</p>
                     </div>
                 @endif
             </x-card>
@@ -68,7 +68,7 @@
                         <div class="flex items-center gap-2">
 
                             <span
-                                class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulationCategory->regulations->count() }}
+                                class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulationType->regulations->count() }}
                                 regulasi</span>
                         </div>
                     </div>
@@ -138,56 +138,8 @@
 
                 @endif
             </x-card>
-
-            {{-- Sub Categories --}}
-            <x-card :padding="false">
-                <x-slot name="header">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="text-lg font-bold text-[#071833]">Sub Category</h3>
-                            <p class="text-xs text-[#667085] mt-0.5">Daftar sub kategori di bawah kategori ini</p>
-                        </div>
-                        <span
-                            class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulationCategory->subCategories->count() }}
-                            item</span>
-                    </div>
-                </x-slot>
-
-                @if ($regulationCategory->subCategories->isEmpty())
-                    <div class="text-center py-10">
-                        <div
-                            class="mx-auto w-14 h-14 rounded-2xl bg-[#f6f8fb] flex items-center justify-center text-[#c99a3e]">
-                            <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="1.4">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                            </svg>
-                        </div>
-                        <p class="mt-3 text-sm font-bold text-[#071833]">Belum ada sub category</p>
-                        <p class="text-xs text-[#667085] mt-1">Gunakan form di samping untuk menambahkan sub category.</p>
-                    </div>
-                @else
-                    <ul class="divide-y divide-[#f0f3f8]">
-                        @foreach ($regulationCategory->subCategories as $sub)
-                            <li class="flex items-center gap-4 px-6 py-4 hover:bg-[#f6f8fb]/60 transition">
-                                <div
-                                    class="shrink-0 w-10 h-10 rounded-xl bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
-                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        stroke-width="1.6">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 0 1 0 2.828l-7 7a2 2 0 0 1-2.828 0l-7-7A2 2 0 0 1 3 12V7a4 4 0 0 1 4-4Z" />
-                                    </svg>
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-[#071833]">{{ $sub->name }}</p>
-                                </div>
-
-                            </li>
-                        @endforeach
-                    </ul>
-                @endif
-            </x-card>
         </div>
+
     </div>
 
     <x-modal name="confirm-delete-file" title="Delete File" maxWidth="md">

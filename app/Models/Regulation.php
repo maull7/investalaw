@@ -83,7 +83,7 @@ class Regulation extends Model
     public function documentsParseProgress(): array
     {
         $total = $this->documents->count();
-        $parsed = $this->documents->filter(fn ($d) => $d->parse_status === 'complete')->count();
+        $parsed = $this->documents->filter(fn ($d) => $d->isParsed())->count();
 
         return [
             'total' => $total,

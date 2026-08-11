@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         $partitions = DocumentPartition::where('has_toc', 1)
             ->whereNull('parent_id')
             ->with('reviewDocument')
@@ -67,6 +71,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         // re-run original backfill (formula-based)
         DB::statement('
             UPDATE document_bab_structures bs

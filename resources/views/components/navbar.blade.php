@@ -95,6 +95,10 @@
                                 <svg class="w-4 h-4 text-[#667085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 3h4M5 6h14v15l-3-2-2 2-2-2-2 2-2-2-3 2V6Z"/></svg>
                                 My Reviews
                             </a>
+                            <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#071833] hover:bg-[#f6f8fb] transition">
+                                <svg class="w-4 h-4 text-[#667085]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/></svg>
+                                Profil
+                            </a>
                         </div>
 
                         <div class="border-t border-[#e7eaf0]">

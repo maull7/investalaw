@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentPartitionController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\RegulationController;
 use App\Http\Controllers\RegulationTypeController;
@@ -35,8 +36,11 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -118,6 +122,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/sub-categories', [SubCategoryController::class, 'index'])->name('sub-categories.index');
         Route::post('/sub-categories', [SubCategoryController::class, 'store'])->name('sub-categories.create');
+        Route::get('/sub-categories/{subCategory}', [SubCategoryController::class, 'show'])->name('sub-categories.show');
 
         Route::patch('/regulation-types/{regulationType}/toggle', [RegulationTypeController::class, 'toggle'])->name('regulation-types.toggle');
         Route::resource('regulation-types', RegulationTypeController::class);

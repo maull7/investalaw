@@ -123,7 +123,7 @@
                         @if ($canManageSubCategories)
                             <li>
                                 <a href="{{ route('sub-categories.index') }}"
-                                    class="nav-item {{ request()->routeIs('sub-categories.index') ? 'is-active' : '' }}">
+                                    class="nav-item {{ request()->routeIs('sub-categories.*') ? 'is-active' : '' }}">
                                     <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="1.6">
                                         <path stroke-linecap="round" stroke-linejoin="round"

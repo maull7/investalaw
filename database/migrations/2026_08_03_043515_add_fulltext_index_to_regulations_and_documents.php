@@ -10,12 +10,20 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement('ALTER TABLE regulations ADD FULLTEXT INDEX regulations_parsed_text_fulltext(parsed_text) WITH PARSER ngram');
         DB::statement('ALTER TABLE regulation_documents ADD FULLTEXT INDEX regulation_documents_parsed_text_fulltext(parsed_text) WITH PARSER ngram');
     }
 
     public function down(): void
     {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return;
+        }
+
         DB::statement('ALTER TABLE regulations DROP INDEX regulations_parsed_text_fulltext');
         DB::statement('ALTER TABLE regulation_documents DROP INDEX regulation_documents_parsed_text_fulltext');
     }

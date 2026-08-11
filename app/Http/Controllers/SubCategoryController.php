@@ -91,4 +91,13 @@ class SubCategoryController extends Controller
         return redirect()->route('sub-categories.index')
             ->with('success', 'Sub category berhasil dihapus.');
     }
+
+    public function show(SubCategory $subCategory): View
+    {
+        abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_sub_categories'), 403);
+        $subCategory->load('category');
+        $regulations = $subCategory->regulations()->latest('effective_date')->paginate(10)->withQueryString();
+
+        return view('sub-categories.show', compact('subCategory', 'regulations'));
+    }
 }

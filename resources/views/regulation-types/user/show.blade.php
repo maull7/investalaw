@@ -1,0 +1,144 @@
+@extends('layouts.app')
+
+@section('title', 'Type Category Details')
+@section('header', $regulationType->name)
+
+@section('content')
+    {{-- Hero --}}
+    <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
+        <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/18 blur-3xl"></div>
+
+        <div class="relative grid lg:grid-cols-3 gap-6 items-start">
+            <div class="lg:col-span-2">
+                <span
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[10.5px] font-bold rounded-full bg-[#c99a3e]/20 ring-1 ring-[#c99a3e]/30 text-[#e6c06a] uppercase tracking-wider">
+                    <span class="w-1 h-1 rounded-full bg-[#e6c06a]"></span>
+                    Type Category
+                </span>
+                <h2 class="mt-4 text-3xl font-bold tracking-tight">{{ $regulationType->name }}</h2>
+                @if ($regulationType->description)
+                    <p class="mt-3 text-white/70 leading-relaxed max-w-3xl">{{ $regulationType->description }}</p>
+                @endif
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
+                <p class="text-[11px] font-semibold tracking-[0.16em] uppercase text-white/55">Regulasi</p>
+                <div class="mt-3 flex items-baseline gap-2">
+                    <p class="text-4xl font-bold text-white">{{ $regulationType->regulations->count() }}</p>
+                    <span class="text-sm text-white/65">regulasi</span>
+                </div>
+                <p class="text-xs text-white/55 mt-2">Daftar regulasi di bawah kategori ini.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+        <div class="lg:col-span-2 space-y-6">
+            <x-card>
+                <x-slot name="header">
+                    <h3 class="text-lg font-bold text-[#071833]">Regulation Type Information</h3>
+                </x-slot>
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Name</dt>
+                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulationType->name }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Created</dt>
+                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">
+                            {{ $regulationType->created_at->format('d F Y') }}
+                        </dd>
+                    </div>
+                </dl>
+                @if ($regulationType->description)
+                    <div class="mt-6 pt-6 border-t border-[#e7eaf0]">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Description</p>
+                        <p class="mt-2 text-sm text-[#071833] leading-relaxed">{{ $regulationType->description }}</p>
+                    </div>
+                @endif
+            </x-card>
+
+            <x-card :padding="false">
+                <x-slot name="header">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-[#071833]">Daftar Regulasi</h3>
+                            <p class="text-xs text-[#667085] mt-0.5">Regulasi yang terdaftar di bawah kategori ini</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+
+                            <span
+                                class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulationType->regulations->count() }}
+                                regulasi</span>
+                        </div>
+                    </div>
+                </x-slot>
+
+                @if ($regulations->isEmpty())
+                    <div class="text-center py-14">
+                        <div
+                            class="mx-auto w-14 h-14 rounded-2xl bg-[#f6f8fb] flex items-center justify-center text-[#c99a3e]">
+                            <svg class="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.4">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                        </div>
+                        <p class="mt-3 text-sm font-bold text-[#071833]">Belum ada regulasi</p>
+                        <p class="text-xs text-[#667085] mt-1">Tambahkan regulasi baru melalui tombol di atas.</p>
+                    </div>
+                @else
+                    <ul class="divide-y divide-[#f0f3f8]">
+                        @foreach ($regulations as $regulation)
+                            <li class="px-6 py-4 hover:bg-[#f6f8fb]/60 transition">
+                                <div class="flex items-start gap-4">
+                                    <div
+                                        class="shrink-0 w-11 h-11 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path
+                                                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z" />
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <a href="{{ route('regulations.show', $regulation) }}"
+                                            class="text-sm font-bold text-[#071833] hover:text-[#c99a3e] transition">{{ $regulation->regulation_number }}</a>
+                                        <p class="text-xs text-[#667085] mt-0.5 line-clamp-1">{{ $regulation->title }}</p>
+                                        <div class="flex items-center gap-2 mt-1.5">
+                                            @if ($regulation->type)
+                                                <x-badge :color="$regulation->type->levelBadgeColor()">{{ $regulation->type->name }}
+                                                    Lv{{ $regulation->type->level }}</x-badge>
+                                            @endif
+                                            <span class="text-[10px] text-[#667085]">{{ $regulation->year }}</span>
+                                            <span class="text-[10px] text-[#667085]">&middot;
+                                                {{ $regulation->documents->count() }} dokumen</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 mt-3 ml-15">
+
+                                    <x-button href="{{ route('regulations.show', $regulation) }}" variant="ghost"
+                                        size="sm">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                        </svg>
+                                        Detail
+                                    </x-button>
+                                </div>
+                            </li>
+                        @endforeach
+                        <div class="p-6">
+                            {{ $regulations->links() }}
+
+                        </div>
+                    </ul>
+
+                @endif
+            </x-card>
+        </div>
+
+    </div>
+@endsection

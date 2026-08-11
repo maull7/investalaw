@@ -39,6 +39,7 @@
                  :class="navOpen ? 'max-lg:flex max-lg:opacity-100 max-lg:translate-y-0' : 'max-lg:hidden max-lg:opacity-0 max-lg:-translate-y-2'"
                  @click.outside="navOpen = false" x-cloak>
                 <a href="#layanan" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Layanan</a>
+                <a href="#paket" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Paket</a>
                 <a href="#checker" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Legal Check</a>
                 <a href="#alur" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Alur</a>
                 <a href="#dokumen" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Dokumen</a>
@@ -363,6 +364,71 @@
                 <div><strong class="block text-[42px] font-bold text-gold leading-none mb-1">200+</strong><span class="font-extrabold text-white/80">Proyek</span></div>
                 <div><strong class="block text-[42px] font-bold text-gold leading-none mb-1">15+</strong><span class="font-extrabold text-white/80">Sektor Industri</span></div>
                 <div><strong class="block text-[42px] font-bold text-gold leading-none mb-1">10+</strong><span class="font-extrabold text-white/80">Tahun Pengalaman</span></div>
+            </div>
+        </section>
+
+        {{-- Paket & Harga --}}
+        <section id="paket" class="py-[82px] bg-soft">
+            <div class="mx-auto max-w-[1180px] px-5">
+                <div class="text-center max-w-[760px] mx-auto mb-[38px]">
+                    <p class="text-xs font-black tracking-[0.12em] uppercase text-gold mb-3">Paket & Harga</p>
+                    <h2 class="text-[clamp(30px,4vw,46px)] font-bold leading-[1.05] tracking-[-0.03em] mb-4">Pilih Paket yang Sesuai</h2>
+                    {{-- ponytail: harga & fitur placeholder, ganti saat data tarif resmi tersedia --}}
+                    <p class="text-muted">Skema pendampingan tunggal untuk kebutuhan kepatuhan dan transaksi pasar modal.</p>
+                </div>
+
+                <div class="grid grid-cols-3 max-lg:grid-cols-1 gap-5">
+                    {{-- Dasar --}}
+                    <article class="relative border border-line rounded-[24px] bg-white p-[30px] shadow-[0_10px_30px_rgba(7,27,58,.05)] flex flex-col">
+                        <h3 class="text-lg font-bold text-navy">Dasar</h3>
+                        <p class="text-muted text-sm mt-1">Untuk individu & pemantauan kepatuhan ringan.</p>
+                        <p class="mt-6 flex items-baseline gap-1.5">
+                            <span class="text-[40px] font-bold text-navy leading-none">Rp<span class="text-gold">5</span>jt</span>
+                            <span class="text-muted text-sm font-bold">/bulan</span>
+                        </p>
+                        <ul class="mt-6 space-y-2.5 text-sm text-muted flex-1">
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Legal check regulasi dasar</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Review 1 dokumen per bulan</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Konsultasi email</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Checklist kepatuhan</li>
+                        </ul>
+                        <a href="{{ route('register') }}" class="mt-7 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-extrabold text-sm border-2 border-navy/15 text-navy hover:bg-navy hover:text-white hover:border-navy transition-all duration-300">Pilih Paket</a>
+                    </article>
+
+                    {{-- Bisnis --}}
+                    <article class="relative border-2 border-gold rounded-[24px] bg-navy text-white p-[30px] shadow-[0_24px_60px_rgba(201,154,62,.22)] flex flex-col overflow-hidden">
+                        <span class="absolute top-0 right-0 bg-gradient-to-r from-gold to-[#b17c24] text-white text-[11px] font-black tracking-wider uppercase px-4 py-1.5 rounded-bl-[18px]">Paling Populer</span>
+                        <h3 class="text-lg font-bold">Bisnis</h3>
+                        <p class="text-white/70 text-sm mt-1">Untuk perusahaan & manajer investasi aktif.</p>
+                        <p class="mt-6 flex items-baseline gap-1.5">
+                            <span class="text-[40px] font-bold leading-none">Rp<span class="text-gold">12,5</span>jt</span>
+                            <span class="text-white/60 text-sm font-bold">/bulan</span>
+                        </p>
+                        <ul class="mt-6 space-y-2.5 text-sm text-white/80 flex-1">
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Review hingga 5 dokumen/bulan</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Konsultasi telepon & email</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Pendampingan aksi korporasi</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Prioritas respon 24 jam</li>
+                        </ul>
+                        <a href="{{ route('register') }}" class="mt-7 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-gold to-[#b17c24] text-white shadow-gold hover:shadow-lg hover:from-[#b17c24] hover:to-gold transition-all duration-300">Pilih Paket</a>
+                    </article>
+
+                    {{-- Enterprise --}}
+                    <article class="relative border border-line rounded-[24px] bg-white p-[30px] shadow-[0_10px_30px_rgba(7,27,58,.05)] flex flex-col">
+                        <h3 class="text-lg font-bold text-navy">Enterprise</h3>
+                        <p class="text-muted text-sm mt-1">Untuk grup usaha & transaksi kompleks.</p>
+                        <p class="mt-6 flex items-baseline gap-1.5">
+                            <span class="text-[40px] font-bold text-navy leading-none">Custom</span>
+                        </p>
+                        <ul class="mt-6 space-y-2.5 text-sm text-muted flex-1">
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Review tanpa batas</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Dedicated legal counsel</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Due diligence & transaksi besar</li>
+                            <li class="flex items-start gap-2.5"><svg class="w-4.5 h-4.5 text-gold shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 12.75 6 6 9-13.5"/></svg>Prioritas respons & SLA</li>
+                        </ul>
+                        <a href="#konsultasi" class="mt-7 inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl font-extrabold text-sm border-2 border-navy/15 text-navy hover:bg-navy hover:text-white hover:border-navy transition-all duration-300">Hubungi Kami</a>
+                    </article>
+                </div>
             </div>
         </section>
 

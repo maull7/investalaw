@@ -41,6 +41,9 @@
                     @if(session('error'))
                         <x-alert type="error" :message="session('error')" />
                     @endif
+                    @if(session('info'))
+                        <x-alert type="info" :message="session('info')" />
+                    @endif
 
                     <div class="animate-fade-up">
                         @yield('content')

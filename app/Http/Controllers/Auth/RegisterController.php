@@ -27,7 +27,7 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('dashboard')
-            ->with('success', 'Registrasi berhasil. Selamat datang, '.$user->name.'!');
+        return redirect()->route('profile.edit')
+            ->with('info', 'Halo '.$user->name.'! Lengkapi data pribadi Anda terlebih dahulu untuk mulai menggunakan aplikasi.');
     }
 }

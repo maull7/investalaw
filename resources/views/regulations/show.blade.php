@@ -93,11 +93,6 @@
                         <dd class="mt-1.5 text-sm font-semibold text-[#071833]">{{ $regulation->year }}</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Berlaku</dt>
-                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">
-                            {{ $regulation->effective_date?->format('d F Y') ?? '-' }}</dd>
-                    </div>
-                    <div>
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Jenis Regulasi</dt>
                         <dd class="mt-1.5">
                             @if ($regulation->type)
@@ -134,6 +129,11 @@
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal DiUndangkan</dt>
                         <dd class="mt-1.5 text-sm font-semibold text-[#071833]">
                             {{ $regulation->tanggal_diundangkan?->format('d F Y') ?? '-' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Berlaku</dt>
+                        <dd class="mt-1.5 text-sm font-semibold text-[#071833]">
+                            {{ $regulation->effective_date?->format('d F Y') ?? '-' }}</dd>
                     </div>
                 </dl>
             </x-card>
@@ -414,6 +414,12 @@
                                     'pptx', 'ppt' => 'bg-orange-50 text-orange-500',
                                     default => 'bg-[#f6f8fb] text-[#667085]',
                                 };
+                                $statusBadge = match ($doc->parse_status) {
+                                    'complete' => 'bg-emerald-100 text-emerald-700',
+                                    'incomplete' => 'bg-amber-100 text-amber-700',
+                                    'parsing' => 'bg-blue-100 text-blue-700',
+                                    default => 'bg-gray-100 text-gray-500',
+                                };
                             @endphp
                             <li class="flex items-center gap-4 px-6 py-4 hover:bg-[#f6f8fb]/60 transition">
                                 <div
@@ -427,19 +433,12 @@
                                     <a href="{{ route('regulations.documents.view', $doc) }}" target="_blank"
                                         class="text-sm font-semibold text-[#071833] hover:text-[#c99a3e] transition truncate block"
                                         title="{{ $doc->name }}">{{ $doc->name }}</a>
-                                    <p class="text-xs text-[#667085] mt-0.5">{{ $doc->document_type }} &middot;
-                                        {{ strtoupper($ext) }}
-                                        @if ($doc->isParsed())
-                                            <span
-                                                class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700">{{ $doc->parseStatusLabel() }}</span>
-                                        @elseif($doc->parse_status === 'parsing')
-                                            <span
-                                                class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">Parsing</span>
-                                        @else
-                                            <span
-                                                class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500">Belum
-                                                diparse</span>
+                                    <p class="text-xs text-[#667085] mt-0.5">{{ $doc->document_type ?: '-' }}
+                                        @if ($ext)
+                                            <span class="mx-1">&middot;</span>{{ strtoupper($ext) }}
                                         @endif
+                                        <span
+                                            class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold {{ $statusBadge }}">{{ $doc->parseStatusLabel() }}</span>
                                     </p>
                                     @if ($doc->parse_status === 'parsing')
                                         <div class="mt-2 flex items-center gap-2">
@@ -456,15 +455,6 @@
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     @if ($doc->isParsed())
-                                        <a href="{{ route('regulations.documents.parsed-text', $doc) }}"
-                                            class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200 hover:bg-emerald-100 hover:ring-emerald-300 transition">
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                            </svg>
-                                            Lihat Hasil
-                                        </a>
                                         @if (auth()->user()->hasPermission('upload_regulations'))
                                             <form method="POST"
                                                 action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
@@ -532,7 +522,6 @@
                         <x-slot name="header">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-lg font-bold text-[#071833]">Generate AI</h3>
                                     <p class="text-xs text-[#667085] mt-0.5">Pilih prompt lalu generate analisa AI untuk
                                         regulasi
                                         ini</p>
@@ -573,8 +562,7 @@
                                                     <p class="text-[10px] text-[#667085] mt-0.5">{{ $aiResult->type }} ·
                                                         {{ $aiResult->created_at->format('d M Y H:i') }}</p>
                                                 </div>
-                                                <x-badge color="blue">{{ $aiResult->provider_used }} ·
-                                                    {{ $aiResult->model_used }}</x-badge>
+
                                             </div>
                                             <div class="px-4 py-4 text-xs text-[#071833] leading-relaxed whitespace-pre-line">
                                                 {{ $aiResult->result }}

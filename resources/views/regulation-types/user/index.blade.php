@@ -38,6 +38,7 @@
                         <th>Nama Jenis Regulasi</th>
                         <th>Level Hierarki</th>
                         <th>Jumlah Regulasi</th>
+                        <th>AKsi</th>
 
                     </tr>
                 </thead>
@@ -56,6 +57,19 @@
                             <td>
                                 <span class="font-semibold text-[#071833]">{{ $type->regulations_count }}</span>
                                 <span class="text-[#667085]">regulasi</span>
+                            </td>
+                            <td>
+                                <a href="{{ route('user.regulation-types.show', $type) }}"
+                                    class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[#667085] hover:bg-[#f6f8fb] hover:text-[#071833] transition"
+                                    title="Detail">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                                    </svg>
+                                </a>
                             </td>
                         </tr>
                     @endforeach

@@ -85,4 +85,28 @@ class RegulationTypeController extends Controller
         return redirect()->route('regulation-types.index')
             ->with('success', 'Status jenis regulasi berhasil diperbarui.');
     }
+
+    public function show(RegulationType $regulationType): View
+    {
+        abort_if(
+            auth()->user()->isSubAdmin() &&
+                ! auth()->user()->hasPermission('manage_types'),
+            403
+        );
+
+        $regulationType->load([
+            'regulations.category',
+            'regulations.documents',
+            'regulations.subCategories',
+        ]);
+        $regulations = $regulationType->regulations()
+            ->with([
+                'type',
+                'documents',
+            ])
+            ->latest('effective_date')
+            ->paginate(10);
+
+        return view('regulation-types.show', compact('regulationType', 'regulations'));
+    }
 }

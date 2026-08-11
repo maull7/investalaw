@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'permissions'])]
+#[Fillable(['name', 'email', 'password', 'role', 'permissions', 'institution', 'position', 'province', 'phone'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -57,6 +57,12 @@ class User extends Authenticatable
         }
 
         return $this->isSubAdmin() && in_array($permission, $this->permissions ?? []);
+    }
+
+    public function hasCompletedProfile(): bool
+    {
+        return $this->role !== 'user'
+            || ($this->institution && $this->position && $this->province && $this->phone);
     }
 
     /**

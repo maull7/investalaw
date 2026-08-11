@@ -65,10 +65,23 @@ class RegulationCategoryController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
 
-        $regulationCategory->load(['files', 'subCategories', 'regulations.type', 'regulations.documents']);
-        $category = $regulationCategory;
+        $regulationCategory->load([
+            'files',
+            'subCategories',
+        ]);
 
-        return view('regulation-categories.show', compact('category'));
+        $regulations = $regulationCategory->regulations()
+            ->with([
+                'type',
+                'documents',
+            ])
+            ->latest('effective_date')
+            ->paginate(10);
+
+        return view('regulation-categories.show', compact(
+            'regulationCategory',
+            'regulations'
+        ));
     }
 
     public function edit(RegulationCategory $regulationCategory): View

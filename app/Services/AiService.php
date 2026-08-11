@@ -72,7 +72,7 @@ class AiService
             'type' => $prompt->type,
             'prompt_title' => $prompt->title,
             'prompt_text' => $prompt->prompt_text,
-            'result' => $result['content'],
+            'result' => $this->cleanFormattedText($result['content']),
             'provider_used' => $result['provider'],
             'model_used' => $result['model'],
         ]);
@@ -209,6 +209,24 @@ PROMPT;
         }
 
         return $prompt;
+    }
+
+    // ponytail: strips markdown that some models emit despite prompt instructions; plain-text output only
+    private function cleanFormattedText(string $content): string
+    {
+        $lines = preg_split('/\r\n|\r|\n/', $content);
+
+        $cleaned = array_map(static function (string $line): string {
+            $line = preg_replace('/^#{1,6}\s*/', '', $line);
+            $line = preg_replace('/\*+/', '', $line);
+            $line = str_replace(['`', '```'], '', $line);
+
+            return rtrim($line);
+        }, $lines);
+
+        $text = preg_replace('/\n{3,}/', "\n\n", implode("\n", $cleaned));
+
+        return trim($text);
     }
 
     private function scoreToStatus(?string $score): ?string

@@ -24,7 +24,7 @@ class UserAccountTest extends TestCase
             'password_confirmation' => 'secret-password',
         ]);
 
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
 
         $this->assertDatabaseHas('users', [
             'email' => 'user@example.com',
@@ -35,6 +35,28 @@ class UserAccountTest extends TestCase
         $this->assertAuthenticatedAs($user);
         $this->assertNotEquals('secret-password', $user->password);
         $this->assertTrue(password_verify('secret-password', $user->password));
+    }
+
+    public function test_registered_user_redirected_to_profile_until_complete(): void
+    {
+        $this->post('/register', [
+            'name' => 'End User',
+            'email' => 'user@example.com',
+            'password' => 'secret-password',
+            'password_confirmation' => 'secret-password',
+        ]);
+
+        $response = $this->get(route('dashboard'));
+        $response->assertRedirect(route('profile.edit'));
+
+        $this->post(route('profile.update'), [
+            'institution' => 'PT Contoh Investasi',
+            'position' => 'Compliance Officer',
+            'province' => config('provinces')[0],
+            'phone' => '081234567890',
+        ]);
+
+        $this->get(route('dashboard'))->assertOk();
     }
 
     public function test_register_validates_duplicate_email(): void

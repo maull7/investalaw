@@ -459,7 +459,7 @@ class RegulationController extends Controller
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
         $regulation->load('documents');
-        $pending = $regulation->documents->reject(fn ($d) => $d->parse_status === 'complete');
+        $pending = $regulation->documents->reject(fn ($d) => $d->isParsed());
 
         if ($pending->isEmpty()) {
             return redirect()->route('regulations.show', $regulation)

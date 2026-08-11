@@ -20,7 +20,7 @@
                     @endif
                 </div>
                 <h2 class="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">{{ $document->name }}</h2>
-                <p class="mt-2 text-white/70 text-sm">{{ $document->document_type }} &middot; Regulasi: {{ $document->regulation->regulation_number }}</p>
+                <p class="mt-2 text-white/70 text-sm">{{ $document->document_type ?: '-' }} &middot; Regulasi: {{ $document->regulation->regulation_number }}</p>
             </div>
             <a href="{{ route('regulations.show', $document->regulation) }}#hasil-parse" class="shrink-0 inline-flex items-center gap-2 px-5 h-11 rounded-xl bg-white/10 backdrop-blur text-sm font-semibold text-white hover:bg-white/20 transition">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/></svg>

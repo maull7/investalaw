@@ -187,28 +187,28 @@
                                 d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
                     </x-button>
-                    </form>
+                </form>
 
-                    @if (session('unverified'))
-                        <div class="mt-4 p-4 rounded-2xl border border-[#e7eaf0] bg-[#fafbfd]">
-                            <p class="text-xs font-semibold text-[#071833]">Belum menerima email aktivasi?</p>
-                            <form method="POST" action="{{ route('verification.send') }}" class="flex gap-2 mt-2">
-                                @csrf
-                                <input type="email" name="email" value="{{ session('unverified_email', old('email')) }}"
-                                    placeholder="Alamat email Anda" required class="input-premium flex-1"
-                                    style="padding-left: 1rem">
-                                <x-button type="submit" variant="primary" size="md" class="shrink-0">
-                                    Kirim Ulang
-                                </x-button>
-                            </form>
-                        </div>
-                    @endif
+                @if (session('unverified'))
+                    <div class="mt-4 p-4 rounded-2xl border border-[#e7eaf0] bg-[#fafbfd]">
+                        <p class="text-xs font-semibold text-[#071833]">Belum menerima email aktivasi?</p>
+                        <form method="POST" action="{{ route('verification.send') }}" class="flex gap-2 mt-2">
+                            @csrf
+                            <input type="email" name="email" value="{{ session('unverified_email', old('email')) }}"
+                                placeholder="Alamat email Anda" required class="input-premium flex-1"
+                                style="padding-left: 1rem">
+                            <x-button type="submit" variant="primary" size="md" class="shrink-0">
+                                Kirim Ulang
+                            </x-button>
+                        </form>
+                    </div>
+                @endif
 
-                    <p class="text-center text-xs text-[#667085]">
-                        Belum punya akun?
-                        <a href="{{ route('register') }}"
-                            class="font-semibold text-[#c99a3e] hover:text-[#8c6a25] transition">Daftar</a>
-                    </p>
+                <p class="text-center text-xs text-[#667085]">
+                    Belum punya akun?
+                    <a href="{{ route('register') }}"
+                        class="font-semibold text-[#c99a3e] hover:text-[#8c6a25] transition">Daftar</a>
+                </p>
             </div>
         </div>
     </div>

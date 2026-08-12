@@ -235,6 +235,44 @@ class UserAccountTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_admin_can_login_without_verified_email(): void
+    {
+        $password = 'secret-password';
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'password' => $password,
+            'email_verified_at' => null,
+        ]);
+
+        $this->post('/login', [
+            'email' => $admin->email,
+            'password' => $password,
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($admin);
+
+        $this->get(route('dashboard'))->assertOk();
+    }
+
+    public function test_sub_admin_can_login_and_access_without_verified_email(): void
+    {
+        $password = 'secret-password';
+        $subAdmin = User::factory()->create([
+            'role' => 'sub_admin',
+            'password' => $password,
+            'email_verified_at' => null,
+            'permissions' => ['upload_regulations'],
+        ]);
+
+        $this->post('/login', [
+            'email' => $subAdmin->email,
+            'password' => $password,
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($subAdmin);
+        $this->get(route('dashboard'))->assertOk();
+    }
+
     public function test_user_document_index_only_shows_own_documents(): void
     {
         $other = User::factory()->create(['role' => 'user']);

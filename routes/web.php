@@ -3,10 +3,14 @@
 use App\Http\Controllers\AiPreviewController;
 use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
+use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentPartitionController;
+use App\Http\Controllers\LegalNecessityController;
+use App\Http\Controllers\PackageController;
+use App\Http\Controllers\PackagePaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RegulationCategoryController;
 use App\Http\Controllers\RegulationChatController;
@@ -21,14 +25,21 @@ use App\Http\Controllers\User\RegulationCategoryUserController;
 use App\Http\Controllers\User\RegulationTypeUserController;
 use App\Http\Controllers\User\SubCategoryUserController;
 use App\Http\Controllers\UserController;
+use App\Models\Package;
 use App\Models\Regulation;
 use App\Models\ReviewDocument;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('index');
+    $packages = Package::where('is_active', true)->orderBy('sort')->orderBy('id')->get();
+
+    return view('index', compact('packages'));
 });
+
+Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
+    ->name('legal-necessities.store')
+    ->middleware('throttle:5,1');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
@@ -37,11 +48,26 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [RegisterController::class, 'store'])->middleware('throttle:5,1');
 });
 
-Route::middleware(['auth', 'profile.complete'])->group(function () {
+Route::get('/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])->name('verification.verify');
+Route::post('/email/resend', [EmailVerificationController::class, 'send'])->name('verification.send')->middleware('throttle:6,1');
+
+Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
 
+    Route::get('/email/verify', [EmailVerificationController::class, 'notice'])->name('verification.notice');
+});
+
+Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::middleware('role:admin')->group(function () {
+        Route::get('/paket/pembayaran/konfirmasi', [PackagePaymentController::class, 'confirmations'])->name('packages.payment.confirmations');
+        Route::post('/paket/pembayaran/konfirmasi/{userPackage}', [PackagePaymentController::class, 'confirm'])->name('packages.payment.confirm');
+    });
+
+    Route::get('/paket/pembayaran/{userPackage}', [PackagePaymentController::class, 'show'])->name('packages.payment');
+    Route::post('/paket/pembayaran/{userPackage}/bukti', [PackagePaymentController::class, 'submitProof'])->name('packages.payment.submit');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/compliance-monitoring', [DashboardController::class, 'compliance'])->name('compliance.monitoring');
@@ -111,8 +137,14 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
     Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');
     Route::get('/regulations/documents/{document}/view', [RegulationController::class, 'viewDocument'])->name('regulations.documents.view');
 
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('packages', PackageController::class)->except(['show']);
+    });
+
     // Admin management routes (admin & sub_admin only)
     Route::middleware('role:admin,sub_admin')->group(function () {
+        Route::get('/legal-necessities', [LegalNecessityController::class, 'index'])->name('legal-necessities.index');
+
         Route::resource('regulation-categories', RegulationCategoryController::class);
         Route::post('/regulation-categories/{regulationCategory}/upload', [RegulationCategoryController::class, 'uploadFile'])->name('regulation-categories.upload-file');
         Route::delete('/regulation-categories/file/{file}', [RegulationCategoryController::class, 'deleteFile'])->name('regulation-categories.delete-file');
@@ -133,9 +165,11 @@ Route::middleware(['auth', 'profile.complete'])->group(function () {
         // Regulations write/parse/analyze (admin & sub_admin)
         Route::resource('regulations', RegulationController::class)->except(['index', 'show', 'create']);
         Route::post('/regulations/{regulation}/parse', [RegulationController::class, 'parseRegulation'])->name('regulations.parse');
+        Route::post('/regulations/{regulation}/parse-cancel', [RegulationController::class, 'cancelParse'])->name('regulations.parse-cancel');
         Route::get('/regulations/{regulation}/parse-progress', [RegulationController::class, 'parseProgress'])->name('regulations.parse-progress');
         Route::post('/regulations/{regulation}/extract-references', [RegulationController::class, 'extractReferences'])->name('regulations.extract-references');
         Route::post('/regulations/{regulation}/documents/{document}/parse', [RegulationController::class, 'parseDocument'])->name('regulations.documents.parse');
+        Route::post('/regulations/{regulation}/documents/{document}/parse-cancel', [RegulationController::class, 'cancelDocumentParse'])->name('regulations.documents.parse-cancel');
         Route::post('/regulations/{regulation}/parse-documents', [RegulationController::class, 'parseAllDocuments'])->name('regulations.documents.parse-all');
         Route::post('/regulations/{regulation}/documents', [RegulationController::class, 'uploadDocument'])->name('regulations.documents.store');
         Route::put('/regulations/documents/{document}', [RegulationController::class, 'updateDocument'])->name('regulations.documents.update');

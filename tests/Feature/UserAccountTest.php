@@ -8,7 +8,12 @@ use App\Models\RegulationCategory;
 use App\Models\RegulationType;
 use App\Models\ReviewDocument;
 use App\Models\User;
+use App\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class UserAccountTest extends TestCase
@@ -17,6 +22,8 @@ class UserAccountTest extends TestCase
 
     public function test_user_can_register_and_is_logged_in(): void
     {
+        Notification::fake();
+
         $response = $this->post('/register', [
             'name' => 'End User',
             'email' => 'user@example.com',
@@ -24,21 +31,28 @@ class UserAccountTest extends TestCase
             'password_confirmation' => 'secret-password',
         ]);
 
-        $response->assertRedirect(route('profile.edit'));
+        $response->assertRedirect(route('verification.notice'));
+
+        $this->get(route('verification.notice'))->assertOk();
 
         $this->assertDatabaseHas('users', [
             'email' => 'user@example.com',
             'role' => 'user',
+            'email_verified_at' => null,
         ]);
 
         $user = User::where('email', 'user@example.com')->firstOrFail();
         $this->assertAuthenticatedAs($user);
         $this->assertNotEquals('secret-password', $user->password);
         $this->assertTrue(password_verify('secret-password', $user->password));
+
+        Notification::assertSentTo($user, VerifyEmail::class);
     }
 
-    public function test_registered_user_redirected_to_profile_until_complete(): void
+    public function test_registered_user_redirected_to_verification_until_verified(): void
     {
+        Notification::fake();
+
         $this->post('/register', [
             'name' => 'End User',
             'email' => 'user@example.com',
@@ -47,7 +61,38 @@ class UserAccountTest extends TestCase
         ]);
 
         $response = $this->get(route('dashboard'));
-        $response->assertRedirect(route('profile.edit'));
+        $response->assertRedirect(route('verification.notice'));
+
+        $user = User::where('email', 'user@example.com')->firstOrFail();
+        $this->get(route('verification.notice'))->assertOk();
+
+        $this->post(route('verification.send'));
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_verification_link_fulfills_and_unlocks_profile_flow(): void
+    {
+        Notification::fake();
+
+        $this->post('/register', [
+            'name' => 'End User',
+            'email' => 'user@example.com',
+            'password' => 'secret-password',
+            'password_confirmation' => 'secret-password',
+        ]);
+
+        $user = User::where('email', 'user@example.com')->firstOrFail();
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())]
+        );
+
+        $this->get($url)->assertRedirect(route('profile.edit'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->email_verified_at);
 
         $this->post(route('profile.update'), [
             'institution' => 'PT Contoh Investasi',
@@ -57,6 +102,73 @@ class UserAccountTest extends TestCase
         ]);
 
         $this->get(route('dashboard'))->assertOk();
+    }
+
+    public function test_verification_link_works_from_other_tab_when_not_logged_in(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => null,
+        ]);
+
+        $url = URL::temporarySignedRoute(
+            'verification.verify',
+            now()->addMinutes(60),
+            ['id' => $user->getKey(), 'hash' => sha1($user->getEmailForVerification())]
+        );
+
+        $this->assertGuest();
+
+        $this->get($url)->assertRedirect(route('profile.edit'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->email_verified_at);
+    }
+
+    public function test_verification_email_is_pushed_to_queue(): void
+    {
+        Queue::fake();
+
+        $this->post('/register', [
+            'name' => 'End User',
+            'email' => 'user@example.com',
+            'password' => 'secret-password',
+            'password_confirmation' => 'secret-password',
+        ]);
+
+        Queue::assertPushed(SendQueuedNotifications::class);
+    }
+
+    public function test_unverified_user_can_request_resend_link_from_login(): void
+    {
+        Notification::fake();
+
+        $user = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => null,
+        ]);
+
+        $this->assertGuest();
+
+        $this->post(route('verification.send'), ['email' => $user->email])
+            ->assertSessionHas('status');
+
+        Notification::assertSentTo($user, VerifyEmail::class);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Belum menerima email aktivasi?')
+            ->assertSee($user->email, false);
+    }
+
+    public function test_resend_link_for_unknown_email_returns_generic_message(): void
+    {
+        Notification::fake();
+
+        $this->post(route('verification.send'), ['email' => 'tidak-ada@example.com'])
+            ->assertSessionHas('status');
+
+        Notification::assertNothingSent();
     }
 
     public function test_register_validates_duplicate_email(): void
@@ -83,6 +195,44 @@ class UserAccountTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('password');
+    }
+
+    public function test_unverified_user_cannot_login(): void
+    {
+        $password = 'secret-password';
+        $user = User::factory()->create([
+            'role' => 'user',
+            'email_verified_at' => null,
+            'password' => $password,
+        ]);
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => $password,
+        ])->assertSessionHasErrors('email')->assertSessionHas('unverified');
+
+        $this->assertGuest();
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Belum menerima email aktivasi?')
+            ->assertSee($user->email, false);
+    }
+
+    public function test_verified_user_can_login(): void
+    {
+        $password = 'secret-password';
+        $user = User::factory()->create([
+            'role' => 'user',
+            'password' => $password,
+        ]);
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => $password,
+        ])->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_user_document_index_only_shows_own_documents(): void

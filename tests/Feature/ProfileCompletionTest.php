@@ -76,16 +76,18 @@ class ProfileCompletionTest extends TestCase
         ])->assertSessionHasErrors(['province', 'phone']);
     }
 
-    public function test_admin_is_not_blocked_without_profile(): void
+    public function test_non_user_roles_are_not_blocked_without_profile(): void
     {
-        $admin = User::factory()->create([
-            'role' => 'admin',
-            'institution' => null,
-            'position' => null,
-            'province' => null,
-            'phone' => null,
-        ]);
+        foreach (['admin', 'sub_admin', 'reviewer'] as $role) {
+            $staff = User::factory()->create([
+                'role' => $role,
+                'institution' => null,
+                'position' => null,
+                'province' => null,
+                'phone' => null,
+            ]);
 
-        $this->actingAs($admin)->get(route('dashboard'))->assertOk();
+            $this->actingAs($staff)->get(route('dashboard'))->assertOk();
+        }
     }
 }

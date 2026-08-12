@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\ParsingCancelledException;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use Illuminate\Support\Facades\Log;
@@ -45,8 +46,12 @@ class RegulationParserService
         }
     }
 
-    public function parseRegulation(Regulation $regulation, ?callable $progress = null): array
+    public function parseRegulation(Regulation $regulation, ?callable $progress = null, ?callable $isCancelled = null): array
     {
+        if ($isCancelled && $isCancelled()) {
+            throw new ParsingCancelledException('Parsing dibatalkan.');
+        }
+
         $fullPath = Storage::disk('public')->path($regulation->file_path);
 
         if (! file_exists($fullPath)) {
@@ -129,8 +134,12 @@ class RegulationParserService
         return $this->parseDocumentChoice($document, $this->resolveMethod($document->file_path));
     }
 
-    public function parseDocumentChoice(RegulationDocument $document, string $method, ?callable $progress = null): array
+    public function parseDocumentChoice(RegulationDocument $document, string $method, ?callable $progress = null, ?callable $isCancelled = null): array
     {
+        if ($isCancelled && $isCancelled()) {
+            throw new ParsingCancelledException('Parsing dibatalkan.');
+        }
+
         $fullPath = Storage::disk('public')->path($document->file_path);
 
         if (! file_exists($fullPath)) {
@@ -138,6 +147,10 @@ class RegulationParserService
         }
 
         set_time_limit(300);
+
+        if ($isCancelled && $isCancelled()) {
+            throw new ParsingCancelledException('Parsing dibatalkan.');
+        }
 
         $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
 
@@ -147,8 +160,12 @@ class RegulationParserService
 
         $pages = match ($ext) {
             'docx' => $this->extractDocxText($fullPath),
-            'pdf' => $this->extractPdfPages($document, $method, $progress),
+            'pdf' => $this->extractPdfPages($document, $method, $progress, $isCancelled),
         };
+
+        if ($isCancelled && $isCancelled()) {
+            throw new ParsingCancelledException('Parsing dibatalkan.');
+        }
 
         if (empty($pages)) {
             return $this->result('error', 'Gagal mengekstrak teks.');
@@ -199,13 +216,17 @@ class RegulationParserService
         return $this->detectPdfType($path) === 'text' ? 'text' : 'ocr';
     }
 
-    private function extractPdfPages(RegulationDocument $document, string $method, ?callable $progress = null): array
+    private function extractPdfPages(RegulationDocument $document, string $method, ?callable $progress = null, ?callable $isCancelled = null): array
     {
         if ($method === 'ocr') {
             return $this->ocrDocument($document, $progress);
         }
 
         $pages = $this->documentParser->extractAllPagesText($document->file_path);
+
+        if ($isCancelled && $isCancelled()) {
+            throw new ParsingCancelledException('Parsing dibatalkan.');
+        }
 
         if ($this->hasContent($pages)) {
             return $pages;

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats', 'parse_progress', 'tanggal_tetapkan', 'tanggal_diundangkan'])]
+#[Fillable(['regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'effective_date', 'file_path', 'parsed_at', 'parse_status', 'parsed_text', 'parse_stats', 'parse_progress', 'parse_error', 'tanggal_tetapkan', 'tanggal_diundangkan'])]
 class Regulation extends Model
 {
     use HasFactory, SoftDeletes;
@@ -132,6 +132,7 @@ class Regulation extends Model
             'complete' => 'Complete',
             'incomplete' => 'InComplete',
             'parsing' => 'Parsing',
+            'failed' => 'Failed',
             default => 'Not Parsed',
         };
     }
@@ -142,6 +143,7 @@ class Regulation extends Model
             'complete' => 'emerald',
             'incomplete' => 'amber',
             'parsing' => 'blue',
+            'failed' => 'rose',
             default => 'gray',
         };
     }

@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-use Database\Factories\UserFactory;
+use App\Notifications\VerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable(['name', 'email', 'password', 'role', 'permissions', 'institution', 'position', 'province', 'phone'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -21,6 +22,12 @@ class User extends Authenticatable
     public function reviewDocuments(): HasMany
     {
         return $this->hasMany(ReviewDocument::class);
+    }
+
+    /** @return HasMany<UserPackage> */
+    public function userPackages(): HasMany
+    {
+        return $this->hasMany(UserPackage::class);
     }
 
     /** @return HasMany<UserActivityLog> */
@@ -63,6 +70,11 @@ class User extends Authenticatable
     {
         return $this->role !== 'user'
             || ($this->institution && $this->position && $this->province && $this->phone);
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmail);
     }
 
     /**

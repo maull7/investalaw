@@ -21,6 +21,7 @@ use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -434,7 +435,10 @@ class RegulationController extends Controller
                 ->with('info', 'Regulasi sudah diparse lengkap.');
         }
 
-        $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
+        $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
+
+        Cache::forget("parse_cancel:regulation:{$regulation->id}");
+        $regulation->documents->each(fn ($d) => Cache::forget("parse_cancel:document:{$d->id}"));
 
         ParseRegulation::dispatch($regulation);
 
@@ -448,12 +452,23 @@ class RegulationController extends Controller
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        $result = $this->regulationParserService->parseDocument($document);
+        try {
+            $result = $this->regulationParserService->parseDocument($document);
+        } catch (\Throwable $e) {
+            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => mb_substr($e->getMessage(), 0, 500)]);
+
+            return redirect()->route('regulations.show', $regulation)
+                ->with('error', 'Parse dokumen gagal: '.$e->getMessage());
+        }
 
         if (! $result['success']) {
+            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => mb_substr($result['message'], 0, 500)]);
+
             return redirect()->route('regulations.show', $regulation)
                 ->with('error', $result['message']);
         }
+
+        $document->fresh()?->update(['parse_error' => null]);
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
 
@@ -476,7 +491,8 @@ class RegulationController extends Controller
         $count = $pending->count();
 
         foreach ($pending as $document) {
-            $document->update(['parse_status' => 'parsing', 'parse_progress' => 0]);
+            $document->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
+            Cache::forget("parse_cancel:document:{$document->id}");
             ParseRegulationDocument::dispatch($document);
         }
 
@@ -494,14 +510,46 @@ class RegulationController extends Controller
             'regulation' => [
                 'progress' => $regulation->parse_progress,
                 'status' => $regulation->parse_status,
+                'error' => $regulation->parse_error,
                 'parsed_at' => $regulation->parsed_at?->toIso8601String(),
             ],
             'documents' => $regulation->documents->map(fn ($d) => [
                 'id' => $d->id,
                 'progress' => $d->parse_progress,
                 'status' => $d->parse_status,
+                'error' => $d->parse_error,
             ]),
         ]);
+    }
+
+    public function cancelParse(Regulation $regulation): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        Cache::put("parse_cancel:regulation:{$regulation->id}", true, now()->addHour());
+
+        foreach ($regulation->documents as $document) {
+            Cache::put("parse_cancel:document:{$document->id}", true, now()->addHour());
+            $document->fresh()?->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+        }
+
+        $regulation->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Membatalkan parse regulasi {$regulation->regulation_number}");
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('info', 'Parse regulasi dibatalkan.');
+    }
+
+    public function cancelDocumentParse(Regulation $regulation, RegulationDocument $document): RedirectResponse
+    {
+        abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+
+        Cache::put("parse_cancel:document:{$document->id}", true, now()->addHour());
+        $document->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+
+        return redirect()->route('regulations.show', $regulation)
+            ->with('info', "Parse dokumen {$document->name} dibatalkan.");
     }
 
     public function extractReferences(Regulation $regulation): RedirectResponse

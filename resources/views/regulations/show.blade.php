@@ -93,7 +93,7 @@
                         class="px-4 py-2 text-xs font-bold rounded-xl transition">Short Review</button>
                     <button type="button" @click="tab = 'vesa'"
                         :class="tab === 'vesa' ? 'bg-white shadow-sm text-[#071833]' : 'text-[#667085] hover:text-[#071833]'"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition">Tanya Kak Vesa</button>
+                        class="px-4 py-2 text-xs font-bold rounded-xl transition">Tanya Kak Vesta</button>
                 </div>
 
                 <div x-show="tab === 'info'" class="space-y-6">
@@ -454,6 +454,7 @@
                                             'complete' => 'bg-emerald-100 text-emerald-700',
                                             'incomplete' => 'bg-amber-100 text-amber-700',
                                             'parsing' => 'bg-blue-100 text-blue-700',
+                                            'failed' => 'bg-rose-100 text-rose-500',
                                             default => 'bg-gray-100 text-gray-500',
                                         };
                                     @endphp
@@ -486,7 +487,21 @@
                                                     </div>
                                                     <span class="text-[10px] font-bold text-[#667085]"
                                                         x-text="(docProgress({{ $doc->id }}) ?? {{ $doc->parse_progress ?? 0 }}) + '%'"></span>
+                                                    @if (auth()->user()->hasPermission('upload_regulations'))
+                                                        <form method="POST"
+                                                            action="{{ route('regulations.documents.parse-cancel', [$regulation, $doc]) }}"
+                                                            class="inline"
+                                                            onsubmit="return confirm('Batalkan parse dokumen ini?')">
+                                                            @csrf
+                                                            <button type="submit"
+                                                                class="text-[10px] font-bold text-rose-500 hover:text-rose-700 transition">Batalkan</button>
+                                                        </form>
+                                                    @endif
                                                 </div>
+                                            @endif
+                                            @if ($doc->parse_status === 'failed' && $doc->parse_error)
+                                                <p class="mt-1.5 text-[10px] font-medium text-rose-500 break-words">
+                                                    {{ $doc->parse_error }}</p>
                                             @endif
                                         </div>
                                         <div class="flex items-center gap-1.5">
@@ -746,37 +761,12 @@
                         <x-slot name="header">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <h3 class="text-lg font-bold text-[#071833]">Tanya Kak Vesa</h3>
+                                    <h3 class="text-lg font-bold text-[#071833]">Tanya Kak Vesta</h3>
                                     <p class="text-xs text-[#667085] mt-0.5">Asisten AI InvestaLaw — bisa membaca teks
-                                        regulasi &amp; dokumen tambahan yang sudah diparse.</p>
+                                        regulasi &amp; dokumen tambahan.</p>
                                 </div>
                             </div>
                         </x-slot>
-
-                        @php
-                            $vesaDocs = $regulation->documents;
-                            $vesaParsed = $vesaDocs->filter(fn ($d) => $d->isParsed());
-                            $vesaUnparsed = $vesaDocs->filter(fn ($d) => ! $d->isParsed());
-                        @endphp
-                        <div class="mb-3 flex flex-wrap gap-2">
-                            <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold {{ $regulation->isParsed() ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
-                                <span class="w-1.5 h-1.5 rounded-full {{ $regulation->isParsed() ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
-                                Teks regulasi {{ $regulation->isParsed() ? 'dibaca' : 'belum diparse' }}
-                            </span>
-                            <span
-                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-700">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                {{ $vesaParsed->count() }} dokumen diparse
-                            </span>
-                            @if ($vesaUnparsed->isNotEmpty())
-                                <span
-                                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-amber-100 text-amber-700">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                    {{ $vesaUnparsed->count() }} belum diparse
-                                </span>
-                            @endif
-                        </div>
 
                         <div x-ref="messages" class="max-h-[26rem] overflow-y-auto space-y-3">
                             @forelse ($chatMessages as $msg)
@@ -823,7 +813,7 @@
                             <form @submit.prevent="send()" class="flex items-center gap-2">
                                 <label class="relative flex-1">
                                     <textarea x-model="question" :disabled="sending" rows="2" maxlength="4000"
-                                        class="input-premium resize-none" placeholder="Tanya Kak Vesa tentang regulasi ini…"></textarea>
+                                        class="input-premium resize-none" placeholder="Tanya Kak Vesta tentang regulasi ini…"></textarea>
                                 </label>
                                 <button type="submit" :disabled="sending"
                                     class="shrink-0 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#c99a3e] to-[#b17c24] hover:brightness-110 transition disabled:opacity-60 disabled:cursor-not-allowed">
@@ -853,172 +843,218 @@
 
         <aside class="space-y-6">
             @if (auth()->user()->hasPermission('upload_regulations'))
-            {{-- File Regulasi --}}
-            <x-card>
-                <x-slot name="header">
-                    <h3 class="text-base font-bold text-[#071833]">File Regulasi</h3>
-                </x-slot>
-                <a href="{{ route('regulations.file', $regulation) }}" target="_blank"
-                    class="block p-3 rounded-xl bg-[#f6f8fb] hover:bg-[#f0f3f8] transition">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="shrink-0 w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path
-                                    d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z" />
-                            </svg>
+                {{-- File Regulasi --}}
+                <x-card>
+                    <x-slot name="header">
+                        <h3 class="text-base font-bold text-[#071833]">File Regulasi</h3>
+                    </x-slot>
+                    <a href="{{ route('regulations.file', $regulation) }}" target="_blank"
+                        class="block p-3 rounded-xl bg-[#f6f8fb] hover:bg-[#f0f3f8] transition">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="shrink-0 w-10 h-10 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path
+                                        d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 3.5L18.5 8H14V3.5zM6 20V4h7v5h5v11H6z" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-[#071833] truncate">File PDF</p>
+                                <p class="text-xs text-[#667085]">Regulasi utama</p>
+                            </div>
                         </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-[#071833] truncate">File PDF</p>
-                            <p class="text-xs text-[#667085]">Regulasi utama</p>
-                        </div>
-                    </div>
-                </a>
-                <a href="{{ route('regulations.file-raw', $regulation) }}" download
-                    class="mt-3 flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Download PDF
-                </a>
-            </x-card>
+                    </a>
+                    <a href="{{ route('regulations.file-raw', $regulation) }}" download
+                        class="mt-3 flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        Download PDF
+                    </a>
+                </x-card>
 
-            {{-- Actions --}}
-            <x-card>
-                <x-slot name="header">
-                    <h3 class="text-base font-bold text-[#071833]">Aksi</h3>
-                </x-slot>
-                <div class="space-y-2.5">
-                    @if (!auth()->user()->hasPermission('upload_regulations'))
-                        <div
-                            class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] text-xs font-semibold text-[#667085]">
-                            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                            </svg>
-                            Dokumen hanya untuk dibaca
-                        </div>
-                        @if ($regulation->isParsed())
-                            <a href="#hasil-parse"
-                                class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                </svg>
-                                Lihat Hasil Parse
-                            </a>
-                        @endif
-                    @else
-                        @if ($regulation->parse_status === 'complete')
+                {{-- Actions --}}
+                <x-card>
+                    <x-slot name="header">
+                        <h3 class="text-base font-bold text-[#071833]">Aksi</h3>
+                    </x-slot>
+                    <div class="space-y-2.5">
+                        @if (!auth()->user()->hasPermission('upload_regulations'))
                             <div
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
-                                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                                </svg>
-                                Teks berhasil diekstrak
-                            </div>
-                            <a href="#hasil-parse"
-                                class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-                                </svg>
-                                Lihat Hasil Parse
-                            </a>
-                        @elseif ($regulation->parse_status === 'incomplete')
-                            <div
-                                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold">
+                                class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] text-xs font-semibold text-[#667085]">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                                 </svg>
-                                Parse tidak lengkap (incomplete) — klik Parse PDF untuk mengulang
+                                Dokumen hanya untuk dibaca
                             </div>
-                            <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
-                                @csrf
-                                <x-button type="submit" variant="primary" class="w-full justify-start">
+                            @if ($regulation->isParsed())
+                                <a href="#hasil-parse"
+                                    class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                                            d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                                     </svg>
-                                    Parse PDF
-                                </x-button>
-                            </form>
-                        @elseif($regulation->parse_status === 'parsing')
-                            <div class="space-y-2">
-                                <div class="flex items-center justify-between px-1 text-xs font-semibold text-[#667085]">
-                                    <span x-text="display < 5 ? 'Menyiapkan dokumen...' : 'Memproses halaman...'"></span>
-                                    <span class="text-[#071833]" x-text="display + '%'"></span>
-                                </div>
-                                <div class="h-2.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
-                                    <div class="h-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-full transition-all duration-500"
-                                        :style="`width: ${display}%`"></div>
-                                </div>
-                                <p class="text-[10px] text-[#b0b8c5] px-1">Berjalan di background. Halaman otomatis refresh
-                                    saat selesai.</p>
-                            </div>
+                                    Lihat Hasil Parse
+                                </a>
+                            @endif
                         @else
-                            <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
-                                @csrf
-                                <x-button type="submit" variant="primary" class="w-full justify-start">
+                            @if ($regulation->parse_status === 'complete')
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold">
+                                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                    </svg>
+                                    Teks berhasil diekstrak
+                                </div>
+                                <a href="#hasil-parse"
+                                    class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#c99a3e] text-sm font-bold text-white hover:bg-[#b88a2e] transition">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                                            d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                                     </svg>
-                                    Parse PDF
+                                    Lihat Hasil Parse
+                                </a>
+                            @elseif ($regulation->parse_status === 'incomplete')
+                                <div
+                                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold">
+                                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                    </svg>
+                                    Parse tidak lengkap (incomplete) — klik Parse PDF untuk mengulang
+                                </div>
+                                <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
+                                    @csrf
+                                    <x-button type="submit" variant="primary" class="w-full justify-start">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                                        </svg>
+                                        Parse PDF
+                                    </x-button>
+                                </form>
+                            @elseif($regulation->parse_status === 'failed')
+                                <div
+                                    class="flex items-start gap-2 px-3 py-2 rounded-lg bg-rose-50 text-rose-700 text-xs font-semibold">
+                                    <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"
+                                        stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                    </svg>
+                                    <span class="text-rose-700">
+                                        Parse gagal
+
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
+                                        @csrf
+                                        <x-button type="submit" variant="primary" class="w-full justify-center">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+                                            </svg>
+                                            Parse Ulang
+                                        </x-button>
+                                    </form>
+                                    <form method="POST" action="{{ route('regulations.parse-cancel', $regulation) }}"
+                                        onsubmit="return confirm('Batalkan parse regulasi ini?')">
+                                        @csrf
+                                        <x-button type="submit" variant="outline"
+                                            class="w-full justify-center text-rose-600">
+                                            Batalkan
+                                        </x-button>
+                                    </form>
+                                </div>
+                            @elseif($regulation->parse_status === 'parsing')
+                                <div class="space-y-2">
+                                    <div
+                                        class="flex items-center justify-between px-1 text-xs font-semibold text-[#667085]">
+                                        <span
+                                            x-text="display < 5 ? 'Menyiapkan dokumen...' : 'Memproses halaman...'"></span>
+                                        <span class="text-[#071833]" x-text="display + '%'"></span>
+                                    </div>
+                                    <div class="h-2.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-full transition-all duration-500"
+                                            :style="`width: ${display}%`"></div>
+                                    </div>
+                                    <p class="text-[10px] text-[#b0b8c5] px-1">Berjalan di background. Halaman otomatis
+                                        refresh
+                                        saat selesai.</p>
+                                    <form method="POST" action="{{ route('regulations.parse-cancel', $regulation) }}"
+                                        onsubmit="return confirm('Batalkan parse yang sedang berjalan?')">
+                                        @csrf
+                                        <button type="submit"
+                                            class="w-full inline-flex items-center justify-center gap-2 h-9 rounded-lg bg-rose-50 text-rose-600 text-xs font-bold ring-1 ring-rose-200 hover:bg-rose-100 transition">
+                                            Batalkan Parse
+                                        </button>
+                                    </form>
+                                </div>
+                            @else
+                                <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
+                                    @csrf
+                                    <x-button type="submit" variant="primary" class="w-full justify-start">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
+                                        </svg>
+                                        Parse PDF
+                                    </x-button>
+                                </form>
+                            @endif
+                            <a href="{{ route('regulations.analyze', $regulation) }}"
+                                class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 transition">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0 5.25 5.25M13.5 3.75h4.5m-4.5 0v4.5m0-4.5 5.25 5.25M3.75 13.5h4.5m-4.5 0v4.5m0-4.5 5.25-5.25M13.5 20.25h4.5m-4.5 0v-4.5m0 4.5 5.25-5.25" />
+                                </svg>
+                                Checking Hasil Parse
+                            </a>
+                            <x-button href="{{ route('regulations.edit', $regulation) }}" variant="outline"
+                                class="w-full justify-start">
+                                <svg class="w-4 h-4 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M16.862 4.487 18.55 2.8a2.121 2.121 0 1 1 3 3L19.863 7.487m-3-3L8.25 13.1l-1.5 4.5 4.5-1.5 8.613-8.613m-3-3 3 3" />
+                                </svg>
+                                Edit Regulasi
+                            </x-button>
+                            <form method="POST" action="{{ route('regulations.destroy', $regulation) }}"
+                                id="delete-regulation-form">
+                                @csrf
+                                @method('DELETE')
+                                <x-button type="button" variant="danger" class="w-full justify-start"
+                                    @click="$dispatch('open-modal-confirm-delete-regulation')">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                    </svg>
+                                    Hapus Regulasi
                                 </x-button>
                             </form>
                         @endif
-                        <a href="{{ route('regulations.analyze', $regulation) }}"
-                            class="inline-flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 transition">
+                        <x-button href="{{ route('regulations.index') }}" variant="ghost" class="w-full justify-start">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0 5.25 5.25M13.5 3.75h4.5m-4.5 0v4.5m0-4.5 5.25 5.25M3.75 13.5h4.5m-4.5 0v4.5m0-4.5 5.25-5.25M13.5 20.25h4.5m-4.5 0v-4.5m0 4.5 5.25-5.25" />
+                                    d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                             </svg>
-                            Checking Hasil Parse
-                        </a>
-                        <x-button href="{{ route('regulations.edit', $regulation) }}" variant="outline"
-                            class="w-full justify-start">
-                            <svg class="w-4 h-4 text-[#c99a3e]" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M16.862 4.487 18.55 2.8a2.121 2.121 0 1 1 3 3L19.863 7.487m-3-3L8.25 13.1l-1.5 4.5 4.5-1.5 8.613-8.613m-3-3 3 3" />
-                            </svg>
-                            Edit Regulasi
+                            Kembali ke Daftar
                         </x-button>
-                        <form method="POST" action="{{ route('regulations.destroy', $regulation) }}"
-                            id="delete-regulation-form">
-                            @csrf
-                            @method('DELETE')
-                            <x-button type="button" variant="danger" class="w-full justify-start"
-                                @click="$dispatch('open-modal-confirm-delete-regulation')">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                </svg>
-                                Hapus Regulasi
-                            </x-button>
-                        </form>
-                    @endif
-                    <x-button href="{{ route('regulations.index') }}" variant="ghost" class="w-full justify-start">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                        </svg>
-                        Kembali ke Daftar
-                    </x-button>
-                </div>
-            </x-card>
+                    </div>
+                </x-card>
             @endif
 
             {{-- Hierarchy Info --}}
@@ -1090,7 +1126,7 @@
                     this.error = '';
                     this.question = '';
                     this.appendBubble('user', q);
-                    this.appendBubble('assistant', 'Kak Vesa sedang mengetik…', true);
+                    this.appendBubble('assistant', 'Kak Vesta sedang mengetik…', true);
 
                     try {
                         const res = await fetch(url, {

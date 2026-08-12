@@ -27,7 +27,9 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
-        return redirect()->route('profile.edit')
-            ->with('info', 'Halo '.$user->name.'! Lengkapi data pribadi Anda terlebih dahulu untuk mulai menggunakan aplikasi.');
+        $user->sendEmailVerificationNotification();
+
+        return redirect()->route('verification.notice')
+            ->with('status', 'Akun berhasil dibuat. Kami telah mengirim link aktivasi ke email Anda. Silakan klik link tersebut untuk mengaktifkan akun.');
     }
 }

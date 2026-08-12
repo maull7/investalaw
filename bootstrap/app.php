@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureEmailIsVerified;
 use App\Http\Middleware\EnsureProfileComplete;
 use App\Http\Middleware\EnsureRole;
-use Illuminate\Auth\Middleware\EnsureEmailIsVerified;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias([
+$middleware->alias([
             'role' => EnsureRole::class,
             'profile.complete' => EnsureProfileComplete::class,
             'verified' => EnsureEmailIsVerified::class,

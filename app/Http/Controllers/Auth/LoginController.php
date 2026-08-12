@@ -24,15 +24,16 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = $request->user();
+            if ($user->role != 'user') {
+                if (! $user->hasVerifiedEmail()) {
+                    Auth::logout();
 
-            if (! $user->hasVerifiedEmail() && $user->role == 'user') {
-                Auth::logout();
-
-                return back()
-                    ->withInput($request->only('email', 'remember'))
-                    ->withErrors(['email' => 'Akun belum diaktivasi. Silakan cek email Anda dan klik link verifikasi yang telah dikirim.'])
-                    ->with('unverified', true)
-                    ->with('unverified_email', $user->email);
+                    return back()
+                        ->withInput($request->only('email', 'remember'))
+                        ->withErrors(['email' => 'Akun belum diaktivasi. Silakan cek email Anda dan klik link verifikasi yang telah dikirim.'])
+                        ->with('unverified', true)
+                        ->with('unverified_email', $user->email);
+                }
             }
 
             $request->session()->regenerate();

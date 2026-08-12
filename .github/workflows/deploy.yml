@@ -72,4 +72,4 @@ jobs:
             sudo systemctl reload nginx
 
             echo "Restart Horizon"
-            sudo supervisorctl restart horizon-law:*
+            sudo supervisorctl restart horizon-law

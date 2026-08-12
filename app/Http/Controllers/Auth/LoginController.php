@@ -24,7 +24,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = $request->user();
-            if ($user->role != 'user') {
+            if ($user->role == 'user') {
                 if (! $user->hasVerifiedEmail()) {
                     Auth::logout();
 

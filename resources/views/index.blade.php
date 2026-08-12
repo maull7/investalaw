@@ -492,7 +492,7 @@
         </section>
 
         {{-- Paket & Harga --}}
-        <section id="paket" class="py-[82px] bg-soft">
+        {{-- <section id="paket" class="py-[82px] bg-soft">
             <div class="mx-auto max-w-[1180px] px-5">
                 <div class="text-center max-w-[760px] mx-auto mb-[38px]">
                     <p class="text-xs font-black tracking-[0.12em] uppercase text-gold mb-3">Paket & Harga</p>
@@ -636,7 +636,7 @@
                     @endforelse
                 </div>
             </div>
-        </section>
+        </section> --}}
 
         {{-- FAQ --}}
         <section id="faq" class="py-[82px] bg-soft">

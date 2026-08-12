@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Regulation;
 use App\Models\RegulationChatMessage;
 use App\Services\AiService;
+use App\Services\TokenLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class RegulationChatController extends Controller
 {
     public function __construct(
         private readonly AiService $aiService,
+        private readonly TokenLimitService $tokenLimit,
     ) {}
 
     public function ask(Request $request, Regulation $regulation): JsonResponse|RedirectResponse
@@ -39,8 +41,28 @@ class RegulationChatController extends Controller
             ->values()
             ->all();
 
+        if (! $this->tokenLimit->canSend($request->user()->id)) {
+            $remaining = $this->tokenLimit->remaining($request->user()->id);
+            $daily = $this->tokenLimit->dailyLimit();
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => "Batas token harian ({$daily}) tercapai. Tersisa {$remaining} token. Coba lagi besok."], 429);
+            }
+
+            return redirect()->route('regulations.show', [$regulation, 'tab' => 'vesa'])
+                ->with('error', "Batas token harian ({$daily}) tercapai. Coba lagi besok.");
+        }
+
         try {
-            $reply = $this->aiService->askRegulation($regulation, $validated['question'], $history, $request->user());
+            $result = $this->aiService->askRegulation($regulation, $validated['question'], $history, $request->user());
+            $reply = $result['content'];
+
+            $this->tokenLimit->record(
+                $request->user()->id,
+                $result['total_tokens'] ?? 0,
+                'regulation_chat',
+                $regulation->id
+            );
 
             RegulationChatMessage::create([
                 'user_id' => $request->user()->id,

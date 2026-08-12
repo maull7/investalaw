@@ -52,6 +52,7 @@
                             <th>Email</th>
                             <th>Role</th>
                             <th>Permissions</th>
+                            <th>Token</th>
                             <th>Dibuat</th>
                             <th class="text-right">Aksi</th>
                         </tr>
@@ -88,6 +89,20 @@
                                         </div>
                                     @else
                                         <span class="text-xs text-[#667085]">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @php $used = $usages[$user->id] ?? 0; @endphp
+                                    <span @class([
+                                        'font-bold' => $used >= $dailyLimit,
+                                        'text-rose-600' => $used >= $dailyLimit,
+                                        'text-[#667085]' => $used < $dailyLimit,
+                                    ])>
+                                        {{ number_format($used) }}
+                                    </span>
+                                    <span class="text-[#b0b8c5]"> / {{ number_format($dailyLimit) }}</span>
+                                    @if ($used >= $dailyLimit)
+                                        <span class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600">Penuh</span>
                                     @endif
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">{{ $user->created_at->format('d M Y H:i') }}</td>

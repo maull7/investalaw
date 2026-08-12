@@ -133,11 +133,32 @@
                 </div>
             </x-slot>
 
+            @if ($activeUserPackage)
+                <div class="px-6 pt-6">
+                    <div class="flex items-center gap-3 p-4 rounded-2xl {{ $activeUserPackage->status === 'active' ? 'bg-emerald-50 ring-1 ring-emerald-200' : 'bg-amber-50 ring-1 ring-amber-200' }}">
+                        <span class="shrink-0 w-8 h-8 rounded-lg {{ $activeUserPackage->status === 'active' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600' }} flex items-center justify-center text-xs font-bold">
+                            {{ $activeUserPackage->status === 'active' ? '✓' : '⏳' }}
+                        </span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-semibold {{ $activeUserPackage->status === 'active' ? 'text-emerald-700' : 'text-amber-700' }}">
+                                Paket saat ini: <strong>{{ $activeUserPackage->package->name }}</strong>
+                            </p>
+                            <p class="text-xs {{ $activeUserPackage->status === 'active' ? 'text-emerald-700/70' : 'text-amber-700/70' }}">
+                                Status: {{ $activeUserPackage->status === 'active' ? 'Aktif' : 'Menunggu pembayaran' }}
+                                @if ($activeUserPackage->status === 'active')
+                                    · Hanya dapat upgrade ke paket lebih tinggi
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 p-6">
                 @forelse($packages as $package)
                     <label class="cursor-pointer block">
                         <input type="radio" name="package_id" value="{{ $package->id }}"
-                            @checked($package->isTrial()) class="peer sr-only">
+                            @checked($activeUserPackage ? $activeUserPackage->package_id === $package->id : $package->isTrial()) class="peer sr-only">
                         <div
                             class="rounded-2xl border border-[#e7eaf0] bg-white p-5 flex flex-col h-full transition peer-checked:ring-2 peer-checked:ring-[#c99a3e] peer-checked:border-[#c99a3e] {{ $package->is_popular ? 'border-[#c99a3e]/50 bg-navy-gradient text-white' : '' }}">
                             @if ($package->is_popular)

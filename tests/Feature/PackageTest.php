@@ -252,4 +252,88 @@ class PackageTest extends TestCase
             ->get(route('packages.payment', $userPackage))
             ->assertForbidden();
     }
+
+    public function test_user_can_upgrade_from_trial_to_paid(): void
+    {
+        $trial = Package::create(['name' => 'Free Trial', 'price' => '0', 'benefits' => ['Dasar']]);
+        $paid = Package::create(['name' => 'Bisnis', 'price' => '12,5jt', 'benefits' => ['Pro']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        UserPackage::create(['user_id' => $user->id, 'package_id' => $trial->id, 'type' => 'trial', 'status' => 'active']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $paid->id,
+        ])->assertRedirect(route('packages.payment', UserPackage::where('user_id', $user->id)->latest('id')->first()));
+
+        $this->assertSame(2, UserPackage::where('user_id', $user->id)->count());
+    }
+
+    public function test_user_cannot_downgrade_package(): void
+    {
+        $paid = Package::create(['name' => 'Bisnis', 'price' => '12,5jt', 'benefits' => ['Pro']]);
+        $basic = Package::create(['name' => 'Dasar', 'price' => '5jt', 'benefits' => ['Ringan']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        UserPackage::create(['user_id' => $user->id, 'package_id' => $paid->id, 'type' => 'paid', 'status' => 'active']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $basic->id,
+        ])->assertSessionHas('error');
+
+        $this->assertSame(1, UserPackage::where('user_id', $user->id)->count());
+    }
+
+    public function test_same_package_selection_gives_info(): void
+    {
+        $trial = Package::create(['name' => 'Free Trial', 'price' => '0', 'benefits' => ['Dasar']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        UserPackage::create(['user_id' => $user->id, 'package_id' => $trial->id, 'type' => 'trial', 'status' => 'active']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $trial->id,
+        ])->assertSessionHas('info');
+
+        $this->assertSame(1, UserPackage::where('user_id', $user->id)->count());
+    }
+
+    public function test_cannot_downgrade_from_paid_to_trial(): void
+    {
+        $paid = Package::create(['name' => 'Bisnis', 'price' => '12,5jt', 'benefits' => ['Pro']]);
+        $trial = Package::create(['name' => 'Free Trial', 'price' => '0', 'benefits' => ['Dasar']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        UserPackage::create(['user_id' => $user->id, 'package_id' => $paid->id, 'type' => 'paid', 'status' => 'active']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $trial->id,
+        ])->assertSessionHas('error');
+
+        $this->assertSame(1, UserPackage::where('user_id', $user->id)->count());
+    }
+
+    public function test_can_upgrade_to_higher_paid_package(): void
+    {
+        $basic = Package::create(['name' => 'Dasar', 'price' => '5jt', 'benefits' => ['Ringan']]);
+        $premium = Package::create(['name' => 'Enterprise', 'price' => '25jt', 'benefits' => ['Full']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        UserPackage::create(['user_id' => $user->id, 'package_id' => $basic->id, 'type' => 'paid', 'status' => 'active']);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $premium->id,
+        ])->assertRedirect(route('packages.payment', UserPackage::where('user_id', $user->id)->latest('id')->first()));
+
+        $this->assertSame(2, UserPackage::where('user_id', $user->id)->count());
+    }
 }

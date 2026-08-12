@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Models\TokenUsage;
 use App\Models\User;
 use App\Models\UserActivityLog;
+use App\Services\TokenLimitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,11 +22,19 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
-            ->when($request->search, fn($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
+            ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
             ->latest()
             ->paginate(20);
 
-        return view('users.index', compact('users'));
+        $usages = TokenUsage::where('date', today()->toDateString())
+            ->whereIn('user_id', $users->pluck('id'))
+            ->groupBy('user_id')
+            ->selectRaw('user_id, SUM(tokens_used) as total')
+            ->pluck('total', 'user_id');
+
+        $dailyLimit = (int) app(TokenLimitService::class)->dailyLimit();
+
+        return view('users.index', compact('users', 'usages', 'dailyLimit'));
     }
 
     public function create(): View
@@ -70,13 +80,13 @@ class UserController extends Controller
 
         $data['permissions'] = $data['permissions'] ?? [];
 
-        $changes = collect($data)->except('permissions')->filter(fn($val, $key) => $val != $user->$key);
+        $changes = collect($data)->except('permissions')->filter(fn ($val, $key) => $val != $user->$key);
 
         $user->update($data);
 
         $desc = "Memperbarui user {$user->name}";
         if ($changes->isNotEmpty()) {
-            $desc .= ' (' . $changes->keys()->implode(', ') . ')';
+            $desc .= ' ('.$changes->keys()->implode(', ').')';
         }
 
         UserActivityLog::log('updated', User::class, $user->id, $desc);
@@ -100,14 +110,16 @@ class UserController extends Controller
         return redirect()->route('users.index')
             ->with('success', 'User berhasil dihapus.');
     }
+
     public function userFromRegister(Request $request): View
     {
         $users = User::query()
-            ->when($request->search, fn($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
+            ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
             ->where('role', 'user')
             ->latest()
             ->paginate(10)
             ->withQueryString();
+
         return view('users.from-register', compact('users'));
     }
 }

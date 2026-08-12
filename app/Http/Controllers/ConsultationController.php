@@ -7,6 +7,7 @@ use App\Models\ConsultationSession;
 use App\Models\RegulationCategory;
 use App\Models\UserPackage;
 use App\Services\AiService;
+use App\Services\TokenLimitService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class ConsultationController extends Controller
 {
     public function __construct(
         private readonly AiService $aiService,
+        private readonly TokenLimitService $tokenLimit,
     ) {}
 
     private function requireNonTrialPackage(): ?RedirectResponse
@@ -70,7 +72,7 @@ class ConsultationController extends Controller
 
         $session = ConsultationSession::create([
             'user_id' => $request->user()->id,
-            'title' => 'Konsultasi ' . Carbon::now()->format('d M Y, H:i'),
+            'title' => 'Konsultasi '.Carbon::now()->format('d M Y, H:i'),
         ]);
 
         $session->regulations()->attach($validated['regulation_ids']);
@@ -82,7 +84,7 @@ class ConsultationController extends Controller
     public function show(ConsultationSession $session): View|RedirectResponse
     {
         if ((int) $session->user_id !== auth()->id()) {
-            Log::warning("Consultation show 403: session_user={$session->user_id} auth_user=" . auth()->id() . " session_id={$session->id}");
+            Log::warning("Consultation show 403: session_user={$session->user_id} auth_user=".auth()->id()." session_id={$session->id}");
             abort(403);
         }
 
@@ -104,7 +106,7 @@ class ConsultationController extends Controller
     public function ask(Request $request, ConsultationSession $session): JsonResponse|RedirectResponse
     {
         if ((int) $session->user_id !== auth()->id()) {
-            Log::warning("Consultation ask 403: session_user={$session->user_id} auth_user=" . auth()->id());
+            Log::warning("Consultation ask 403: session_user={$session->user_id} auth_user=".auth()->id());
             abort(403);
         }
 
@@ -125,12 +127,32 @@ class ConsultationController extends Controller
             ->limit(6)
             ->get(['role', 'content'])
             ->reverse()
-            ->map(fn($m) => ['role' => $m->role, 'content' => $m->content])
+            ->map(fn ($m) => ['role' => $m->role, 'content' => $m->content])
             ->values()
             ->all();
 
+        if (! $this->tokenLimit->canSend($request->user()->id)) {
+            $remaining = $this->tokenLimit->remaining($request->user()->id);
+            $daily = $this->tokenLimit->dailyLimit();
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => "Batas token harian ({$daily}) tercapai. Tersisa {$remaining} token. Coba lagi besok."], 429);
+            }
+
+            return redirect()->route('consultations.show', $session)
+                ->with('error', "Batas token harian ({$daily}) tercapai. Coba lagi besok.");
+        }
+
         try {
-            $reply = $this->aiService->askConsultation($session, $validated['question'], $history, $request->user());
+            $result = $this->aiService->askConsultation($session, $validated['question'], $history, $request->user());
+            $reply = $result['content'];
+
+            $this->tokenLimit->record(
+                $request->user()->id,
+                $result['total_tokens'] ?? 0,
+                'consultation_chat',
+                $session->id
+            );
 
             ConsultationChatMessage::create([
                 'consultation_session_id' => $session->id,
@@ -158,7 +180,7 @@ class ConsultationController extends Controller
     public function addRegulations(Request $request, ConsultationSession $session): RedirectResponse
     {
         if ((int) $session->user_id !== auth()->id()) {
-            Log::warning("Consultation addReg 403: session_user={$session->user_id} auth_user=" . auth()->id());
+            Log::warning("Consultation addReg 403: session_user={$session->user_id} auth_user=".auth()->id());
             abort(403);
         }
 

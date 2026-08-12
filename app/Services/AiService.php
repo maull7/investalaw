@@ -80,16 +80,17 @@ class AiService
         ]);
     }
 
-    public function askRegulation(Regulation $regulation, string $question, array $history = [], ?User $user = null): string
+    public function askRegulation(Regulation $regulation, string $question, array $history = [], ?User $user = null): array
     {
         $messages = $this->buildRegulationMessages($regulation, $question, $history, $user);
 
         $result = $this->callAi($messages, 1500);
+        $result['content'] = $this->cleanFormattedText($result['content']);
 
-        return $this->cleanFormattedText($result['content']);
+        return $result;
     }
 
-    public function askConsultation(ConsultationSession $session, string $question, array $history = [], ?User $user = null): string
+    public function askConsultation(ConsultationSession $session, string $question, array $history = [], ?User $user = null): array
     {
         $regulationTexts = [];
 
@@ -124,8 +125,9 @@ class AiService
         $messages = $this->buildConsultationMessages($combinedContext, $question, $history, $user);
 
         $result = $this->callAi($messages, 1500);
+        $result['content'] = $this->cleanFormattedText($result['content']);
 
-        return $this->cleanFormattedText($result['content']);
+        return $result;
     }
 
     /**
@@ -712,6 +714,7 @@ PROMPT;
                     'content' => $response->choices[0]->message->content ?? '',
                     'provider' => $name,
                     'model' => $config['model'],
+                    'total_tokens' => $response->usage?->totalTokens ?? 0,
                 ];
             } catch (Exception $e) {
                 $lastException = $e;

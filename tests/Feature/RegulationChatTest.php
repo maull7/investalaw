@@ -21,7 +21,7 @@ class RegulationChatTest extends TestCase
         $this->mock(AiService::class, function ($mock): void {
             $mock->shouldReceive('askRegulation')
                 ->once()
-                ->andReturn('Halo! Berdasarkan regulasi tersebut, ketentuan pasal terkait mengatur kewajiban keterbukaan informasi.');
+                ->andReturn(['content' => 'Halo! Berdasarkan regulasi tersebut, ketentuan pasal terkait mengatur kewajiban keterbukaan informasi.', 'total_tokens' => 100]);
         });
 
         $user = User::factory()->create();
@@ -44,7 +44,7 @@ class RegulationChatTest extends TestCase
         $this->mock(AiService::class, function ($mock): void {
             $mock->shouldReceive('askRegulation')
                 ->once()
-                ->andReturn('Balasan Kak Vesa via JSON.');
+                ->andReturn(['content' => 'Balasan Kak Vesa via JSON.', 'total_tokens' => 50]);
         });
 
         $user = User::factory()->create();
@@ -95,7 +95,7 @@ class RegulationChatTest extends TestCase
             $mock->shouldReceive('askRegulation')
                 ->once()
                 ->withArgs(fn ($reg, $question, $history, $passedUser) => $passedUser?->id === $user->id)
-                ->andReturn('Balasan dengan memori.');
+                ->andReturn(['content' => 'Balasan dengan memori.', 'total_tokens' => 100]);
         });
 
         $this->actingAs($user)->postJson(route('regulations.chat.ask', $regulation), [

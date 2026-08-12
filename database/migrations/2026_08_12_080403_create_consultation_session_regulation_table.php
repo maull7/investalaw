@@ -14,9 +14,9 @@ return new class extends Migration
 
         Schema::create('consultation_session_regulation', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('consultation_session_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('regulation_id')->constrained()->cascadeOnDelete();
-            $table->unique(['consultation_session_id', 'regulation_id']);
+            $table->foreignId('consultation_session_id')->constrained(table: 'consultation_sessions', indexName: 'csr_session_fk')->cascadeOnDelete();
+            $table->foreignId('regulation_id')->constrained(indexName: 'csr_regulation_fk')->cascadeOnDelete();
+            $table->unique(['consultation_session_id', 'regulation_id'], 'csr_session_reg_unique');
         });
     }
 

@@ -1,6 +1,8 @@
 <aside class="fixed inset-y-0 left-0 z-40 w-72 transform transition-transform duration-300 ease-out lg:translate-x-0"
     :class="sidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
     <div class="relative h-full overflow-hidden bg-navy-gradient text-white sidebar-scroll overflow-y-auto">
+
+
         {{-- Decorative glow --}}
         <div class="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-[#c99a3e]/20 blur-3xl">
         </div>
@@ -41,6 +43,29 @@
                 <p class="text-xs text-white/55 mt-0.5">Regulatory · Capital Markets</p>
             </div>
 
+            @if (auth()->user()->role == 'user')
+                <a href="{{ route('index') }}"
+                    class="mt-7 block rounded-2xl border border-white/10 bg-gradient-to-br from-[#c99a3e] to-gray-600/70 px-4 py-2 shadow-lg transition duration-200 hover:-translate-y-0.5 hover:shadow-xl hover:border-white/20">
+
+                    <div class="flex items-center justify-between">
+                        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-white">
+                            Profile
+                        </p>
+                    </div>
+
+                    <p class="mt-2 text-lg font-bold text-white">
+                        InvestalawCo Profile
+                    </p>
+
+                    <p class="mt-1 text-xs text-white/60">
+                        View company profile and information
+                    </p>
+
+                </a>
+            @endif
+
+
+
             {{-- Navigation --}}
             <nav class="mt-7 flex-1">
                 @php
@@ -68,7 +93,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M3 13.5 12 4l9 9.5M5 12v8a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-8" />
                             </svg>
-                            <span>Dashboard</span>
+                            <span>{{ $user->isAdmin() ? 'Dashboard' : 'Main Page' }}</span>
                         </a>
                     </li>
                 </ul>
@@ -114,8 +139,8 @@
                                 </svg>
                                 <span>Master Paket</span>
                             </a>
-                            <a href="{{ route('packages.payment.confirmations') }}"
-                                class="nav-item {{ request()->routeIs('packages.payment.confirmations') ? 'is-active' : '' }}">
+                            <a href="{{ route('confirm.packages.payment.confirmations') }}"
+                                class="nav-item {{ request()->routeIs('confirm.packages.payment.confirmations') ? 'is-active' : '' }}">
                                 <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="1.6">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -141,7 +166,8 @@
                                         stroke-width="1.6">
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M6 6h.008v.008H6V6Z" />
                                     </svg>
                                     <span>Kategori</span>
                                 </a>

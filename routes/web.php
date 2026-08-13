@@ -1,14 +1,15 @@
 <?php
 
-use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\AiPreviewController;
 use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
 use App\Http\Controllers\Auth\EmailVerificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentPartitionController;
+use App\Http\Controllers\LegalCaseController;
 use App\Http\Controllers\LegalNecessityController;
 use App\Http\Controllers\PackageController;
 use App\Http\Controllers\PackagePaymentController;
@@ -200,6 +201,10 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
         Route::resource('ai-prompts', AiPromptController::class);
         Route::resource('type-prompts', TypePromptController::class);
 
+        Route::resource('legal-cases', LegalCaseController::class);
+        Route::post('/legal-cases/{legalCase}/parse', [LegalCaseController::class, 'parse'])->name('legal-cases.parse');
+        Route::post('/legal-cases/{legalCase}/generate', [LegalCaseController::class, 'generate'])->name('legal-cases.generate');
+
         // TEMP DEBUG
         Route::get('/debug-reg-text/{id}', function ($id) {
             $reg = Regulation::find($id);
@@ -207,7 +212,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
                 return 'No text';
             }
 
-            return '<pre>' . e(mb_substr($reg->parsed_text, 0, 1000)) . '</pre>';
+            return '<pre>'.e(mb_substr($reg->parsed_text, 0, 1000)).'</pre>';
         })->name('debug.reg-text');
 
         Route::get('/debug-parsed-view', function () {
@@ -217,37 +222,37 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
                 $rd = ReviewDocument::find(2);
 
                 $debug = [];
-                $debug[] = 'User: ' . auth()->user()->name;
+                $debug[] = 'User: '.auth()->user()->name;
                 $debug[] = "Doc: {$rd->id} - {$rd->title}";
-                $debug[] = 'Regs count: ' . $rd->regulations()->count();
-                $debug[] = 'isParsed: ' . ($rd->isParsed() ? 'yes' : 'no');
+                $debug[] = 'Regs count: '.$rd->regulations()->count();
+                $debug[] = 'isParsed: '.($rd->isParsed() ? 'yes' : 'no');
 
                 $reg = $rd->regulations()->first();
                 if ($reg) {
-                    $debug[] = "Reg {$reg->id}: parsed=" . ($reg->isParsed() ? 'yes' : 'no') . ' text_len=' . mb_strlen($reg->parsed_text ?? '');
+                    $debug[] = "Reg {$reg->id}: parsed=".($reg->isParsed() ? 'yes' : 'no').' text_len='.mb_strlen($reg->parsed_text ?? '');
                 }
 
                 $result = app(DocumentPartitionController::class)->showParsedText($rd);
-                $debug[] = 'Controller returned: ' . get_class($result);
-                $debug[] = 'View name: ' . $result->getName();
+                $debug[] = 'Controller returned: '.get_class($result);
+                $debug[] = 'View name: '.$result->getName();
 
                 $data = $result->getData();
-                $debug[] = 'Regulations in view data: ' . count($data['regulations'] ?? []);
+                $debug[] = 'Regulations in view data: '.count($data['regulations'] ?? []);
                 if (! empty($data['regulations'])) {
-                    $debug[] = 'First reg has_text: ' . ($data['regulations'][0]['has_text'] ? 'yes' : 'no');
-                    $debug[] = 'First reg main_parsed: ' . ($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
-                    $debug[] = 'First reg main_chars: ' . $data['regulations'][0]['main_chars'];
+                    $debug[] = 'First reg has_text: '.($data['regulations'][0]['has_text'] ? 'yes' : 'no');
+                    $debug[] = 'First reg main_parsed: '.($data['regulations'][0]['main_parsed'] ? 'yes' : 'no');
+                    $debug[] = 'First reg main_chars: '.$data['regulations'][0]['main_chars'];
                 }
 
                 $html = $result->render();
-                $debug[] = 'HTML length: ' . strlen($html);
-                $debug[] = 'Has Regulasi Acuan: ' . (strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
-                $debug[] = 'Has File Regulasi Utama: ' . (strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
-                $debug[] = 'Has OTORITAS: ' . (strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
+                $debug[] = 'HTML length: '.strlen($html);
+                $debug[] = 'Has Regulasi Acuan: '.(strpos($html, 'Regulasi Acuan') !== false ? 'yes' : 'no');
+                $debug[] = 'Has File Regulasi Utama: '.(strpos($html, 'File Regulasi Utama') !== false ? 'yes' : 'no');
+                $debug[] = 'Has OTORITAS: '.(strpos($html, 'OTORITAS') !== false ? 'yes' : 'no');
 
-                return response('<pre>' . implode("\n", $debug) . '</pre>');
+                return response('<pre>'.implode("\n", $debug).'</pre>');
             } catch (Exception $e) {
-                return response('ERROR: ' . $e->getMessage() . "\nFile: " . $e->getFile() . ':' . $e->getLine());
+                return response('ERROR: '.$e->getMessage()."\nFile: ".$e->getFile().':'.$e->getLine());
             }
         })->name('debug.parsed-view');
     });

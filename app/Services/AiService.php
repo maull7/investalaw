@@ -9,6 +9,7 @@ use App\Models\DocumentBabStructure;
 use App\Models\DocumentPage;
 use App\Models\DocumentParsedText;
 use App\Models\DocumentPartition;
+use App\Models\LegalCase;
 use App\Models\PartitionAnalysis;
 use App\Models\Regulation;
 use App\Models\RegulationAiResult;
@@ -49,10 +50,115 @@ class AiService
         ]);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function analyzeCase(LegalCase $case): array
+    {
+        $prompt = AiPrompt::active()->where('type', 'kasus')->firstOrFail();
+
+        $case->loadMissing('regulations.documents');
+
+        $context = "=== MATERI GUGATAN/PERKARA ===\n";
+        $context .= "Judul: {$case->title}\n";
+        if ($case->case_number) {
+            $context .= "Nomor Perkara: {$case->case_number}\n";
+        }
+        if ($case->court) {
+            $context .= "Pengadilan: {$case->court}\n";
+        }
+        $context .= "Status: {$case->status_case}\n\n";
+        $context .= mb_substr($case->parsed_text ?? '', 0, 60000);
+
+        $context .= "\n\n=== REGULASI ACUAN ===\n";
+        foreach ($case->regulations as $i => $reg) {
+            $regText = $this->getRegulationTextFromDb($reg);
+            $context .= "\n--- Regulasi #".($i + 1).": {$reg->regulation_number} - {$reg->title} ({$reg->year}) ---\n";
+            $context .= $regText ? mb_substr($regText, 0, 30000) : '(Teks regulasi belum diparse.)';
+        }
+
+        $messages = [
+            ['role' => 'system', 'content' => $prompt->prompt_text],
+            ['role' => 'user', 'content' => $context],
+        ];
+
+        $result = $this->callAi($messages, 2048);
+        $decoded = $this->parseCaseAnalysis($result['content']);
+
+        return $decoded;
+    }
+
+    /**
+     * @return array<int, string> keyed by regulation id, value is explanation
+     */
+    public function selectRelevantRegulations(LegalCase $case): array
+    {
+        $prompt = AiPrompt::active()->where('type', 'kasus_select')->firstOrFail();
+
+        $catalog = Regulation::orderBy('regulation_number')->get()
+            ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
+            ->implode("\n");
+
+        $caseText = mb_substr($case->parsed_text ?? '', 0, 60000);
+
+        $messages = [
+            ['role' => 'system', 'content' => $prompt->prompt_text],
+            ['role' => 'user', 'content' => "=== DAFTAR REGULASI TERSEDIA ===\n{$catalog}\n\n=== MATERI GUGATAN/PERKARA ===\n{$caseText}"],
+        ];
+
+        $result = $this->callAi($messages, 1024);
+
+        return $this->parseRegulationIds($result['content']);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function parseRegulationIds(string $content): array
+    {
+        $clean = preg_replace('/```json\s*/', '', $content);
+        $clean = preg_replace('/```\s*$/', '', $clean);
+        $decoded = json_decode(trim($clean), true);
+
+        if (is_array($decoded)) {
+            $map = [];
+            foreach ($decoded as $item) {
+                if (is_array($item) && isset($item['id'])) {
+                    $map[(int) $item['id']] = (string) ($item['alasan'] ?? '');
+                } elseif (is_numeric($item)) {
+                    $map[(int) $item] = '';
+                }
+            }
+
+            return $map;
+        }
+
+        preg_match_all('/\d+/', $clean, $matches);
+
+        return array_fill_keys(array_map('intval', $matches[0]), '');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parseCaseAnalysis(string $content): array
+    {
+        $clean = preg_replace('/```json\s*/', '', $content);
+        $clean = preg_replace('/```\s*$/', '', $clean);
+        $clean = trim($clean);
+
+        $decoded = json_decode($clean, true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        return ['ringkasan' => $content];
+    }
+
     public function generateRegulationPrompt(Regulation $regulation, AiPrompt $prompt): RegulationAiResult
     {
         $text = $regulation->parsed_text;
-
         if (! $text) {
             $text = $regulation->documents()
                 ->whereNotNull('parsed_text')

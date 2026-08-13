@@ -84,6 +84,7 @@ class PackageController extends Controller
             'tagline' => ['nullable', 'string', 'max:255'],
             'price' => ['required', 'string', 'max:255'],
             'price_period' => ['nullable', 'string', 'max:255'],
+            'duration_hours' => ['nullable', 'integer', 'min:1'],
             'benefits' => ['nullable', 'string'],
             'sort' => ['nullable', 'integer', 'min:0'],
         ]);

@@ -70,8 +70,7 @@
                 </button>
 
                 <div class="hidden sm:block w-px h-7 bg-[#e7eaf0]"></div>
-
-                @auth
+                @if (auth()->check())
                     <x-dropdown align="right" width="64">
                         <x-slot name="trigger">
                             <button type="button"
@@ -110,8 +109,8 @@
                         <div class="py-2">
                             <a href="{{ route('dashboard') }}"
                                 class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#071833] hover:bg-[#f6f8fb] transition">
-                                <svg class="w-4 h-4 text-[#667085]" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="1.8">
+                                <svg class="w-4 h-4 text-[#667085]" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M3 13.5 12 4l9 9.5M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
                                 </svg>
@@ -152,7 +151,10 @@
                             </form>
                         </div>
                     </x-dropdown>
-                @endauth
+                @else
+                    <x-button href="{{ route('login') }}">Masuk</x-button>
+                @endif
+
             </div>
         </div>
     </div>

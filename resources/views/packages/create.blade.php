@@ -50,6 +50,16 @@
                         </div>
 
                         <div>
+                            <label for="duration_hours" class="block text-sm font-semibold text-[#071833] mb-2">Durasi Aktif (jam)</label>
+                            <input type="number" name="duration_hours" id="duration_hours" value="{{ old('duration_hours') }}"
+                                min="1" class="input-premium" placeholder="Kosongkan untuk paket berbayar/tanpa batas">
+                            <p class="mt-1.5 text-xs text-[#667085]">Untuk paket free/trial. Dibatasi maksimal oleh setting <span class="font-mono">trial_max_hours</span>.</p>
+                            @error('duration_hours')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
                             <label for="tagline" class="block text-sm font-semibold text-[#071833] mb-2">Deskripsi Singkat</label>
                             <input type="text" name="tagline" id="tagline" value="{{ old('tagline') }}" maxlength="255"
                                 class="input-premium" placeholder="Contoh: Menghindari risiko sengketa kepatuhan">

@@ -53,6 +53,7 @@
                             <th>Role</th>
                             <th>Permissions</th>
                             <th>Token</th>
+                            <th>Kak Vesta</th>
                             <th>Dibuat</th>
                             <th class="text-right">Aksi</th>
                         </tr>
@@ -103,6 +104,31 @@
                                     <span class="text-[#b0b8c5]"> / {{ number_format($dailyLimit) }}</span>
                                     @if ($used >= $dailyLimit)
                                         <span class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600">Penuh</span>
+                                    @endif
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @php $usage = $user->kakVestaUsage(); @endphp
+                                    @if ($usage)
+                                        @php
+                                            $allowedHours = intdiv($usage['allowed_minutes'], 60);
+                                            $hours = intdiv($usage['elapsed_minutes'], 60);
+                                            $minutes = $usage['elapsed_minutes'] % 60;
+                                            $text = $usage['elapsed_minutes'] === 0
+                                                ? 'Belum dipakai'
+                                                : ($hours > 0
+                                                    ? "{$hours} jam {$minutes} mnt / {$allowedHours} jam"
+                                                    : "{$minutes} mnt / {$allowedHours} jam");
+                                        @endphp
+                                        <span @class([
+                                            'font-bold' => $usage['expired'],
+                                            'text-rose-600' => $usage['expired'],
+                                            'text-[#667085]' => ! $usage['expired'],
+                                        ])>{{ $text }}</span>
+                                        @if ($usage['expired'])
+                                            <span class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600">Habis</span>
+                                        @endif
+                                    @else
+                                        <span class="text-[#b0b8c5]">-</span>
                                     @endif
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">{{ $user->created_at->format('d M Y H:i') }}</td>

@@ -58,7 +58,7 @@
                 <a href="#alur" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Alur</a>
                 <a href="#dokumen" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">Dokumen</a>
                 <a href="#faq" @click="navOpen = false" class="hover:text-gold transition max-lg:py-2">FAQ</a>
-                <a href="{{ route('login') }}" @click="navOpen = false"
+                <a href="{{ route('index-dash') }}" @click="navOpen = false"
                     class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-gold to-[#b17c24] text-white shadow-gold hover:shadow-lg hover:from-[#b17c24] hover:to-gold transition-all duration-300">
                     Masuk
                 </a>

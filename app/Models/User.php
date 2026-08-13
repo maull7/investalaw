@@ -72,6 +72,29 @@ class User extends Authenticatable implements MustVerifyEmail
             || ($this->institution && $this->position && $this->province && $this->phone);
     }
 
+    /**
+     * @return array{elapsed_minutes: int, allowed_minutes: int, expired: bool}|null
+     */
+    public function kakVestaUsage(): ?array
+    {
+        $trial = $this->userPackages->first();
+
+        if (! $trial || ! $trial->kak_vesta_started_at) {
+            return null;
+        }
+
+        $cap = (int) Setting::get('trial_max_hours', 48);
+        $allowedHours = min((int) ($trial->package?->duration_hours ?: $cap), $cap);
+        $elapsed = (int) max(0, abs(now()->diffInMinutes($trial->kak_vesta_started_at, false)));
+        $allowedMinutes = $allowedHours * 60;
+
+        return [
+            'elapsed_minutes' => $elapsed,
+            'allowed_minutes' => $allowedMinutes,
+            'expired' => $elapsed >= $allowedMinutes,
+        ];
+    }
+
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmail);

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ConsultationChatMessage;
 use App\Models\ConsultationSession;
 use App\Models\RegulationCategory;
+use App\Models\Setting;
 use App\Models\UserPackage;
 use App\Services\AiService;
 use App\Services\TokenLimitService;
@@ -22,9 +23,9 @@ class ConsultationController extends Controller
         private readonly TokenLimitService $tokenLimit,
     ) {}
 
-    private function requireNonTrialPackage(): ?RedirectResponse
+    private function requireKakVestaAccess(): ?RedirectResponse
     {
-        if (auth()->user()->isAdmin()) {
+        if (auth()->user()->isAdmin() || auth()->user()->isSubAdmin()) {
             return null;
         }
 
@@ -33,9 +34,28 @@ class ConsultationController extends Controller
             ->latest()
             ->first();
 
-        if (! $active || $active->type === 'trial') {
+        if (! $active) {
             return redirect()->route('dashboard')
-                ->with('error', 'Fitur Konsultasi Kak Vesta hanya tersedia untuk paket berbayar.');
+                ->with('error', 'Fitur Konsultasi Kak Vesta hanya tersedia untuk pengguna dengan paket aktif.');
+        }
+
+        if ($active->type === 'paid') {
+            return null;
+        }
+
+        if (! $active->kak_vesta_started_at) {
+            $active->update(['kak_vesta_started_at' => now()]);
+
+            return null;
+        }
+
+        $cap = (int) Setting::get('trial_max_hours', 48);
+        $hours = (int) $active->package?->duration_hours ?: $cap;
+        $allowedUntil = $active->kak_vesta_started_at->addHours(min($hours, $cap));
+
+        if ($allowedUntil->lte(now())) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Masa aktif trial konsultasi Kak Vesta Anda telah berakhir. Upgrade ke paket berbayar untuk melanjutkan.');
         }
 
         return null;
@@ -43,7 +63,7 @@ class ConsultationController extends Controller
 
     public function index(): View|RedirectResponse
     {
-        if ($redirect = $this->requireNonTrialPackage()) {
+        if ($redirect = $this->requireKakVestaAccess()) {
             return $redirect;
         }
 
@@ -61,7 +81,7 @@ class ConsultationController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if ($redirect = $this->requireNonTrialPackage()) {
+        if ($redirect = $this->requireKakVestaAccess()) {
             return $redirect;
         }
 
@@ -88,7 +108,7 @@ class ConsultationController extends Controller
             abort(403);
         }
 
-        if ($redirect = $this->requireNonTrialPackage()) {
+        if ($redirect = $this->requireKakVestaAccess()) {
             return $redirect;
         }
 
@@ -108,6 +128,10 @@ class ConsultationController extends Controller
         if ((int) $session->user_id !== auth()->id()) {
             Log::warning("Consultation ask 403: session_user={$session->user_id} auth_user=".auth()->id());
             abort(403);
+        }
+
+        if ($redirect = $this->requireKakVestaAccess()) {
+            return $redirect;
         }
 
         $validated = $request->validate([

@@ -38,6 +38,8 @@ Route::get('/', function () {
     return view('index', compact('packages'));
 })->name('index');
 
+Route::get('/index-dashboard', [DashboardController::class, 'landing'])->name('index-dash');
+
 Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
     ->name('legal-necessities.store')
     ->middleware('throttle:5,1');

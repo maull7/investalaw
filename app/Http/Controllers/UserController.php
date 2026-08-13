@@ -22,6 +22,7 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $users = User::query()
+            ->with(['userPackages' => fn ($q) => $q->where('type', 'trial')->with('package')->latest()])
             ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
             ->latest()
             ->paginate(20);

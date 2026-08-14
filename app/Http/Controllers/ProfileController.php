@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileRequest;
 use App\Models\Package;
+use App\Models\Setting;
 use App\Models\UserPackage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Carbon;
@@ -57,13 +58,21 @@ class ProfileController extends Controller
                 ->with('error', "Tidak dapat downgrade ke <strong>{$package->name}</strong>. Saat ini Anda menggunakan paket {$latest->package->name}.");
         }
 
+        $isTrial = $package->isTrial();
+        $trialNeedsConfirmation = $isTrial && (bool) Setting::get('trial_requires_confirmation', '0');
+
         $userPackage = UserPackage::create([
             'user_id' => $request->user()->id,
             'package_id' => $package->id,
-            'type' => $package->isTrial() ? 'trial' : 'paid',
-            'status' => $package->isTrial() ? 'active' : 'pending',
-            'trial_ends_at' => $package->isTrial() ? Carbon::now()->addMonth() : null,
+            'type' => $isTrial ? 'trial' : 'paid',
+            'status' => $trialNeedsConfirmation ? 'pending' : ($isTrial ? 'active' : 'pending'),
+            'trial_ends_at' => $isTrial ? Carbon::now()->addMonth() : null,
         ]);
+
+        if ($trialNeedsConfirmation) {
+            return redirect()->route('dashboard')
+                ->with('info', "Paket trial {$package->name} menunggu konfirmasi admin. Anda akan dapat mengakses layanan setelah dikonfirmasi.");
+        }
 
         if ($userPackage->status === 'pending') {
             return redirect()->route('packages.payment', $userPackage)

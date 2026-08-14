@@ -140,7 +140,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label for="password" class="block text-sm font-semibold text-[#071833]">Password</label>
-                            <a href="#"
+                            <a href="{{ route('password.request') }}"
                                 class="text-xs font-semibold text-[#c99a3e] hover:text-[#8c6a25] transition">Forgot
                                 password?</a>
                         </div>

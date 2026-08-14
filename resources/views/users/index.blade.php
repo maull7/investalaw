@@ -54,7 +54,11 @@
                             <th>Permissions</th>
                             <th>Token</th>
                             <th>Kak Vesta</th>
+                            <th>Durasi Aktif</th>
                             <th>Dibuat</th>
+                            @if(request('search'))
+                                <th>Aktivitas</th>
+                            @endif
                             <th class="text-right">Aksi</th>
                         </tr>
                     </thead>
@@ -131,7 +135,26 @@
                                         <span class="text-[#b0b8c5]">-</span>
                                     @endif
                                 </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @if ($user->activeMinutes())
+                                        {{ $user->activeMinutes() }} mnt
+                                    @else
+                                        <span class="text-[#b0b8c5]">-</span>
+                                    @endif
+                                </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">{{ $user->created_at->format('d M Y H:i') }}</td>
+                                @if(request('search'))
+                                    <td class="text-xs text-[#667085]">
+                                        @forelse($user->activityLogs as $log)
+                                            <div class="py-0.5">
+                                                <span class="font-semibold text-[#071833] uppercase">{{ $log->action }}</span>
+                                                — {{ $log->description }}
+                                            </div>
+                                        @empty
+                                            <span class="text-[#b0b8c5]">-</span>
+                                        @endforelse
+                                    </td>
+                                @endif
                                 <td>
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('users.show', $user) }}" class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-[#667085] hover:bg-[#f6f8fb] transition" title="Logs">

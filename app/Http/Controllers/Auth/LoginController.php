@@ -36,6 +36,8 @@ class LoginController extends Controller
                 }
             }
 
+            $user->update(['last_login_at' => now()]);
+
             $request->session()->regenerate();
 
             return redirect()->intended(route('dashboard'));
@@ -48,6 +50,12 @@ class LoginController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        // ponytail: sessio only counts on explicit logout; browser-close is lost
+        if (($user = $request->user()) && $user->last_login_at) {
+            $user->increment('total_active_minutes', $user->last_login_at->diffInMinutes(now()));
+            $user->update(['last_login_at' => null]);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

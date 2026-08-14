@@ -33,13 +33,13 @@ use App\Models\ReviewDocument;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::get('/landing-page', function () {
     $packages = Package::where('is_active', true)->orderBy('sort')->orderBy('id')->get();
 
     return view('index', compact('packages'));
 })->name('index');
 
-Route::get('/index-dashboard', [DashboardController::class, 'landing'])->name('index-dash');
+Route::get('/', [DashboardController::class, 'landing'])->name('index-dash');
 
 Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
     ->name('legal-necessities.store')

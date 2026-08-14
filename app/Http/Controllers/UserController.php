@@ -23,7 +23,10 @@ class UserController extends Controller
     {
         $users = User::query()
             ->with(['userPackages' => fn ($q) => $q->where('type', 'trial')->with('package')->latest()])
-            ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
+            ->when($request->search, fn ($q, $search) => $q->where(function ($q) use ($search) {
+                $q->whereAny(['name', 'email'], 'like', "%{$search}%")
+                    ->orWhereHas('activityLogs', fn ($q) => $q->whereAny(['action', 'description'], 'like', "%{$search}%"));
+            })->with(['activityLogs' => fn ($q) => $q->whereAny(['action', 'description'], 'like', "%{$search}%")->latest()->limit(3)]))
             ->latest()
             ->paginate(20);
 

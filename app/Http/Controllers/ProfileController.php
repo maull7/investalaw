@@ -21,7 +21,12 @@ class ProfileController extends Controller
             ->latest()
             ->first();
 
-        return view('profile.edit', compact('packages', 'activeUserPackage'));
+        $purchaseHistory = request()->user()->userPackages()
+            ->with('package')
+            ->latest()
+            ->get();
+
+        return view('profile.edit', compact('packages', 'activeUserPackage', 'purchaseHistory'));
     }
 
     public function update(ProfileRequest $request): RedirectResponse

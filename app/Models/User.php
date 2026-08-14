@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'permissions', 'institution', 'position', 'province', 'phone'])]
+#[Fillable(['name', 'email', 'password', 'role', 'permissions', 'institution', 'position', 'province', 'phone', 'last_login_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -101,6 +101,18 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Total menit aktif, termasuk sesi yang sedang berjalan (sejak last_login_at).
+     */
+    public function activeMinutes(): int
+    {
+        $running = $this->last_login_at
+            ? max(0, (int) $this->last_login_at->diffInMinutes(now()))
+            : 0;
+
+        return $this->total_active_minutes + $running;
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -109,6 +121,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at' => 'datetime',
             'password' => 'hashed',
             'permissions' => 'array',
         ];

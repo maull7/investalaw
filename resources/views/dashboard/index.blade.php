@@ -98,7 +98,7 @@
                 <div class="flex flex-wrap gap-3 justify-between items-center">
                     <div>
                         <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkini</h3>
-                        <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang diundangkan</p>
+                        <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang ditetapkan</p>
                     </div>
                     <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
                         Semua Regulasi

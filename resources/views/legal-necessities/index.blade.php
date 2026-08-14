@@ -36,7 +36,26 @@
                             <td class="py-3.5 px-4 text-[#667085] capitalize">{{ ucwords(str_replace('_', ' ', $request->legal_activities ?? '')) ?: '-' }}</td>
                             <td class="py-3.5 px-4 text-[#667085] capitalize">{{ ucwords(str_replace('_', ' ', $request->status_company ?? '')) ?: '-' }}</td>
                             <td class="py-3.5 px-4 text-[#667085]">{{ $request->value_trx ?? '-' }}</td>
-                            <td class="py-3.5 px-4 text-[#667085] max-w-xs truncate">{{ $request->message ?? '-' }}</td>
+                            <td class="py-3.5 px-4 text-[#667085] max-w-xs">
+                                        <div x-data="{ expanded: false, overflowing: false }" x-ref="wrap">
+                                            <div
+                                                x-ref="msg"
+                                                x-init="overflowing = $refs.msg.scrollHeight > $refs.msg.clientHeight"
+                                                class="whitespace-pre-line break-words"
+                                                :class="expanded ? '' : 'line-clamp-5'"
+                                                title="{{ $request->message }}">
+                                                {{ $request->message ?? '-' }}
+                                            </div>
+                                            <template x-if="overflowing || expanded">
+                                                <button
+                                                    type="button"
+                                                    @click="expanded = !expanded"
+                                                    class="mt-1 text-xs font-semibold text-[#c99a3e] hover:underline"
+                                                    x-text="expanded ? 'Tutup' : 'Lihat semua'">
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </td>
                             <td class="py-3.5 px-4 text-[#667085]">{{ $request->created_at->diffForHumans() }}</td>
                         </tr>
                     @empty

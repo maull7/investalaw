@@ -421,30 +421,36 @@
                     this.documents.splice(index, 1);
                 },
 
-                async submitForm(event) {
+                submitForm(event) {
                     if (this.submitting) return;
                     this.submitting = true;
 
                     const form = event.target;
-                    const formData = new FormData(form);
+                    const existing = form.querySelectorAll('[name^="documents"]');
+                    existing.forEach(el => el.remove());
 
                     this.documents.forEach((doc, i) => {
-                        formData.set(`documents[${i}][name]`, doc.name);
-                        formData.set(`documents[${i}][document_type]`, doc.document_type);
-                        formData.append(`documents[${i}][file]`, doc.file);
+                        const name = document.createElement('input');
+                        name.type = 'hidden';
+                        name.name = `documents[${i}][name]`;
+                        name.value = doc.name;
+                        const type = document.createElement('input');
+                        type.type = 'hidden';
+                        type.name = `documents[${i}][document_type]`;
+                        type.value = doc.document_type;
+                        form.appendChild(name);
+                        form.appendChild(type);
+
+                        const file = document.createElement('input');
+                        file.type = 'file';
+                        file.name = `documents[${i}][file]`;
+                        const dt = new DataTransfer();
+                        dt.items.add(doc.file);
+                        file.files = dt.files;
+                        form.appendChild(file);
                     });
 
-                    try {
-                        const response = await fetch(form.action, {
-                            method: form.method,
-                            body: formData,
-                        });
-
-                        this.submitting = false;
-                        window.location.href = response.url;
-                    } catch (e) {
-                        this.submitting = false;
-                    }
+                    form.submit();
                 },
 
                 updateSubCategories(categoryId) {

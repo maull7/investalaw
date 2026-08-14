@@ -214,4 +214,66 @@
             </div>
         </x-card>
     </form>
+
+    @if ($purchaseHistory->isNotEmpty())
+        <x-card :padding="false" class="mt-6">
+            <x-slot name="header">
+                <div>
+                    <h3 class="text-lg font-bold text-[#071833]">Riwayat Pembelian Paket</h3>
+                    <p class="text-xs text-[#667085] mt-0.5">Daftar seluruh paket yang pernah Anda pilih / beli.</p>
+                </div>
+            </x-slot>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-[#e7eaf0]">
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Paket</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tipe</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Harga</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Status</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#e7eaf0]">
+                        @foreach ($purchaseHistory as $purchase)
+                            <tr class="hover:bg-[#f6f8fb] transition">
+                                <td class="py-3.5 px-4 font-semibold text-[#071833]">{{ $purchase->package?->name ?? '-' }}</td>
+                                <td class="py-3.5 px-4">
+                                    @if ($purchase->type === 'trial')
+                                        <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-700">Trial</span>
+                                    @else
+                                        <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-sky-100 text-sky-700">Berbayar</span>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4 text-[#667085]">
+                                    @if ($purchase->type === 'trial')
+                                        Free
+                                    @else
+                                        Rp{{ $purchase->package?->price ?? '-' }} <span class="text-[#b0b8c5]">{{ $purchase->package?->price_period }}</span>
+                                    @endif
+                                </td>
+                                <td class="py-3.5 px-4">
+                                    @php
+                                        $statusColor = match ($purchase->status) {
+                                            'active' => 'bg-emerald-100 text-emerald-700',
+                                            'pending' => 'bg-amber-100 text-amber-700',
+                                            'confirmed' => 'bg-blue-100 text-blue-700',
+                                            'expired' => 'bg-gray-100 text-gray-600',
+                                            'cancelled' => 'bg-rose-100 text-rose-600',
+                                            default => 'bg-gray-100 text-gray-600',
+                                        };
+                                    @endphp
+                                    <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full {{ $statusColor }}">
+                                        {{ $purchase->status }}
+                                    </span>
+                                </td>
+                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->created_at->format('d M Y H:i') }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </x-card>
+    @endif
 @endsection

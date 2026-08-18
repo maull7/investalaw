@@ -118,12 +118,41 @@ class UserController extends Controller
     public function userFromRegister(Request $request): View
     {
         $users = User::query()
+            ->with(['userPackages' => fn ($q) => $q->with('package')->latest()])
             ->when($request->search, fn ($q, $search) => $q->whereAny(['name', 'email'], 'like', "%{$search}%"))
             ->where('role', 'user')
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        return view('users.from-register', compact('users'));
+        $usages = TokenUsage::where('date', today()->toDateString())
+            ->whereIn('user_id', $users->pluck('id'))
+            ->groupBy('user_id')
+            ->selectRaw('user_id, SUM(tokens_used) as total')
+            ->pluck('total', 'user_id');
+
+        $dailyLimit = (int) app(TokenLimitService::class)->dailyLimit();
+
+        return view('users.from-register', compact('users', 'usages', 'dailyLimit'));
+    }
+
+    public function toggleActive(User $user): RedirectResponse
+    {
+        if ($user->id === auth()->id()) {
+            return redirect()->route('manage.users.from-register')
+                ->with('error', 'Tidak dapat menonaktifkan akun sendiri.');
+        }
+
+        $user->update(['is_active' => ! $user->is_active]);
+
+        UserActivityLog::log(
+            'updated',
+            User::class,
+            $user->id,
+            ($user->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." user {$user->name}"
+        );
+
+        return redirect()->route('manage.users.from-register')
+            ->with('success', "User {$user->name} berhasil ".($user->is_active ? 'diaktifkan' : 'dinonaktifkan').'.');
     }
 }

@@ -20,7 +20,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -42,7 +42,9 @@ class DashboardController extends Controller
             ->get();
 
         $regulationRelated = RegulationRelatedReference::with('regulation')
-            ->latest()
+            ->join('regulations', 'regulations.id', '=', 'regulation_related_references.regulation_id')
+            ->orderByDesc('regulations.tanggal_tetapkan')
+            ->select('regulation_related_references.*')
             ->take(5)
             ->get();
 
@@ -58,7 +60,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {

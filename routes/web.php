@@ -147,6 +147,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 
     // Regulations browsing (accessible by all authenticated roles)
     Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
+    Route::get('/regulations/ai-search', [RegulationController::class, 'aiSearch'])->name('regulations.ai-search')->middleware('throttle:5,1');
     Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
     Route::get('/regulations/create', [RegulationController::class, 'create'])->name('regulations.create');
     Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');
@@ -208,6 +209,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 
         Route::get('users/register', [UserController::class, 'userFromRegister'])->name('manage.users.from-register');
         Route::resource('users', UserController::class);
+        Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
 
         Route::resource('ai-prompts', AiPromptController::class);
         Route::resource('type-prompts', TypePromptController::class);

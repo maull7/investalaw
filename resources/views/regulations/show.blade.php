@@ -864,14 +864,14 @@
                             </div>
                         </div>
                     </a>
-                    <a href="{{ route('regulations.file-raw', $regulation) }}" download
+                    {{-- <a href="{{ route('regulations.file-raw', $regulation) }}" download
                         class="mt-3 flex items-center justify-center gap-2 w-full h-11 rounded-xl bg-[#f6f8fb] text-sm font-semibold text-[#071833] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                         </svg>
                         Download PDF
-                    </a>
+                    </a> --}}
                 </x-card>
 
                 {{-- Actions --}}
@@ -1131,7 +1131,7 @@
                     try {
                         const res = await fetch(url, {
                             method: 'POST',
-                        credentials: 'same-origin',
+                            credentials: 'same-origin',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',

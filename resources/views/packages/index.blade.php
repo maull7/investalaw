@@ -21,6 +21,7 @@
                     <tr class="border-b border-[#e7eaf0]">
                         <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Nama</th>
                         <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Harga</th>
+                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Kuota Kak Vesta</th>
                         <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Benefit</th>
                         <th class="text-center py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Populer</th>
                         <th class="text-center py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Status</th>
@@ -34,6 +35,14 @@
                             <td class="py-3.5 px-4">
                                 <span class="font-bold text-[#071833]">Rp{{ $package->price }}</span>
                                 <span class="text-xs text-[#667085]">{{ $package->price_period }}</span>
+                            </td>
+                            <td class="py-3.5 px-4">
+                                @if ($package->kak_vesta_tokens)
+                                    <span class="font-semibold text-[#071833]">{{ number_format($package->kak_vesta_tokens) }}</span>
+                                    <span class="text-xs text-[#667085]">token AI</span>
+                                @else
+                                    <span class="text-xs text-[#b0b8c5]">-</span>
+                                @endif
                             </td>
                             <td class="py-3.5 px-4 text-[#667085] max-w-xs truncate">
                                 {{ implode(' | ', $package->benefits ?? []) ?: '-' }}
@@ -74,7 +83,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="py-10 text-center text-sm text-[#667085]">Belum ada paket. Tambahkan paket baru.</td>
+                            <td colspan="7" class="py-10 text-center text-sm text-[#667085]">Belum ada paket. Tambahkan paket baru.</td>
                         </tr>
                     @endforelse
                 </tbody>

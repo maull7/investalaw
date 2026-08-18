@@ -232,7 +232,8 @@
                             <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tipe</th>
                             <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Harga</th>
                             <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Status</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Mulai</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Berakhir</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#e7eaf0]">
@@ -268,7 +269,8 @@
                                         {{ $purchase->status }}
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->created_at->format('d M Y H:i') }}</td>
+                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->startsAt()?->format('d M Y') ?? '-' }}</td>
+                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->endsAt()?->format('d M Y') ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>

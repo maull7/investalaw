@@ -3,11 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\ReviewStatus;
+use App\Models\Package;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
 use App\Models\RegulationType;
 use App\Models\ReviewDocument;
 use App\Models\User;
+use App\Models\UserPackage;
 use App\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
@@ -348,5 +350,76 @@ class UserAccountTest extends TestCase
 
         $this->actingAs($user)->get(route('regulations.index'))->assertOk()
             ->assertSee('Regulasi Terbuka');
+    }
+
+    public function test_inactive_user_cannot_login(): void
+    {
+        $user = User::factory()->create(['role' => 'user', 'is_active' => false]);
+
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertSessionHasErrors('email');
+
+        $this->assertGuest();
+    }
+
+    public function test_admin_can_toggle_user_active(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($admin)
+            ->post(route('users.toggle-active', $user))
+            ->assertRedirect(route('manage.users.from-register'));
+
+        $this->assertFalse($user->fresh()->is_active);
+
+        $this->actingAs($admin)
+            ->post(route('users.toggle-active', $user));
+
+        $this->assertTrue($user->fresh()->is_active);
+    }
+
+    public function test_manage_registrant_shows_token_kak_vesta_and_durasi_aktif(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(['role' => 'user']);
+
+        $this->actingAs($admin)
+            ->get(route('manage.users.from-register'))
+            ->assertOk()
+            ->assertSee('Token')
+            ->assertSee('Kak Vesta')
+            ->assertSee('Durasi Aktif')
+            ->assertSee('Mulai')
+            ->assertSee('Berakhir');
+    }
+
+    public function test_manage_registrant_shows_package_dates(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'user']);
+
+        $trial = Package::create([
+            'name' => 'Free Trial',
+            'price' => '0',
+            'price_period' => '/bulan',
+            'benefits' => [],
+        ]);
+
+        $endsAt = now()->addDays(10);
+        UserPackage::create([
+            'user_id' => $user->id,
+            'package_id' => $trial->id,
+            'type' => 'trial',
+            'status' => 'active',
+            'trial_ends_at' => $endsAt,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('manage.users.from-register'))
+            ->assertOk()
+            ->assertSee($endsAt->format('d M Y'));
     }
 }

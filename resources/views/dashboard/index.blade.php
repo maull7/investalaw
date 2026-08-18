@@ -91,75 +91,185 @@
         </div>
     </section>
 
-    {{-- Peraturan Terkini --}}
-    @if ($latestRegulations->isNotEmpty())
-        <x-card :padding="false" class="mt-7">
-            <x-slot name="header">
-                <div class="flex flex-wrap gap-3 justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkini</h3>
-                        <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang ditetapkan</p>
-                    </div>
-                    <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
-                        Semua Regulasi
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                    </x-button>
-                </div>
-            </x-slot>
-
-            <div class="overflow-x-auto">
-                <table class="table-premium">
-                    <thead>
-                        <tr>
-                            <th class="text-left">No. Regulasi</th>
-                            <th class="text-left">Judul</th>
-                            <th class="text-center">Jenis</th>
-                            <th class="text-center">Kategori</th>
-                            <th class="text-center">Tahun</th>
-                            <th class="text-right">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($latestRegulations as $reg)
-                            <tr>
-                                <td>
-                                    <a href="{{ route('regulations.show', $reg) }}"
-                                        class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
-                                </td>
-                                <td>
-                                    <a href="{{ route('regulations.show', $reg) }}"
-                                        class="text-sm font-medium text-[#071833] hover:text-[#c99a3e] transition line-clamp-2">{{ $reg->title }}</a>
-                                </td>
-                                <td class="text-center">
-                                    @if ($reg->type)
-                                        <x-badge :color="$reg->type->levelBadgeColor()">{{ $reg->type->name }}</x-badge>
-                                    @else
-                                        <span class="text-xs text-[#667085]">-</span>
-                                    @endif
-                                </td>
-                                <td class="text-center text-sm text-[#667085]">{{ $reg->category?->name ?? '-' }}</td>
-                                <td class="text-center">
-                                    <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
-                                </td>
-                                <td class="text-right">
-                                    <a href="{{ route('regulations.show', $reg) }}"
-                                        class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
-                                        Detail
-                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                            stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                        </svg>
-                                    </a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+    {{-- Pencarian Menu --}}
+    <x-card-non-overflow class="overflow-visible" x-data="{
+        open: false,
+        query: '',
+        highlight: 0,
+        menuItems: [],
+    
+        init() {
+            this.$nextTick(() => {
+                this.refreshMenu();
+                // Fallback: sidebar might render later
+                setTimeout(() => this.refreshMenu(), 100);
+                setTimeout(() => this.refreshMenu(), 500);
+            });
+            document.addEventListener('keydown', (e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                    e.preventDefault();
+                    this.$refs.input?.focus();
+                    this.open = true;
+                }
+            });
+            // Refresh on focus as last resort
+            this.$refs.input?.addEventListener?.('focus', () => this.refreshMenu());
+        },
+    
+        refreshMenu() {
+            const seen = new Set();
+            const links = document.querySelectorAll('aside nav a[href], aside ul li a[href]');
+            this.menuItems = [...links]
+                .map(a => ({ label: (a.textContent || '').replace(/\s+/g, ' ').trim(), href: a.href }))
+                .filter(item => item.label && !seen.has(item.href) && seen.add(item.href));
+        },
+    
+        get results() {
+            const tokens = (this.query || '').match(/[a-z0-9]+/gi) || [];
+            const list = tokens.length === 0 ?
+                this.menuItems :
+                this.menuItems.filter(m => {
+                    const key = m.label.toLowerCase().replace(/[^a-z0-9]+/g, '');
+                    return tokens.every(t => key.includes(t));
+                });
+            const out = list.slice(0, 10);
+            if (this.highlight > out.length - 1) this.highlight = 0;
+            return out;
+        },
+    
+        move(dir) {
+            const n = this.results.length;
+            if (!n) return;
+            this.highlight = (this.highlight + dir + n) % n;
+        },
+    
+        positionDropdown() {},
+    
+        go(index) {
+            const item = this.results[index];
+            if (item) location.href = item.href;
+        },
+    }" class="mt-6">
+        <x-slot name="header">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-bold text-[#071833]">Pencarian Menu</h3>
+                <span class="px-2.5 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">⌘K</span>
             </div>
+        </x-slot>
+        <div class="relative">
+            <input x-ref="input" type="search" x-model="query" @focus="open = true; positionDropdown()"
+                @input="highlight = 0; positionDropdown()" @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                @keydown.enter.prevent="go(highlight)" @keydown.esc="open = false; $event.target.blur()"
+                placeholder="Ketik untuk pindah menu… (⌘K)"
+                class="w-full h-11 pl-11 pr-14 rounded-2xl bg-[#f6f8fb] border border-transparent text-sm placeholder:text-[#667085] text-[#071833] focus:outline-none focus:bg-white focus:border-[#c99a3e]/60 focus:ring-4 focus:ring-[#c99a3e]/15 transition">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-[#667085]">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="m21 21-4.3-4.3M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
+                </svg>
+            </span>
+
+            <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0" x-ref="dropdown"
+                class="absolute z-50 mt-2 w-full bg-white rounded-2xl shadow-[0_18px_50px_rgba(7,27,58,.18)] ring-1 ring-[#e7eaf0] overflow-hidden">
+                <div class="px-4 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#667085]">
+                    Pindah ke menu
+                </div>
+                <template x-if="results.length">
+                    <div class="pb-2">
+                        <template x-for="(m, i) in results" :key="m.href">
+                            <a :href="m.href"
+                                :class="i === highlight ? 'bg-[#f6f8fb] ring-1 ring-[#c99a3e]/40' : ''"
+                                class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#071833] hover:bg-[#f6f8fb] transition">
+                                <svg class="w-4 h-4 shrink-0 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                </svg>
+                                <span x-text="m.label" class="truncate"></span>
+                            </a>
+                        </template>
+                    </div>
+                </template>
+                <div x-show="!results.length" class="px-4 py-3 text-sm text-[#667085]">
+                    Tidak ada menu yang cocok.
+                </div>
+            </div>
+        </div>
         </x-card>
+
+        @if ($latestRegulations->isNotEmpty())
+            <x-card :padding="false" class="mt-7">
+                <x-slot name="header">
+                    <div class="flex flex-wrap gap-3 justify-between items-center">
+                        <div>
+                            <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkini</h3>
+                            <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang ditetapkan</p>
+                        </div>
+                        <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
+                            Semua Regulasi
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                            </svg>
+                        </x-button>
+                    </div>
+                </x-slot>
+
+                <div class="overflow-x-auto">
+                    <table class="table-premium">
+                        <thead>
+                            <tr>
+                                <th class="text-left">No. Regulasi</th>
+                                <th class="text-left">Judul</th>
+                                <th class="text-center">Jenis</th>
+                                <th class="text-center">Kategori</th>
+                                <th class="text-center">Tahun</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($latestRegulations as $reg)
+                                <tr>
+                                    <td>
+                                        <a href="{{ route('regulations.show', $reg) }}"
+                                            class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('regulations.show', $reg) }}"
+                                            class="text-sm font-medium text-[#071833] hover:text-[#c99a3e] transition line-clamp-2">{{ $reg->title }}</a>
+                                    </td>
+                                    <td class="text-center">
+                                        @if ($reg->type)
+                                            <x-badge :color="$reg->type->levelBadgeColor()">{{ $reg->type->name }}</x-badge>
+                                        @else
+                                            <span class="text-xs text-[#667085]">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center text-sm text-[#667085]">{{ $reg->category?->name ?? '-' }}</td>
+                                    <td class="text-center">
+                                        <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
+                                    </td>
+                                    <td class="text-right">
+                                        <a href="{{ route('regulations.show', $reg) }}"
+                                            class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                                            Detail
+                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                                                stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                            </svg>
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+    </x-card-non-overflow>
     @endif
 
     {{-- Peraturan Terkait --}}

@@ -28,22 +28,56 @@
             </div>
 
             {{-- Center: Search --}}
-            <div class="hidden md:flex flex-1 max-w-md">
-                <label class="relative w-full">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-[#667085]">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="m21 21-4.3-4.3M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
-                        </svg>
-                    </span>
-                    <input type="search" placeholder="Search documents, regulations, reviews…"
-                        class="w-full h-11 pl-11 pr-14 rounded-2xl bg-[#f6f8fb] border border-transparent text-sm placeholder:text-[#667085] text-[#071833] focus:outline-none focus:bg-white focus:border-[#c99a3e]/60 focus:ring-4 focus:ring-[#c99a3e]/15 transition">
-                    <span class="absolute inset-y-0 right-0 hidden lg:flex items-center pr-3">
-                        <kbd
-                            class="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border border-[#e7eaf0] bg-white text-[#667085]">⌘
-                            K</kbd>
-                    </span>
-                </label>
+            <div class="hidden md:flex flex-1 max-w-md" x-data="searchMenu()" @click.outside="open = false">
+                <div class="relative w-full">
+                    <label class="relative block">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-[#667085]">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="m21 21-4.3-4.3M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0Z" />
+                            </svg>
+                        </span>
+                        <input x-ref="input" type="search" x-model="query" @focus="open = true" @input="highlight = 0"
+                            @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
+                            @keydown.enter.prevent="go(highlight)" @keydown.esc="open = false; $event.target.blur()"
+                            placeholder="Cari menu… (⌘K)"
+                            class="w-full h-11 pl-11 pr-14 rounded-2xl bg-[#f6f8fb] border border-transparent text-sm placeholder:text-[#667085] text-[#071833] focus:outline-none focus:bg-white focus:border-[#c99a3e]/60 focus:ring-4 focus:ring-[#c99a3e]/15 transition">
+                        <span class="absolute inset-y-0 right-0 hidden lg:flex items-center pr-3">
+                            <kbd
+                                class="px-1.5 py-0.5 text-[10px] font-semibold rounded-md border border-[#e7eaf0] bg-white text-[#667085]">⌘
+                                K</kbd>
+                        </span>
+                    </label>
+
+                    <div x-show="open" x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-75"
+                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                        class="absolute z-50 mt-2 w-full bg-white rounded-2xl shadow-[0_18px_50px_rgba(7,27,58,.18)] ring-1 ring-[#e7eaf0] overflow-hidden">
+                        <div class="px-4 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-[#667085]">
+                            Pindah ke menu
+                        </div>
+                        <template x-if="results.length">
+                            <div class="pb-2">
+                                <template x-for="(m, i) in results" :key="m.href">
+                                    <a :href="m.href"
+                                        :class="i === highlight ? 'bg-[#f6f8fb] ring-1 ring-[#c99a3e]/40' : ''"
+                                        class="flex items-center gap-3 px-4 py-2.5 text-sm text-[#071833] hover:bg-[#f6f8fb] transition">
+                                        <svg class="w-4 h-4 shrink-0 text-[#c99a3e]" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                        </svg>
+                                        <span x-text="m.label" class="truncate"></span>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+                        <div x-show="!results.length" class="px-4 py-3 text-sm text-[#667085]">
+                            Tidak ada menu yang cocok.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {{-- Right: Actions --}}
@@ -159,3 +193,58 @@
         </div>
     </div>
 </header>
+
+@push('scripts')
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('searchMenu', () => ({
+            open: false,
+            query: '',
+            highlight: 0,
+            menuItems: [],
+
+            init() {
+                this.refreshMenu();
+                document.addEventListener('keydown', (e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+                        e.preventDefault();
+                        this.$refs.input?.focus();
+                        this.open = true;
+                    }
+                });
+            },
+
+            refreshMenu() {
+                const seen = new Set();
+                this.menuItems = [...document.querySelectorAll('aside nav a[href]')]
+                    .map(a => ({ label: (a.textContent || '').replace(/\s+/g, ' ').trim(), href: a.href }))
+                    .filter(item => item.label && !seen.has(item.href) && seen.add(item.href));
+            },
+
+            get results() {
+                const tokens = (this.query || '').match(/[a-z0-9]+/gi) || [];
+                const list = tokens.length === 0
+                    ? this.menuItems
+                    : this.menuItems.filter(m => {
+                        const key = m.label.toLowerCase().replace(/[^a-z0-9]+/g, '');
+                        return tokens.every(t => key.includes(t));
+                    });
+                const out = list.slice(0, 10);
+                if (this.highlight > out.length - 1) this.highlight = 0;
+                return out;
+            },
+
+            move(dir) {
+                const n = this.results.length;
+                if (!n) return;
+                this.highlight = (this.highlight + dir + n) % n;
+            },
+
+            go(index) {
+                const item = this.results[index];
+                if (item) location.href = item.href;
+            },
+        }));
+    });
+</script>
+@endpush

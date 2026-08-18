@@ -24,6 +24,13 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = $request->user();
+            if (! $user->is_active) {
+                Auth::logout();
+
+                return back()
+                    ->withInput($request->only('email', 'remember'))
+                    ->withErrors(['email' => 'Akun Anda sedang nonaktif. Silakan hubungi admin.']);
+            }
             if ($user->role == 'user') {
                 if (! $user->hasVerifiedEmail() && $user->role === 'user') {
                     Auth::logout();

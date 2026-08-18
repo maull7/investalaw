@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AiPrompt;
 use App\Models\AiSummary;
+use App\Models\DocumentBabAnalysis;
 use App\Models\DocumentParsedText;
 use App\Models\ReviewDocument;
 use App\Services\AiService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -67,8 +69,15 @@ class AiPreviewController extends Controller
 
         $babs = $this->splitTextToBabs($text);
 
+        $saved = DocumentBabAnalysis::where('review_document_id', $reviewDocument->id)
+            ->get()
+            ->keyBy('bab_index');
+
         return response()->json([
-            'babs' => array_map(fn ($b) => ['label' => $b['label']], $babs),
+            'babs' => array_map(fn ($b, $index) => [
+                'label' => $b['label'],
+                ...($saved->has($index) ? ['result' => $saved->get($index)->result] : []),
+            ], $babs, array_keys($babs)),
         ]);
     }
 
@@ -206,6 +215,14 @@ PROMPT;
         }
         $regBlock = $regTexts ? "\n\nREGULASI ACUAN:\n".implode("\n\n", $regTexts) : '';
 
+        $pembandingList = '';
+        if ($reviewDocument->regulations->isNotEmpty()) {
+            $pembandingList = "\n\nDAFTAR REGULASI PEMBANDING — HANYA daftar ini yang boleh muncul di referensi:\n";
+            foreach ($reviewDocument->regulations as $i => $reg) {
+                $pembandingList .= ($i + 1).'. '.$reg->regulation_number.($reg->year ? " ({$reg->year})" : '')."\n";
+            }
+        }
+
         $providers = [
             'openai' => [
                 'api_key' => config('ai.openai.api_key'),
@@ -222,6 +239,9 @@ BAB: {$babLabel}
 Konten BAB:
 {$babText}
 {$regBlock}
+{$pembandingList}
+
+referenced_regulations hanya boleh berisi peraturan dari DAFTAR REGULASI PEMBANDING di atas. Abaikan peraturan lain yang disebut di luar daftar tersebut.
 
 Berikan analisis JSON dengan format:
 {
@@ -238,7 +258,8 @@ Berikan analisis JSON dengan format:
       "name": "nama peraturan",
       "number": "nomor",
       "year": tahun,
-      "relationship": "diubah|dicabut|dirujuk|disebut"
+      "relationship": "diubah|dicabut|dirujuk|disebut",
+      "pasal": ["Pasal X", "Pasal Y ayat (z)"]
     }
   ],
   "insights": "analisis perbandingan bab ini dengan regulasi acuan: kesesuaian, perbedaan, atau celah",
@@ -288,16 +309,59 @@ PROMPT;
             }
         }
 
-        return response()->json([
+        $references = $this->filterPembandingReferences($result['referenced_regulations'] ?? [], $reviewDocument->regulations);
+
+        $payload = [
             'label' => $babLabel,
             'pasal_count' => count($result['pasal_structure'] ?? []),
-            'ref_count' => count($result['referenced_regulations'] ?? []),
+            'ref_count' => count($references),
             'pasal' => $result['pasal_structure'] ?? [],
-            'references' => $result['referenced_regulations'] ?? [],
+            'references' => $references,
             'insights' => $result['insights'] ?? null,
             'compliance_assessment' => $result['compliance_assessment'] ?? null,
             'key_findings' => $result['key_findings'] ?? [],
-        ]);
+        ];
+
+        DocumentBabAnalysis::updateOrCreate(
+            ['review_document_id' => $reviewDocument->id, 'bab_index' => $index],
+            ['label' => $babLabel, 'result' => $payload]
+        );
+
+        return response()->json($payload);
+    }
+
+    // ponytail: fuzzy best-effort match; prompt whitelist does the heavy lifting, this drops wildcards
+    private function filterPembandingReferences(array $references, Collection $regulations): array
+    {
+        return array_values(array_filter($references, function ($ref) use ($regulations) {
+            $refName = $this->normalizeKey($ref['name'] ?? '');
+            $refNumber = $this->normalizeKey($ref['number'] ?? '');
+            $refYear = (int) ($ref['year'] ?? 0);
+
+            foreach ($regulations as $reg) {
+                $regName = $this->normalizeKey($reg->regulation_number ?? '');
+                $regTitle = $this->normalizeKey($reg->title ?? '');
+
+                $matches = ($refName !== '' && ($refName === $regName || str_contains($regName, $refName) || str_contains($refName, $regName)))
+                    || ($refName !== '' && $regTitle !== '' && str_contains($regTitle, $refName))
+                    || ($refNumber !== '' && $refNumber === $regName);
+
+                if (! $matches) {
+                    continue;
+                }
+
+                $regYear = (int) ($reg->year ?? 0);
+
+                return $refYear === 0 || $regYear === 0 || $regYear === $refYear;
+            }
+
+            return false;
+        }));
+    }
+
+    private function normalizeKey(string $value): string
+    {
+        return mb_strtolower(preg_replace('/[^a-zA-Z0-9]/u', '', $value) ?? '');
     }
 
     private function splitTextToBabs(string $text): array

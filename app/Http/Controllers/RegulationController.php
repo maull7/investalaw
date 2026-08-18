@@ -16,6 +16,7 @@ use App\Models\RegulationChatMessage;
 use App\Models\RegulationDocument;
 use App\Models\UserActivityLog;
 use App\Repositories\RegulationRepository;
+use App\Services\AiService;
 use App\Services\RegulationAnalysisService;
 use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,7 @@ class RegulationController extends Controller
         private readonly RegulationRepository $regulationRepository,
         private readonly RegulationParserService $regulationParserService,
         private readonly RegulationAnalysisService $regulationAnalysisService,
+        private readonly AiService $aiService,
     ) {}
 
     public function index(Request $request): View
@@ -316,6 +318,37 @@ class RegulationController extends Controller
             'year' => $r->year,
             'type_name' => $r->type?->name,
         ]));
+    }
+
+    public function aiSearch(Request $request): View|RedirectResponse
+    {
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+        $query = trim($validated['q']);
+
+        try {
+            $matches = $this->aiService->searchRegulations($query);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->route('regulations.index')
+                ->with('error', 'Pencarian AI gagal. Coba lagi beberapa saat.');
+        }
+
+        $results = Regulation::with('type')
+            ->whereIn('id', array_keys($matches))
+            ->get()
+            ->sortBy(fn ($reg) => (int) array_search($reg->id, array_keys($matches)))
+            ->values()
+            ->map(function (Regulation $reg) use ($matches, $query) {
+                $reg->ai_reason = $matches[$reg->id];
+                $reg->ai_snippet = $this->regulationRepository->buildSnippet($reg->parsed_text ?? '', $query);
+
+                return $reg;
+            });
+
+        return view('regulations.ai-search', compact('query', 'results'));
     }
 
     public function uploadDocument(Request $request, Regulation $regulation): RedirectResponse

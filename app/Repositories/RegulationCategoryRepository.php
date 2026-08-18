@@ -13,6 +13,11 @@ class RegulationCategoryRepository
         return RegulationCategory::withCount('files')->get();
     }
 
+    public function investalawCo(): Collection
+    {
+        return RegulationCategory::where('sector_id', 1)->get();
+    }
+
     public function findById(int $id): RegulationCategory
     {
         return RegulationCategory::with('files')->findOrFail($id);

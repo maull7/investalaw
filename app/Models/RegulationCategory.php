@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['name', 'description'])]
+#[Fillable(['name', 'description', 'sector_id'])]
 class RegulationCategory extends Model
 {
     use HasFactory, SoftDeletes;

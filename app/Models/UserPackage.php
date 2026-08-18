@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 class UserPackage extends Model
 {
@@ -26,5 +27,32 @@ class UserPackage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function startsAt(): ?Carbon
+    {
+        if ($this->type === 'trial') {
+            return $this->created_at;
+        }
+
+        $runningTrial = UserPackage::query()
+            ->where('user_id', $this->user_id)
+            ->where('type', 'trial')
+            ->where('status', 'active')
+            ->where('id', '<', $this->id)
+            ->where('trial_ends_at', '>', $this->created_at)
+            ->latest('id')
+            ->first();
+
+        return $runningTrial
+            ? $runningTrial->trial_ends_at->copy()->addDay()
+            : $this->confirmed_at;
+    }
+
+    public function endsAt(): ?Carbon
+    {
+        return $this->type === 'trial'
+            ? $this->trial_ends_at
+            : $this->startsAt()?->copy()->addMonth();
     }
 }

@@ -145,24 +145,11 @@
                                 <span class="w-2 h-2 rounded-full bg-[#0b5e42]"></span>
                                 <span class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">Regulasi Pembanding</span>
                             </div>
-                            <div class="space-y-2">
+                            <div class="space-y-1">
                                 @foreach($document->regulations as $reg)
-                                    @php
-                                        $psColor = $reg->parseStatusBadgeColor();
-                                        $psColors = ['emerald' => 'bg-emerald-100 text-emerald-700', 'amber' => 'bg-amber-100 text-amber-700', 'gray' => 'bg-gray-100 text-gray-600'];
-                                    @endphp
                                     <div class="flex items-center gap-1.5">
                                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                                         <span class="text-sm text-[#071833]">{{ $reg->regulation_number }}</span>
-                                        <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold {{ $psColors[$psColor] ?? $psColors['gray'] }}">
-                                            @if($psColor === 'gray')
-                                                Not Parsed
-                                            @elseif($psColor === 'amber')
-                                                Parsed Incomplete
-                                            @else
-                                                Parsed Complete
-                                            @endif
-                                        </span>
                                     </div>
                                 @endforeach
                             </div>
@@ -292,7 +279,7 @@
                     @csrf
                     <div class="flex flex-col sm:flex-row gap-3 mb-4">
                         <select x-model="selectedType" @change="window.location.href = '{{ route('ai-preview.show', $document) }}?type=' + $event.target.value" class="select-premium flex-1">
-                            @foreach($prompts as $prompt)
+                            @foreach($prompts->whereBetween('id', [1, 4]) as $prompt)
                                 <option value="{{ $prompt->type }}">{{ $prompt->title ?? ucfirst($prompt->type) }}</option>
                             @endforeach
                             @if($prompts->isEmpty())
@@ -522,12 +509,6 @@
                                 </div>
                             </div>
                         @endif
-
-                        @if($summary)
-                            <p class="text-[11px] text-amber-600 italic border-t border-[#e7eaf0] pt-4">
-                                Analisis ini dihasilkan oleh AI dan mungkin mengandung ketidakakuratan. Harap verifikasi informasi penting dengan sumber resmi.
-                            </p>
-                        @endif
                     </div>
                 @else
                     <div class="text-center py-14">
@@ -706,7 +687,14 @@
                                         <div x-show="bab.references?.length" class="space-y-1">
                                             <p class="text-[10px] font-bold uppercase tracking-wider text-[#667085]">Referensi</p>
                                             <template x-for="(r, ri) in bab.references" :key="ri">
-                                                <div class="text-xs text-[#667085]" x-text="r.name"></div>
+                                                <div class="rounded-lg bg-[#f6f8fb] p-2 ring-1 ring-[#e7eaf0]">
+                                                    <div class="text-xs font-semibold text-[#071833]" x-text="r.name"></div>
+                                                    <div class="mt-1 flex flex-wrap gap-1" x-show="r.pasal?.length">
+                                                        <template x-for="(p, pi) in r.pasal" :key="pi">
+                                                            <span class="px-1.5 py-0.5 rounded bg-[#c99a3e]/10 text-[10px] font-semibold text-[#8c6a25]" x-text="p"></span>
+                                                        </template>
+                                                    </div>
+                                                </div>
                                             </template>
                                         </div>
                                     </div>
@@ -945,12 +933,15 @@
             babs: [],
             loading: false,
             analyzing: false,
-            done: false,
             error: null,
 
             get progress() {
                 if (!this.babs.length) return 0;
                 return Math.round((this.babs.filter(b => b.status === 'done').length / this.babs.length) * 100);
+            },
+
+            get done() {
+                return this.babs.length > 0 && this.babs.every(b => b.status === 'done');
             },
 
             async fetchBabs() {
@@ -959,7 +950,20 @@
                 try {
                     const res = await fetch('{{ route("ai-preview.babs-list", $document) }}');
                     const data = await res.json();
-                    this.babs = (data.babs || []).map(b => ({ ...b, status: 'idle', pasal: [], references: [], pasal_count: 0, ref_count: 0 }));
+                    this.babs = (data.babs || []).map(b => {
+                        const saved = b.result || {};
+                        return {
+                            label: b.label,
+                            pasal: saved.pasal || [],
+                            references: saved.references || [],
+                            pasal_count: saved.pasal_count || 0,
+                            ref_count: saved.ref_count || 0,
+                            insights: saved.insights ?? null,
+                            compliance_assessment: saved.compliance_assessment ?? null,
+                            key_findings: saved.key_findings || [],
+                            status: b.result ? 'done' : 'idle',
+                        };
+                    });
                 } catch (e) {
                     this.error = 'Gagal memuat daftar bab.';
                 } finally {
@@ -971,6 +975,7 @@
                 this.analyzing = true;
                 this.error = null;
                 for (let i = 0; i < this.babs.length; i++) {
+                    if (this.babs[i].status === 'done') continue;
                     this.babs[i].status = 'processing';
                     try {
                         const res = await fetch('/review-documents/{{ $document->id }}/ai-preview/bab/' + i, { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
@@ -980,11 +985,13 @@
                         this.babs[i].references = result.references || [];
                         this.babs[i].pasal_count = result.pasal_count || 0;
                         this.babs[i].ref_count = result.ref_count || 0;
+                        this.babs[i].insights = result.insights ?? null;
+                        this.babs[i].compliance_assessment = result.compliance_assessment ?? null;
+                        this.babs[i].key_findings = result.key_findings || [];
                     } catch (e) {
                         this.babs[i].status = 'done';
                     }
                 }
-                this.done = true;
                 this.analyzing = false;
             },
         }));

@@ -13,6 +13,12 @@
             this.$watch('query', (value, previous) => {
                 if (value && !previous) this.open = { ...this.allOpen };
             });
+        },
+        matchesQuery(el, q) {
+            const tokens = (q || '').toLowerCase().match(/[a-z0-9]+/g) || [];
+            if (!tokens.length) return true;
+            const key = (el.dataset.search || '');
+            return tokens.every(t => key.includes(t));
         }
     }"
 >
@@ -41,7 +47,8 @@
                     <div x-show="open['{{ $category->id }}']" x-collapse>
                         <div class="px-3 pb-3 space-y-2">
                             @foreach($category->regulations as $regulation)
-                                <label data-search="{{ strtolower($regulation->regulation_number.' '.$regulation->title) }}" x-show="!query || $el.dataset.search.includes(query)" class="flex items-start gap-3 p-3 rounded-xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#c99a3e]/40 cursor-pointer transition">
+                                @php $searchKey = preg_replace('/[^a-z0-9]+/u', '', mb_strtolower(($regulation->regulation_number ?? '').' '.($regulation->title ?? '').' '.($regulation->year ?? ''))); @endphp
+                                <label data-search="{{ $searchKey }}" x-show="matchesQuery($el, query)" class="flex items-start gap-3 p-3 rounded-xl bg-white ring-1 ring-[#e7eaf0] hover:ring-[#c99a3e]/40 cursor-pointer transition">
                                     <input type="checkbox" name="regulation_ids[]" value="{{ $regulation->id }}" {{ in_array($regulation->id, $selectedIds) ? 'checked' : '' }} class="checkbox-premium mt-0.5">
                                     <div class="min-w-0 flex-1">
                                         <p class="text-sm font-semibold text-[#071833]">{{ $regulation->regulation_number }}</p>

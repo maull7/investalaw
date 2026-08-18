@@ -8,7 +8,9 @@ use App\Models\AiJobStatus;
 use App\Models\DocumentBabStructure;
 use App\Models\DocumentPartition;
 use App\Models\PartitionAnalysis;
+use App\Models\Regulation;
 use App\Models\ReviewDocument;
+use App\Models\ReviewDocumentRelatedReference;
 use App\Models\TypePrompt;
 use App\Models\UserActivityLog;
 use App\Services\AiService;
@@ -16,6 +18,7 @@ use App\Services\BabStructureService;
 use App\Services\DocumentParser;
 use App\Services\PartitionService;
 use App\Services\TocExtractorService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,14 +54,58 @@ class DocumentPartitionController extends Controller
 
         $allParsed = ! empty($babTree) && collect($babTree)->every(fn ($b) => ! empty($b['children']));
 
+        $regulationsCatalog = Regulation::query()->get(['id', 'regulation_number', 'title', 'year']);
+
+        $referenceMatches = $reviewDocument->relatedReferences->mapWithKeys(
+            fn ($ref) => [$ref->id => $this->findMatchingRegulation($regulationsCatalog, $ref)?->id ?? null]
+        );
+
         return view('partitions.index', [
             'document' => $reviewDocument,
             'totalPages' => $totalPages,
             'babTree' => $babTree,
             'parsedBabIds' => $parsedBabIds,
             'allParsed' => $allParsed,
+            'referenceMatches' => $referenceMatches,
             'promptTypes' => TypePrompt::where('is_active', true)->orderBy('name')->get(),
         ]);
+    }
+
+    // ponytail: fuzzy best-effort; catalog number/title can be messy. Third normalize copy here,
+    // consolidate into one shared helper when the next match-site appears.
+    private function findMatchingRegulation(Collection $catalog, ReviewDocumentRelatedReference $ref): ?Regulation
+    {
+        $refName = $this->normalizeKey($ref->name ?? '');
+        $refNumber = $this->normalizeKey($ref->number ?? '');
+        $refYear = (int) ($ref->year ?? 0);
+
+        foreach ($catalog as $reg) {
+            $regName = $this->normalizeKey($reg->regulation_number ?? '');
+            $regTitle = $this->normalizeKey($reg->title ?? '');
+
+            $matches = ($refName !== '' && ($refName === $regName || str_contains($regName, $refName) || str_contains($refName, $regName)))
+                || ($refName !== '' && $regTitle !== '' && str_contains($regTitle, $refName))
+                || ($refNumber !== '' && ($refNumber === $regName || str_contains($regName, $refNumber) || str_contains($refNumber, $regName)));
+
+            if (! $matches) {
+                continue;
+            }
+
+            $regYear = (int) (($reg->year ?? 0) ?: 0);
+
+            if ($refYear !== 0 && $regYear !== 0 && $refYear !== $regYear) {
+                continue;
+            }
+
+            return $reg;
+        }
+
+        return null;
+    }
+
+    private function normalizeKey(string $value): string
+    {
+        return preg_replace('/[^a-z0-9]+/u', '', mb_strtolower($value));
     }
 
     public function store(Request $request, ReviewDocument $reviewDocument): RedirectResponse

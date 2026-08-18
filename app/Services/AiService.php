@@ -16,6 +16,7 @@ use App\Models\RegulationAiResult;
 use App\Models\ReviewDocument;
 use App\Models\User;
 use Exception;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use OpenAI;
 
@@ -86,6 +87,85 @@ class AiService
         $decoded = $this->parseCaseAnalysis($result['content']);
 
         return $decoded;
+    }
+
+    /**
+     * @return array<int, string> keyed by regulation id, value is alasan
+     */
+    public function searchRegulations(string $query): array
+    {
+        $catalog = Regulation::query()
+            ->where(fn ($q) => $q->whereNotNull('parsed_text')
+                ->orWhereHas('documents', fn ($dq) => $dq->whereNotNull('parsed_text')))
+            ->latest('year')
+            ->latest('id')
+            ->limit(150)
+            ->get()
+            ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
+            ->implode("\n");
+
+        $prompt = <<<PROMPT
+Anda adalah pencari regulasi dalam database. Hanya boleh memilih regulasi dari daftar yang diberikan, tidak boleh membuat id baru.
+
+DAFTAR REGULASI TERSEDIA:
+{$catalog}
+
+PERTANYAAN: {$query}
+
+Kembalikan JSON SAJA dengan format:
+[{"id": <id regulasi>, "alasan": "singkat mengapa relevan, maks 1 kalimat"}]
+Maksimal 15 hasil, hanya id yang ada di daftar.
+PROMPT;
+
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $content = null;
+
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 1024,
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+                if ($content) {
+                    break;
+                }
+            } catch (Exception $e) {
+                Log::warning("AI search provider {$provider['model']} failed: {$e->getMessage()}");
+
+                continue;
+            }
+        }
+
+        if (! $content) {
+            return [];
+        }
+
+        return $this->parseRegulationIds($content);
     }
 
     /**

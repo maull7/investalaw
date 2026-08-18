@@ -1,7 +1,7 @@
 @props(['header' => null, 'footer' => null, 'padding' => true, 'hoverable' => false])
 
 @php
-    $base = 'card-premium overflow-hidden';
+    $base = 'card-premium overflow-visible';
     if ($hoverable) {
         $base .= ' card-premium-hover';
     }

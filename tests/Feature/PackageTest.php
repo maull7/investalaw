@@ -336,4 +336,76 @@ class PackageTest extends TestCase
 
         $this->assertSame(2, UserPackage::where('user_id', $user->id)->count());
     }
+
+    public function test_admin_can_set_and_edit_kak_vesta_token_quota(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('packages.store'), [
+                'name' => 'Bisnis',
+                'price' => '12jt',
+                'price_period' => '/bulan',
+                'benefits' => 'Benefit A',
+                'kak_vesta_tokens' => '500000',
+            ])->assertRedirect(route('packages.index'));
+
+        $this->assertDatabaseHas('packages', ['name' => 'Bisnis', 'kak_vesta_tokens' => 500000]);
+
+        $package = Package::where('name', 'Bisnis')->firstOrFail();
+        $this->actingAs($this->admin())
+            ->put(route('packages.update', $package), [
+                'name' => 'Bisnis',
+                'price' => '15jt',
+                'price_period' => '/bulan',
+                'benefits' => 'Benefit A',
+                'kak_vesta_tokens' => '750000',
+            ])->assertRedirect(route('packages.index'));
+
+        $this->assertSame(750000, $package->fresh()->kak_vesta_tokens);
+    }
+
+    public function test_paid_package_start_is_day_after_active_trial_ends(): void
+    {
+        $trial = Package::create(['name' => 'Free Trial', 'price' => '0', 'benefits' => ['Dasar']]);
+        $paid = Package::create(['name' => 'Bisnis', 'price' => '12,5jt', 'price_period' => '/bulan', 'benefits' => ['Pro']]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        $trialPackage = UserPackage::create([
+            'user_id' => $user->id,
+            'package_id' => $trial->id,
+            'type' => 'trial',
+            'status' => 'active',
+            'trial_ends_at' => now()->addDays(10),
+        ]);
+
+        $this->actingAs($user)->post(route('profile.update'), [
+            'institution' => 'PT Contoh', 'position' => 'Compliance',
+            'province' => config('provinces')[0], 'phone' => '081234567890',
+            'package_id' => $paid->id,
+        ])->assertRedirect();
+
+        $paidPackage = UserPackage::where('user_id', $user->id)->where('type', 'paid')->firstOrFail();
+        $this->assertTrue($trialPackage->trial_ends_at->copy()->addDay()->equalTo($paidPackage->startsAt()));
+        $this->assertTrue($trialPackage->trial_ends_at->copy()->addDay()->addMonth()->equalTo($paidPackage->endsAt()));
+    }
+
+    public function test_paid_package_start_is_confirmation_date_without_active_trial(): void
+    {
+        $paid = Package::create(['name' => 'Bisnis', 'price' => '12,5jt', 'price_period' => '/bulan', 'benefits' => ['Pro']]);
+        $user = User::factory()->create(['role' => 'user']);
+        $userPackage = UserPackage::create([
+            'user_id' => $user->id,
+            'package_id' => $paid->id,
+            'type' => 'paid',
+            'status' => 'pending',
+            'payment_proof' => 'payment-proofs/bukti.jpg',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('packages.payment.confirm', $userPackage))
+            ->assertRedirect();
+
+        $fresh = $userPackage->fresh();
+        $this->assertTrue($fresh->confirmed_at->equalTo($fresh->startsAt()));
+        $this->assertTrue($fresh->startsAt()->copy()->addMonth()->equalTo($fresh->endsAt()));
+    }
 }

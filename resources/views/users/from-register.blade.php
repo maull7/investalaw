@@ -55,6 +55,11 @@
                             <th>Nama</th>
                             <th>Email</th>
                             <th>Role</th>
+                            <th>Token</th>
+                            <th>Kak Vesta</th>
+                            <th>Durasi Aktif</th>
+                            <th>Mulai</th>
+                            <th>Berakhir</th>
                             <th>Dibuat</th>
                             <th class="text-right">Aksi</th>
                         </tr>
@@ -74,10 +79,62 @@
                                 </td>
                                 <td class="text-sm text-[#667085]">{{ $user->email }}</td>
                                 <td>
-
                                     <x-badge color="gray">
                                         {{ str_replace('_', ' ', ucfirst($user->role)) }}
                                     </x-badge>
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @php $used = $usages[$user->id] ?? 0; @endphp
+                                    <span @class([
+                                        'font-bold' => $used >= $dailyLimit,
+                                        'text-rose-600' => $used >= $dailyLimit,
+                                        'text-[#667085]' => $used < $dailyLimit,
+                                    ])>
+                                        {{ number_format($used) }}
+                                    </span>
+                                    <span class="text-[#b0b8c5]"> / {{ number_format($dailyLimit) }}</span>
+                                    @if ($used >= $dailyLimit)
+                                        <span class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600">Penuh</span>
+                                    @endif
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @php $usage = $user->kakVestaUsage(); @endphp
+                                    @if ($usage)
+                                        @php
+                                            $allowedHours = intdiv($usage['allowed_minutes'], 60);
+                                            $hours = intdiv($usage['elapsed_minutes'], 60);
+                                            $minutes = $usage['elapsed_minutes'] % 60;
+                                            $text = $usage['elapsed_minutes'] === 0
+                                                ? 'Belum dipakai'
+                                                : ($hours > 0
+                                                    ? "{$hours} jam {$minutes} mnt / {$allowedHours} jam"
+                                                    : "{$minutes} mnt / {$allowedHours} jam");
+                                        @endphp
+                                        <span @class([
+                                            'font-bold' => $usage['expired'],
+                                            'text-rose-600' => $usage['expired'],
+                                            'text-[#667085]' => ! $usage['expired'],
+                                        ])>{{ $text }}</span>
+                                        @if ($usage['expired'])
+                                            <span class="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600">Habis</span>
+                                        @endif
+                                    @else
+                                        <span class="text-[#b0b8c5]">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @if ($user->activeMinutes())
+                                        {{ $user->activeMinutes() }} mnt
+                                    @else
+                                        <span class="text-[#b0b8c5]">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    @php $latestPackage = $user->userPackages->first(); @endphp
+                                    {{ $latestPackage?->startsAt()?->format('d M Y') ?? '-' }}
+                                </td>
+                                <td class="text-xs text-[#667085] whitespace-nowrap">
+                                    {{ $latestPackage?->endsAt()?->format('d M Y') ?? '-' }}
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">
                                     {{ $user->created_at->format('d M Y H:i') }}</td>
@@ -102,19 +159,26 @@
                                             </svg>
                                         </a>
                                         @if (auth()->id() !== $user->id)
-                                            <form method="POST" action="{{ route('users.destroy', $user) }}"
-                                                onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?')">
+                                            <form method="POST" action="{{ route('users.toggle-active', $user) }}"
+                                                onsubmit="return confirm('Apakah Anda yakin ingin {{ $user->is_active ? 'menonaktifkan' : 'mengaktifkan' }} user ini?')">
                                                 @csrf
-                                                @method('DELETE')
-                                                <button type="submit"
-                                                    class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-rose-600 hover:bg-rose-50 transition"
-                                                    title="Hapus">
-                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
-                                                        stroke="currentColor" stroke-width="2">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                                    </svg>
-                                                </button>
+                                                @if ($user->is_active)
+                                                    <button type="submit"
+                                                        class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-rose-600 hover:bg-rose-50 transition"
+                                                        title="Inactive">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                                                        </svg>
+                                                    </button>
+                                                @else
+                                                    <button type="submit"
+                                                        class="inline-flex items-center justify-center w-9 h-9 rounded-xl text-emerald-600 hover:bg-emerald-50 transition"
+                                                        title="Active">
+                                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
                                             </form>
                                         @endif
                                     </div>

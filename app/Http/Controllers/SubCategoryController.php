@@ -26,7 +26,7 @@ class SubCategoryController extends Controller
         }
 
         $subCategories = $query->paginate(20)->withQueryString();
-        $categories = RegulationCategory::orderBy('name')->get();
+        $categories = RegulationCategory::orderBy('name')->where('sector_id', 1)->get();
 
         return view('sub-categories.index', compact('subCategories', 'categories'));
     }

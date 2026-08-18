@@ -441,6 +441,7 @@
                                             <th class="py-3 px-4">Nama / Nomor</th>
                                             <th class="py-3 px-4 text-center w-24">Tahun</th>
                                             <th class="py-3 px-4 text-center w-32">Hubungan</th>
+                                            <th class="py-3 px-4 text-center w-28">Dokumentasi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-[#e7eaf0]">
@@ -453,6 +454,18 @@
                                                 <td class="py-3.5 px-4 text-center text-sm font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</td>
                                                 <td class="py-3.5 px-4 text-center">
                                                     <x-badge :color="match($ref->relationship) { 'dicabut' => 'rose', 'diubah' => 'amber', default => 'blue' }">{{ $ref->relationship }}</x-badge>
+                                                </td>
+                                                <td class="py-3.5 px-4 text-center">
+                                                    @if(($matchedId = $referenceMatches[$ref->id] ?? null))
+                                                        <a href="{{ route('regulations.show', $matchedId) }}" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition">
+                                                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                                                            Ada
+                                                        </a>
+                                                    @else
+                                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">
+                                                            Belum Ada
+                                                        </span>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach

@@ -63,6 +63,17 @@
                         </div>
 
                         <div>
+                            <label for="kak_vesta_tokens" class="block text-sm font-semibold text-[#071833] mb-2">Jumlah Token AI Kak Vesta</label>
+                            <input type="number" name="kak_vesta_tokens" id="kak_vesta_tokens"
+                                value="{{ old('kak_vesta_tokens', $package->kak_vesta_tokens) }}" min="1"
+                                class="input-premium" placeholder="Contoh: 500000">
+                            <p class="mt-1.5 text-xs text-[#667085]">Kuota token AI lifetime untuk fitur Kak Vesta. Kosongkan = tanpa batas.</p>
+                            @error('kak_vesta_tokens')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
                             <label for="tagline" class="block text-sm font-semibold text-[#071833] mb-2">Deskripsi Singkat</label>
                             <input type="text" name="tagline" id="tagline" value="{{ old('tagline', $package->tagline) }}"
                                 maxlength="255" class="input-premium" placeholder="Contoh: Menghindari risiko sengketa kepatuhan">

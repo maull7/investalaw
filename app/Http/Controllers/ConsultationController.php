@@ -6,6 +6,7 @@ use App\Models\ConsultationChatMessage;
 use App\Models\ConsultationSession;
 use App\Models\RegulationCategory;
 use App\Models\Setting;
+use App\Models\TokenUsage;
 use App\Models\UserPackage;
 use App\Services\AiService;
 use App\Services\TokenLimitService;
@@ -37,6 +38,14 @@ class ConsultationController extends Controller
         if (! $active) {
             return redirect()->route('dashboard')
                 ->with('error', 'Fitur Konsultasi Kak Vesta hanya tersedia untuk pengguna dengan paket aktif.');
+        }
+
+        $quota = (int) ($active->package?->kak_vesta_tokens ?: 0);
+        if ($quota > 0 && TokenUsage::where('user_id', auth()->id())
+            ->where('source', 'consultation_chat')
+            ->sum('tokens_used') >= $quota) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Kuota token AI Kak Vesta Anda telah habis. Silakan upgrade paket atau hubungi admin.');
         }
 
         if ($active->type === 'paid') {

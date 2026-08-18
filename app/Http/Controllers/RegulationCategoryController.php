@@ -25,7 +25,7 @@ class RegulationCategoryController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_categories'), 403);
 
-        $categories = $this->categoryRepository->all();
+        $categories = $this->categoryRepository->investalawCo();
 
         return view('regulation-categories.index', compact('categories'));
     }

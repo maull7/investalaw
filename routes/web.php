@@ -90,6 +90,14 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     Route::post('/konsultasi-kak-vesta/{session}/chat', [ConsultationController::class, 'ask'])->name('consultations.chat.ask')->middleware('throttle:10,1');
     Route::post('/konsultasi-kak-vesta/{session}/regulations', [ConsultationController::class, 'addRegulations'])->name('consultations.regulations.add');
 
+    Route::get('/konsultasi-kak-vesta/{session}/export/pdf', [ConsultationController::class, 'exportSessionPdf'])->name('consultations.export.session.pdf');
+    Route::get('/konsultasi-kak-vesta/{session}/export/word', [ConsultationController::class, 'exportSessionWord'])->name('consultations.export.session.word');
+    Route::get('/konsultasi-kak-vesta/{session}/messages/{message}/export/pdf', [ConsultationController::class, 'exportMessagePdf'])->name('consultations.export.message.pdf');
+    Route::get('/konsultasi-kak-vesta/{session}/messages/{message}/export/word', [ConsultationController::class, 'exportMessageWord'])->name('consultations.export.message.word');
+    Route::get('/konsultasi-kak-vesta/{session}/messages/{message}/attachments/{index}', [ConsultationController::class, 'downloadAttachment'])->name('consultations.attachments.download');
+    Route::get('/konsultasi-kak-vesta/generated/{file}', [ConsultationController::class, 'downloadGeneratedFile'])->name('consultations.generated.download');
+    Route::get('/konsultasi-kak-vesta/generated/{file}/view', [ConsultationController::class, 'viewGeneratedFile'])->name('consultations.generated.view');
+
     Route::prefix('user')->group(function () {
         Route::get('/regulation-categories', [RegulationCategoryUserController::class, 'index'])->name('user.regulation-categories.index');
         Route::get('/regulation-categories/{regulationCategory}', [RegulationCategoryUserController::class, 'show'])->name('user.regulation-categories.show');

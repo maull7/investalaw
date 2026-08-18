@@ -15,18 +15,22 @@ class SubCategoryController extends Controller
     {
         abort_if(auth()->user()->isSubAdmin() && ! auth()->user()->hasPermission('manage_sub_categories'), 403);
 
-        $query = SubCategory::with('category')->orderBy('name');
+        $categories = RegulationCategory::orderBy('name')->where('sector_id', 1)->get();
+
+        $query = SubCategory::with('category')
+            ->whereIn('category_id', $categories->pluck('id'));
+
 
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->input('category_id'));
         }
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->input('search').'%');
+            $query->where('name', 'like', '%' . $request->input('search') . '%');
         }
 
         $subCategories = $query->paginate(20)->withQueryString();
-        $categories = RegulationCategory::orderBy('name')->where('sector_id', 1)->get();
+
 
         return view('sub-categories.index', compact('subCategories', 'categories'));
     }
@@ -73,7 +77,7 @@ class SubCategoryController extends Controller
 
         $subCategory->update(['is_active' => ! $subCategory->is_active]);
 
-        UserActivityLog::log('toggled', SubCategory::class, $subCategory->id, ($subCategory->is_active ? 'Mengaktifkan' : 'Menonaktifkan')." sub kategori {$subCategory->name}");
+        UserActivityLog::log('toggled', SubCategory::class, $subCategory->id, ($subCategory->is_active ? 'Mengaktifkan' : 'Menonaktifkan') . " sub kategori {$subCategory->name}");
 
         return redirect()->route('sub-categories.index')
             ->with('success', 'Status sub category berhasil diperbarui.');

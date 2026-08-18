@@ -10,10 +10,13 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "barryvdh/laravel-dompdf": "*",
         "laravel/framework": "^13.8",
         "laravel/horizon": "*",
         "laravel/tinker": "^3.0",
         "openai-php/client": "*",
+        "phpoffice/phpspreadsheet": "*",
+        "phpoffice/phpword": "*",
         "smalot/pdfparser": "*",
         "thiagoalessio/tesseract_ocr": "*"
     },

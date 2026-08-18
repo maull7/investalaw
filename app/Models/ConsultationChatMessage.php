@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ConsultationChatMessage extends Model
 {
-    protected $fillable = ['consultation_session_id', 'user_id', 'role', 'content'];
+    protected $fillable = ['consultation_session_id', 'user_id', 'role', 'content', 'attachments'];
+
+    protected $casts = [
+        'attachments' => 'array',
+    ];
 
     /** @return BelongsTo<ConsultationSession, ConsultationChatMessage> */
     public function session(): BelongsTo

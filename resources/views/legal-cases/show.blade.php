@@ -100,7 +100,7 @@
                     </p>
                 @else
                     @php $a = $legalCase->analysis; @endphp
-                    <div class="space-y-5 text-sm text-[#333] leading-relaxed">
+                    <div class="space-y-5 text-sm text-[#333] leading-relaxed" x-data="checklistNotes({{ $legalCase->id }})">
                         @if(! empty($a['ringkasan']))
                             <div>
                                 <h5 class="text-xs font-bold uppercase tracking-wide text-[#c99a3e]">Ringkasan</h5>
@@ -111,9 +111,21 @@
                         @if(! empty($a['dasar_hukum']))
                             <div>
                                 <h5 class="text-xs font-bold uppercase tracking-wide text-[#c99a3e]">Dasar Hukum</h5>
-                                <ul class="mt-1.5 list-disc list-inside space-y-1">
-                                    @foreach($a['dasar_hukum'] as $item)
-                                        <li>{{ $item }}</li>
+                                <ul class="mt-1.5 space-y-2">
+                                    @foreach($a['dasar_hukum'] as $idx => $item)
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-[#c99a3e] text-base font-bold mt-0.5 flex-shrink-0">✓</span>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[#333]">{{ $item }}</p>
+                                                <button @click="toggleNote('dasar_hukum_{{ $idx }}')" type="button" class="text-xs text-[#667085] hover:text-[#c99a3e] mt-1">
+                                                    <span x-show="activeNote !== 'dasar_hukum_{{ $idx }}'">+ Catatan</span>
+                                                    <span x-show="activeNote === 'dasar_hukum_{{ $idx }}'">- Tutup</span>
+                                                </button>
+                                                <div x-show="activeNote === 'dasar_hukum_{{ $idx }}'" x-transition class="mt-2">
+                                                    <textarea x-model="notes['dasar_hukum_{{ $idx }}']" @input="saveNotes()" rows="2" placeholder="Tulis catatan..." class="w-full text-xs border border-[#d0d5dd] rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#c99a3e]/20 focus:border-[#c99a3e]"></textarea>
+                                                </div>
+                                            </div>
+                                        </li>
                                     @endforeach
                                 </ul>
                             </div>
@@ -122,9 +134,21 @@
                         @if(! empty($a['pasal_yang_mungkin_dilanggar']))
                             <div>
                                 <h5 class="text-xs font-bold uppercase tracking-wide text-[#c99a3e]">Pasal yang Mungkin Dilanggar</h5>
-                                <ul class="mt-1.5 list-disc list-inside space-y-1">
-                                    @foreach($a['pasal_yang_mungkin_dilanggar'] as $item)
-                                        <li>{{ $item }}</li>
+                                <ul class="mt-1.5 space-y-2">
+                                    @foreach($a['pasal_yang_mungkin_dilanggar'] as $idx => $item)
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-[#c99a3e] text-base font-bold mt-0.5 flex-shrink-0">✓</span>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[#333]">{{ $item }}</p>
+                                                <button @click="toggleNote('pasal_{{ $idx }}')" type="button" class="text-xs text-[#667085] hover:text-[#c99a3e] mt-1">
+                                                    <span x-show="activeNote !== 'pasal_{{ $idx }}'">+ Catatan</span>
+                                                    <span x-show="activeNote === 'pasal_{{ $idx }}'">- Tutup</span>
+                                                </button>
+                                                <div x-show="activeNote === 'pasal_{{ $idx }}'" x-transition class="mt-2">
+                                                    <textarea x-model="notes['pasal_{{ $idx }}']" @input="saveNotes()" rows="2" placeholder="Tulis catatan..." class="w-full text-xs border border-[#d0d5dd] rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#c99a3e]/20 focus:border-[#c99a3e]"></textarea>
+                                                </div>
+                                            </div>
+                                        </li>
                                     @endforeach
                                 </ul>
                             </div>
@@ -149,7 +173,29 @@
                         @if(! empty($a['strategi_peluang']))
                             <div>
                                 <h5 class="text-xs font-bold uppercase tracking-wide text-[#c99a3e]">Strategi &amp; Peluang</h5>
-                                <p class="mt-1.5 whitespace-pre-wrap">{{ $a['strategi_peluang'] }}</p>
+                                @php
+                                    $strategiItems = array_filter(
+                                        array_map('trim', preg_split('/\n+/', $a['strategi_peluang'])),
+                                        fn($line) => !empty($line)
+                                    );
+                                @endphp
+                                <ul class="mt-1.5 space-y-2">
+                                    @foreach($strategiItems as $idx => $item)
+                                        <li class="flex items-start gap-2">
+                                            <span class="text-[#c99a3e] text-base font-bold mt-0.5 flex-shrink-0">✓</span>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[#333]">{{ $item }}</p>
+                                                <button @click="toggleNote('strategi_{{ $idx }}')" type="button" class="text-xs text-[#667085] hover:text-[#c99a3e] mt-1">
+                                                    <span x-show="activeNote !== 'strategi_{{ $idx }}'">+ Catatan</span>
+                                                    <span x-show="activeNote === 'strategi_{{ $idx }}'">- Tutup</span>
+                                                </button>
+                                                <div x-show="activeNote === 'strategi_{{ $idx }}'" x-transition class="mt-2">
+                                                    <textarea x-model="notes['strategi_{{ $idx }}']" @input="saveNotes()" rows="2" placeholder="Tulis catatan..." class="w-full text-xs border border-[#d0d5dd] rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#c99a3e]/20 focus:border-[#c99a3e]"></textarea>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </div>
                         @endif
                     </div>
@@ -167,3 +213,30 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+function checklistNotes(caseId) {
+    return {
+        notes: {},
+        activeNote: null,
+        init() {
+            const saved = localStorage.getItem(`case_notes_${caseId}`);
+            if (saved) {
+                try {
+                    this.notes = JSON.parse(saved);
+                } catch (e) {
+                    this.notes = {};
+                }
+            }
+        },
+        toggleNote(key) {
+            this.activeNote = this.activeNote === key ? null : key;
+        },
+        saveNotes() {
+            localStorage.setItem(`case_notes_${caseId}`, JSON.stringify(this.notes));
+        }
+    }
+}
+</script>
+@endpush

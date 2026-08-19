@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Regulation;
+use App\Models\RegulationCategory;
 use App\Models\RegulationRelatedReference;
 use App\Models\Review;
 use App\Models\ReviewDocument;
@@ -37,7 +38,7 @@ class DashboardController extends Controller
         $recentDocuments = $documentsQuery->with('user')->latest()->take(5)->get();
 
         $latestRegulations = Regulation::with(['type', 'category'])
-            ->latest()
+            ->orderByDesc('tanggal_tetapkan')
             ->take(5)
             ->get();
 
@@ -48,7 +49,12 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        return view('dashboard.index', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated'));
+        $regulationFilterOptions = [
+            'categories' => RegulationCategory::orderBy('name')->get(),
+            'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
+        ];
+
+        return view('dashboard.index', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated', 'regulationFilterOptions'));
     }
 
     public function compliance(Request $request): View
@@ -95,7 +101,7 @@ class DashboardController extends Controller
         $recentDocuments = $documentsQuery->with('user')->latest()->take(5)->get();
 
         $latestRegulations = Regulation::with(['type', 'category'])
-            ->latest()
+            ->orderByDesc('tanggal_tetapkan')
             ->take(5)
             ->get();
 

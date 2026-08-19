@@ -269,8 +269,8 @@
                                         {{ $purchase->status }}
                                     </span>
                                 </td>
-                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->startsAt()?->format('d M Y') ?? '-' }}</td>
-                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->endsAt()?->format('d M Y') ?? '-' }}</td>
+                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->startDateDisplay() }}</td>
+                                <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->endDateDisplay() }}</td>
                             </tr>
                         @endforeach
                     </tbody>

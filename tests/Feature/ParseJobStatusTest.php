@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Exceptions\ParsingCancelledException;
 use App\Jobs\ParseRegulationDocument;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
@@ -43,7 +42,7 @@ class ParseJobStatusTest extends TestCase
         $reg = $this->makeRegulation();
         $doc = RegulationDocument::create([
             'regulation_id' => $reg->id,
-            
+
             'name' => 'Doc',
             'document_type' => 'lampiran',
             'file_path' => 'regulations/not-exist.pdf',
@@ -61,7 +60,7 @@ class ParseJobStatusTest extends TestCase
         $reg = $this->makeRegulation();
         $doc = RegulationDocument::create([
             'regulation_id' => $reg->id,
-            
+
             'name' => 'Doc',
             'document_type' => 'lampiran',
             'file_path' => 'regulations/fixture.pdf',
@@ -74,20 +73,23 @@ class ParseJobStatusTest extends TestCase
         $this->assertSame('Boom error', $fresh->parse_error);
     }
 
-    public function test_service_cancellation_throws(): void
+    public function test_cancel_flag_marks_incomplete_and_keeps_resume(): void
     {
-        $this->expectException(ParsingCancelledException::class);
-
         $reg = $this->makeRegulation();
         $doc = RegulationDocument::create([
             'regulation_id' => $reg->id,
-            
             'name' => 'Doc',
             'document_type' => 'lampiran',
             'file_path' => 'regulations/fixture.pdf',
+            'parse_stats' => ['resume_page' => 12, 'pdf_type' => 'image'],
         ]);
 
-        app(RegulationParserService::class)->parseDocumentChoice($doc, 'text', null, fn () => true);
+        Cache::put("parse_cancel:document:{$doc->id}", true, now()->addHour());
+
+        (new ParseRegulationDocument($doc))->handle(app(RegulationParserService::class));
+
+        $this->assertSame('incomplete', $doc->fresh()->parse_status);
+        $this->assertFalse(Cache::has("parse_cancel:document:{$doc->id}"));
     }
 
     public function test_cancel_endpoint_resets_status_and_sets_flags(): void
@@ -96,7 +98,7 @@ class ParseJobStatusTest extends TestCase
         $reg->update(['parse_status' => 'parsing', 'parse_progress' => 40]);
         $doc = RegulationDocument::create([
             'regulation_id' => $reg->id,
-            
+
             'name' => 'Doc',
             'document_type' => 'lampiran',
             'file_path' => 'regulations/fixture.pdf',
@@ -108,8 +110,8 @@ class ParseJobStatusTest extends TestCase
             ->post(route('regulations.parse-cancel', $reg))
             ->assertRedirect(route('regulations.show', $reg));
 
-        $this->assertSame('not_parsed', $reg->fresh()->parse_status);
-        $this->assertSame('not_parsed', $doc->fresh()->parse_status);
+        $this->assertSame('incomplete', $reg->fresh()->parse_status);
+        $this->assertSame('incomplete', $doc->fresh()->parse_status);
         $this->assertTrue(Cache::get("parse_cancel:regulation:{$reg->id}"));
         $this->assertTrue(Cache::get("parse_cancel:document:{$doc->id}"));
     }

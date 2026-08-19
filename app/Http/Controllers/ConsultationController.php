@@ -54,9 +54,11 @@ class ConsultationController extends Controller
         }
 
         $quota = (int) ($active->package?->kak_vesta_tokens ?: 0);
-        if ($quota > 0 && TokenUsage::where('user_id', auth()->id())
-            ->where('source', 'consultation_chat')
-            ->sum('tokens_used') >= $quota) {
+        if (
+            $quota > 0 && TokenUsage::where('user_id', auth()->id())
+                ->where('source', 'consultation_chat')
+                ->sum('tokens_used') >= $quota
+        ) {
             return redirect()->route('dashboard')
                 ->with('error', 'Kuota token AI Kak Vesta Anda telah habis. Silakan upgrade paket atau hubungi admin.');
         }
@@ -76,7 +78,7 @@ class ConsultationController extends Controller
         $allowedUntil = $active->kak_vesta_started_at->addHours(min($hours, $cap));
 
         if ($allowedUntil->lte(now())) {
-            return redirect()->route('dashboard')
+            return redirect()->route('profile.edit')
                 ->with('error', 'Masa aktif trial konsultasi Kak Vesta Anda telah berakhir. Upgrade ke paket berbayar untuk melanjutkan.');
         }
 
@@ -94,9 +96,10 @@ class ConsultationController extends Controller
             ->latest()
             ->get();
 
-        $categories = RegulationCategory::with(['regulations' => function ($q) {
-            $q->whereHas('documents');
-        }])->orderBy('name')->get();
+        $categories = RegulationCategory::with('regulations')
+            ->whereHas('regulations')
+            ->orderBy('name')
+            ->get();
 
         return view('consultations.index', compact('sessions', 'categories'));
     }

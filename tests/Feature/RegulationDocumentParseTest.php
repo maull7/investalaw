@@ -6,7 +6,6 @@ use App\Models\Regulation;
 use App\Models\RegulationCategory;
 use App\Models\RegulationDocument;
 use App\Models\RegulationType;
-use App\Services\DocumentParser;
 use App\Services\RegulationParserService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -32,15 +31,15 @@ class RegulationDocumentParseTest extends TestCase
             'file_path' => 'regulation-documents/fixture.docx',
         ]);
 
-        $service = new RegulationParserService(new DocumentParser);
-        $result = $service->parseDocument($document);
+        $service = app(RegulationParserService::class);
+        $result = $service->parseDocumentChunk($document, 1);
 
         $document = $document->fresh();
 
         $this->assertTrue($result['success']);
         $this->assertSame('complete', $document->parse_status);
         $this->assertStringContainsString('reksa dana investasi', $document->parsed_text);
-        $this->assertSame('docx', $document->parse_stats['doc_type']);
+        $this->assertSame('docx', $document->parse_stats['pdf_type']);
     }
 
     public function test_unsupported_format_returns_error(): void
@@ -56,7 +55,7 @@ class RegulationDocumentParseTest extends TestCase
             'file_path' => 'regulation-documents/fixture.txt',
         ]);
 
-        $result = (new RegulationParserService(new DocumentParser))->parseDocument($document);
+        $result = app(RegulationParserService::class)->parseDocumentChunk($document, 1);
 
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('PDF dan DOCX', $result['message']);
@@ -64,7 +63,7 @@ class RegulationDocumentParseTest extends TestCase
 
     private function makeRegulation(): Regulation
     {
-        $type = RegulationType::create(['name' => 'POJK']);
+        $type = RegulationType::create(['name' => 'POJK', 'level' => 1]);
         $category = RegulationCategory::create(['name' => 'Kontrak Investasi Kolektif']);
 
         return Regulation::create([

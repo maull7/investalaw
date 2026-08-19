@@ -11,14 +11,18 @@
                     <div>
                         <p class="text-xs font-semibold tracking-[0.16em] uppercase text-[#c99a3e]">Buat Sesi Baru</p>
                         <h3 class="mt-1 text-xl font-bold text-[#071833]">Pilih Regulasi (maks 10)</h3>
-                        <p class="text-sm text-[#667085] mt-1">Pilih regulasi yang ingin Anda konsutansi. Kak Vesta akan menganalisa semua regulasi terpilih.</p>
+                        <p class="text-sm text-[#667085] mt-1">Pilih regulasi yang ingin Anda konsutansi. Kak Vesta akan
+                            menganalisa semua regulasi terpilih.</p>
                     </div>
                 </x-slot>
 
                 <form method="POST" action="{{ route('consultations.store') }}">
                     @csrf
 
-                    @include('review-documents._regulation-picker', ['selectedIds' => [], 'categories' => $categories])
+                    @include('review-documents._regulation-picker', [
+                        'selectedIds' => [],
+                        'categories' => $categories,
+                    ])
 
                     <div class="mt-4 flex items-center justify-between">
                         <p class="text-xs text-[#667085]">Pilih minimal 1, maksimal 10 regulasi.</p>

@@ -156,6 +156,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     // Regulations browsing (accessible by all authenticated roles)
     Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
     Route::get('/regulations/ai-search', [RegulationController::class, 'aiSearch'])->name('regulations.ai-search')->middleware('throttle:5,1');
+    Route::post('/regulations/ai-search/{session}/chat', [RegulationController::class, 'aiSearchChat'])->name('regulations.ai-search.chat')->middleware('throttle:5,1');
     Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
     Route::get('/regulations/create', [RegulationController::class, 'create'])->name('regulations.create');
     Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');

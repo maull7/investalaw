@@ -219,6 +219,34 @@
                     </div>
                 </x-slot>
 
+                <form method="GET" action="{{ route('regulations.index') }}" class="px-6 pb-5 border-b border-[#e7eaf0]">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <input type="text" name="search" placeholder="Cari nomor/judul regulasi..." 
+                               class="input-premium text-sm h-10">
+                        
+                        <select name="category_id" class="select-premium text-sm h-10">
+                            <option value="">Semua Kategori</option>
+                            @foreach($regulationFilterOptions['categories'] as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                        
+                        <select name="year" class="select-premium text-sm h-10">
+                            <option value="">Semua Tahun</option>
+                            @foreach($regulationFilterOptions['years'] as $y)
+                                <option value="{{ $y }}">{{ $y }}</option>
+                            @endforeach
+                        </select>
+                        
+                        <x-button type="submit" variant="primary" size="md" class="w-full h-10">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                            Cari
+                        </x-button>
+                    </div>
+                </form>
+
                 <div class="overflow-x-auto">
                     <table class="table-premium">
                         <thead>
@@ -280,10 +308,38 @@
                     <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkait</h3>
                     <p class="text-xs text-[#667085] mt-0.5">5 peraturan terkait terbaru berdasarkan data linkage
                     </p>
-                </div>
-            </x-slot>
+                    </div>
+                </x-slot>
 
-            <div class="overflow-x-auto">
+                <form method="GET" action="{{ route('regulations.index') }}" class="px-6 pb-5 border-b border-[#e7eaf0]">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                        <input type="text" name="search" placeholder="Cari nomor/judul regulasi..." 
+                               class="input-premium text-sm h-10">
+                        
+                        <select name="category_id" class="select-premium text-sm h-10">
+                            <option value="">Semua Kategori</option>
+                            @foreach($regulationFilterOptions['categories'] as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                        
+                        <select name="year" class="select-premium text-sm h-10">
+                            <option value="">Semua Tahun</option>
+                            @foreach($regulationFilterOptions['years'] as $y)
+                                <option value="{{ $y }}">{{ $y }}</option>
+                            @endforeach
+                        </select>
+                        
+                        <x-button type="submit" variant="primary" size="md" class="w-full h-10">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                            Cari
+                        </x-button>
+                    </div>
+                </form>
+
+                <div class="overflow-x-auto">
                 <table class="table-premium">
                     <thead>
                         <tr>

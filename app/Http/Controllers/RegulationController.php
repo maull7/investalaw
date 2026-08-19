@@ -14,6 +14,8 @@ use App\Models\AiPrompt;
 use App\Models\Regulation;
 use App\Models\RegulationChatMessage;
 use App\Models\RegulationDocument;
+use App\Models\RegulationSearchMessage;
+use App\Models\RegulationSearchSession;
 use App\Models\UserActivityLog;
 use App\Repositories\RegulationRepository;
 use App\Services\AiService;
@@ -22,6 +24,7 @@ use App\Services\RegulationParserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -336,7 +339,73 @@ class RegulationController extends Controller
                 ->with('error', 'Pencarian AI gagal. Coba lagi beberapa saat.');
         }
 
-        $results = Regulation::with('type')
+        $session = RegulationSearchSession::create(['user_id' => $request->user()->id]);
+
+        RegulationSearchMessage::create([
+            'regulation_search_session_id' => $session->id,
+            'role' => 'user',
+            'content' => $query,
+        ]);
+
+        RegulationSearchMessage::create([
+            'regulation_search_session_id' => $session->id,
+            'role' => 'assistant',
+            'content' => 'Hasil pencarian AI.',
+            'regulation_ids' => array_keys($matches),
+        ]);
+
+        $results = $this->hydrateAiResults($matches, $query);
+
+        return view('regulations.ai-search', compact('query', 'results', 'session'));
+    }
+
+    public function aiSearchChat(Request $request, RegulationSearchSession $session): View
+    {
+        abort_unless($session->user_id === $request->user()->id, 403);
+
+        $validated = $request->validate([
+            'q' => ['required', 'string', 'min:3', 'max:255'],
+        ]);
+        $query = trim($validated['q']);
+
+        $previous = $session->messages()
+            ->where('role', 'assistant')
+            ->latest()
+            ->first();
+
+        $previousIds = is_array($previous?->regulation_ids) ? $previous->regulation_ids : [];
+
+        try {
+            $matches = empty($previousIds)
+                ? $this->aiService->searchRegulations($query)
+                : $this->aiService->refineRegulationSearch($query, $previousIds);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->with('error', 'Pencarian AI lanjutan gagal. Coba lagi beberapa saat.');
+        }
+
+        RegulationSearchMessage::create([
+            'regulation_search_session_id' => $session->id,
+            'role' => 'user',
+            'content' => $query,
+        ]);
+
+        RegulationSearchMessage::create([
+            'regulation_search_session_id' => $session->id,
+            'role' => 'assistant',
+            'content' => 'Hasil pencarian AI lanjutan.',
+            'regulation_ids' => array_keys($matches),
+        ]);
+
+        $results = $this->hydrateAiResults($matches, $query);
+
+        return view('regulations.ai-search', compact('query', 'results', 'session'));
+    }
+
+    private function hydrateAiResults(array $matches, string $query): Collection
+    {
+        return Regulation::with('type')
             ->whereIn('id', array_keys($matches))
             ->get()
             ->sortBy(fn ($reg) => (int) array_search($reg->id, array_keys($matches)))
@@ -347,8 +416,6 @@ class RegulationController extends Controller
 
                 return $reg;
             });
-
-        return view('regulations.ai-search', compact('query', 'results'));
     }
 
     public function uploadDocument(Request $request, Regulation $regulation): RedirectResponse
@@ -468,7 +535,18 @@ class RegulationController extends Controller
                 ->with('info', 'Regulasi sudah diparse lengkap.');
         }
 
-        $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
+        // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
+        if (request()->boolean('reset')) {
+            $regulation->update([
+                'parse_status' => 'parsing',
+                'parse_progress' => 0,
+                'parse_error' => null,
+                'parsed_text' => null,
+                'parse_stats' => null,
+            ]);
+        } else {
+            $regulation->update(['parse_status' => 'parsing', 'parse_error' => null]);
+        }
 
         Cache::forget("parse_cancel:regulation:{$regulation->id}");
         $regulation->documents->each(fn ($d) => Cache::forget("parse_cancel:document:{$d->id}"));
@@ -477,36 +555,51 @@ class RegulationController extends Controller
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses parse teks regulasi {$regulation->regulation_number}");
 
+        $stats = $regulation->fresh()->parse_stats ?? [];
+        $resumePage = $stats['resume_page'] ?? null;
+        $message = $resumePage
+            ? "Parse regulasi dilanjutkan dari halaman {$resumePage} secara background."
+            : 'Parse regulasi sedang diproses di background. Silakan refresh halaman untuk melihat hasil.';
+
         return redirect()->route('regulations.show', $regulation)
-            ->with('success', 'Parse regulasi sedang diproses di background. Silakan refresh halaman untuk melihat hasil.');
+            ->with('success', $message);
     }
 
     public function parseDocument(Regulation $regulation, RegulationDocument $document): RedirectResponse
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        try {
-            $result = $this->regulationParserService->parseDocument($document);
-        } catch (\Throwable $e) {
-            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => mb_substr($e->getMessage(), 0, 500)]);
-
+        if ($document->parse_status === 'complete') {
             return redirect()->route('regulations.show', $regulation)
-                ->with('error', 'Parse dokumen gagal: '.$e->getMessage());
+                ->with('info', 'Dokumen sudah diparse lengkap.');
         }
 
-        if (! $result['success']) {
-            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => mb_substr($result['message'], 0, 500)]);
-
-            return redirect()->route('regulations.show', $regulation)
-                ->with('error', $result['message']);
+        // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
+        if (request()->boolean('reset')) {
+            $document->update([
+                'parse_status' => 'parsing',
+                'parse_progress' => 0,
+                'parse_error' => null,
+                'parsed_text' => null,
+                'parse_stats' => null,
+            ]);
+        } else {
+            $document->update(['parse_status' => 'parsing', 'parse_error' => null]);
         }
 
-        $document->fresh()?->update(['parse_error' => null]);
+        Cache::forget("parse_cancel:document:{$document->id}");
+        ParseRegulationDocument::dispatch($document);
 
-        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Melakukan parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
+        UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
+
+        $stats = $document->fresh()->parse_stats ?? [];
+        $resumePage = $stats['resume_page'] ?? null;
+        $message = $resumePage
+            ? "Parse dokumen dilanjutkan dari halaman {$resumePage} secara background."
+            : 'Parse dokumen sedang diproses di background. Silakan refresh halaman untuk melihat hasil.';
 
         return redirect()->route('regulations.show', $regulation)
-            ->with('success', $result['message']);
+            ->with('success', $message);
     }
 
     public function parseAllDocuments(Regulation $regulation): RedirectResponse
@@ -539,18 +632,27 @@ class RegulationController extends Controller
     {
         $regulation->loadMissing('documents');
 
+        $regStats = $regulation->parse_stats ?? [];
+        $docStats = fn ($d) => $d->parse_stats ?? [];
+
         return response()->json([
             'regulation' => [
                 'progress' => $regulation->parse_progress,
                 'status' => $regulation->parse_status,
                 'error' => $regulation->parse_error,
                 'parsed_at' => $regulation->parsed_at?->toIso8601String(),
+                'total_pages' => $regStats['total_pages'] ?? null,
+                'resume_page' => $regStats['resume_page'] ?? null,
+                'chunk_size' => $regStats['chunk_size'] ?? RegulationParserService::CHUNK_SIZE,
             ],
             'documents' => $regulation->documents->map(fn ($d) => [
                 'id' => $d->id,
                 'progress' => $d->parse_progress,
                 'status' => $d->parse_status,
                 'error' => $d->parse_error,
+                'total_pages' => $docStats($d)['total_pages'] ?? null,
+                'resume_page' => $docStats($d)['resume_page'] ?? null,
+                'chunk_size' => $docStats($d)['chunk_size'] ?? RegulationParserService::CHUNK_SIZE,
             ]),
         ]);
     }
@@ -563,15 +665,16 @@ class RegulationController extends Controller
 
         foreach ($regulation->documents as $document) {
             Cache::put("parse_cancel:document:{$document->id}", true, now()->addHour());
-            $document->fresh()?->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+            $document->fresh()?->update(['parse_status' => 'incomplete', 'parse_error' => null]);
         }
 
-        $regulation->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+        // Pertahankan parse_stats + parsed_text (resume tersimpan), status jadi incomplete.
+        $regulation->update(['parse_status' => 'incomplete', 'parse_error' => null]);
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Membatalkan parse regulasi {$regulation->regulation_number}");
 
         return redirect()->route('regulations.show', $regulation)
-            ->with('info', 'Parse regulasi dibatalkan.');
+            ->with('info', 'Parse regulasi dibatalkan. Klik "Parse" lagi untuk melanjutkan dari halaman terakhir.');
     }
 
     public function cancelDocumentParse(Regulation $regulation, RegulationDocument $document): RedirectResponse
@@ -579,10 +682,10 @@ class RegulationController extends Controller
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
         Cache::put("parse_cancel:document:{$document->id}", true, now()->addHour());
-        $document->update(['parse_status' => 'not_parsed', 'parse_progress' => null, 'parse_error' => null]);
+        $document->update(['parse_status' => 'incomplete', 'parse_error' => null]);
 
         return redirect()->route('regulations.show', $regulation)
-            ->with('info', "Parse dokumen {$document->name} dibatalkan.");
+            ->with('info', "Parse dokumen {$document->name} dibatalkan. Klik parse lagi untuk melanjutkan dari halaman terakhir.");
     }
 
     public function extractReferences(Regulation $regulation): RedirectResponse

@@ -131,10 +131,10 @@
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">
                                     @php $latestPackage = $user->userPackages->first(); @endphp
-                                    {{ $latestPackage?->startsAt()?->format('d M Y') ?? '-' }}
+                                    {{ $latestPackage?->startDateDisplay() ?? '-' }}
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">
-                                    {{ $latestPackage?->endsAt()?->format('d M Y') ?? '-' }}
+                                    {{ $latestPackage?->endDateDisplay() ?? '-' }}
                                 </td>
                                 <td class="text-xs text-[#667085] whitespace-nowrap">
                                     {{ $user->created_at->format('d M Y H:i') }}</td>

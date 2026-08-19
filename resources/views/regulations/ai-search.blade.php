@@ -68,6 +68,22 @@
                 </div>
             @endif
         </x-card>
+
+        @isset($session)
+            <x-card class="mt-5">
+                <h4 class="text-sm font-bold text-[#071833] mb-3">Perbaiki Hasil Pencarian</h4>
+                <p class="text-xs text-[#667085] mb-3">Tanyakan pertanyaan lanjutan untuk memfilter atau memperluas hasil di atas, mis. "yang dari OJK saja" atau "yang tahun 2024".</p>
+                <form method="POST" action="{{ route('regulations.ai-search.chat', $session) }}" class="flex flex-col sm:flex-row gap-3">
+                    @csrf
+                    <input type="text" name="q" minlength="3" required class="input-premium flex-1"
+                        placeholder="Contoh: yang dari OJK saja, atau tambahkan tentang pelaporan emiten...">
+                    <x-button type="submit" variant="primary" size="lg">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                        Perbaiki
+                    </x-button>
+                </form>
+            </x-card>
+        @endisset
     @endif
 
     @if (session('error'))

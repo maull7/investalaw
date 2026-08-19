@@ -7,6 +7,7 @@ use App\Models\TypePrompt;
 use App\Models\UserActivityLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class AiPromptController extends Controller
@@ -41,10 +42,11 @@ class AiPromptController extends Controller
         ]);
 
         $typePrompt = TypePrompt::findOrFail($validated['type_prompt_id']);
+        $slug = Str::slug($validated['title']);
 
         $prompt = AiPrompt::create([
             'type_prompt_id' => $typePrompt->id,
-            'type' => $typePrompt->slug,
+            'type' => $slug,
             'title' => $validated['title'] ?? null,
             'prompt_text' => $validated['prompt_text'],
             'is_active' => $validated['is_active'] ?? true,
@@ -77,10 +79,11 @@ class AiPromptController extends Controller
         ]);
 
         $typePrompt = TypePrompt::findOrFail($validated['type_prompt_id']);
+        $slug = Str::slug($validated['title']);
 
         $aiPrompt->update([
             'type_prompt_id' => $typePrompt->id,
-            'type' => $typePrompt->slug,
+            'type' => $slug,
             'title' => $validated['title'] ?? null,
             'prompt_text' => $validated['prompt_text'],
             'is_active' => $validated['is_active'] ?? true,

@@ -15,6 +15,7 @@ class TypePromptSeeder extends Seeder
             ['name' => 'Review', 'slug' => 'review', 'description' => 'Review kesesuaian dokumen'],
             ['name' => 'Rekomendasi', 'slug' => 'rekomendasi', 'description' => 'Review dan rekomendasi dokumen'],
             ['name' => 'Validitas', 'slug' => 'validitas', 'description' => 'Validitas dokumen'],
+            ['name' => 'Analisa Bab', 'slug' => 'analisa-bab', 'description' => 'Analisa struktur bab regulasi'],
         ];
 
         foreach ($types as $type) {

@@ -487,6 +487,8 @@
                                                     </div>
                                                     <span class="text-[10px] font-bold text-[#667085]"
                                                         x-text="(docProgress({{ $doc->id }}) ?? {{ $doc->parse_progress ?? 0 }}) + '%'"></span>
+                                                    <span class="hidden sm:inline text-[10px] font-medium text-[#b0b8c5]"
+                                                        x-text="docChunkLabel({{ $doc->id }})"></span>
                                                     @if (auth()->user()->hasPermission('upload_regulations'))
                                                         <form method="POST"
                                                             action="{{ route('regulations.documents.parse-cancel', [$regulation, $doc]) }}"
@@ -536,6 +538,17 @@
                                                             Parse
                                                         </x-button>
                                                     </form>
+                                                    @if (in_array($doc->parse_status, ['failed', 'incomplete']))
+                                                        <form method="POST"
+                                                            action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
+                                                            class="inline">
+                                                            @csrf
+                                                            <input type="hidden" name="reset" value="1">
+                                                            <x-button type="submit" variant="ghost" size="sm">
+                                                                Reset &amp; Parse
+                                                            </x-button>
+                                                        </form>
+                                                    @endif
                                                 @endif
                                             @endif
                                             <a href="{{ route('regulations.documents.view', $doc) }}" target="_blank"
@@ -629,6 +642,49 @@
                                                 </p>
                                                 <p class="mt-1.5 text-2xl font-bold text-[#071833]">
                                                     {{ ($stats['percent_parsed'] ?? 0) . '%' }}</p>
+                                            </div>
+                                            <div class="rounded-xl bg-[#f6f8fb] p-4">
+                                                <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                                    Halaman Selesai
+                                                </p>
+                                                <p class="mt-1.5 text-2xl font-bold text-[#071833]">
+                                                    {{ $stats['completed_pages'] ?? ($stats['parsed_pages'] ?? 0) }}
+                                                    @if (($stats['total_pages'] ?? 0) > 0)
+                                                        <span class="text-sm font-semibold text-[#b0b8c5]">/
+                                                            {{ $stats['total_pages'] }}</span>
+                                                    @endif
+                                                </p>
+                                            </div>
+                                            <div class="rounded-xl bg-[#f6f8fb] p-4">
+                                                <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                                    Sisa Halaman
+                                                </p>
+                                                <p class="mt-1.5 text-2xl font-bold text-amber-600">
+                                                    @if (($stats['resume_page'] ?? null) !== null && ($stats['total_pages'] ?? 0) > 0)
+                                                        {{ max(0, $stats['total_pages'] - $stats['resume_page'] + 1) }}
+                                                    @else
+                                                        {{ $stats['total_pages'] - ($stats['completed_pages'] ?? $stats['parsed_pages'] ?? 0) }}
+                                                    @endif
+                                                </p>
+                                            </div>
+                                            <div class="rounded-xl bg-[#f6f8fb] p-4">
+                                                <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                                    Chunk / Halaman
+                                                </p>
+                                                <p class="mt-1.5 text-2xl font-bold text-[#071833]">
+                                                    {{ $stats['chunk_size'] ?? 10 }}
+                                                </p>
+                                                @php
+                                                    $chunksDone = $stats['completed_pages'] ?? ($stats['parsed_pages'] ?? 0);
+                                                    $totalPages = $stats['total_pages'] ?? 0;
+                                                    $totalChunks = $totalPages > 0 ? (int) ceil($totalPages / ($stats['chunk_size'] ?? 10)) : 0;
+                                                    $chunksDoneCount = $totalPages > 0 ? (int) ceil($chunksDone / ($stats['chunk_size'] ?? 10)) : 0;
+                                                @endphp
+                                                @if ($totalChunks > 0)
+                                                    <p class="mt-1 text-[11px] font-semibold text-[#667085]">
+                                                        {{ $chunksDoneCount }}/{{ $totalChunks }} chunk selesai
+                                                    </p>
+                                                @endif
                                             </div>
                                             <div class="rounded-xl bg-[#f6f8fb] p-4">
                                                 <p class="text-[11px] font-bold uppercase tracking-wider text-[#667085]">
@@ -921,14 +977,19 @@
                                     Lihat Hasil Parse
                                 </a>
                             @elseif ($regulation->parse_status === 'incomplete')
-                                <div
-                                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-xs font-semibold">
-                                    <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24"
-                                        stroke="currentColor" stroke-width="2">
+<div
+                                    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold">
+                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                                            d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
-                                    Parse tidak lengkap (incomplete) — klik Parse PDF untuk mengulang
+                                    @php $resumeN = $regulation->parse_stats['resume_page'] ?? null; @endphp
+                                    @if ($resumeN)
+                                        Parse terhenti di halaman {{ $resumeN }} — klik Parse PDF untuk melanjutkan.
+                                    @else
+                                        Parse tidak lengkap (incomplete) — klik Parse PDF untuk mengulang
+                                    @endif
                                 </div>
                                 <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
                                     @csrf
@@ -966,21 +1027,27 @@
                                             Parse Ulang
                                         </x-button>
                                     </form>
-                                    <form method="POST" action="{{ route('regulations.parse-cancel', $regulation) }}"
-                                        onsubmit="return confirm('Batalkan parse regulasi ini?')">
+                                    <form method="POST" action="{{ route('regulations.parse', $regulation) }}">
                                         @csrf
-                                        <x-button type="submit" variant="outline"
-                                            class="w-full justify-center text-rose-600">
-                                            Batalkan
+                                        <input type="hidden" name="reset" value="1">
+                                        <x-button type="submit" variant="outline" class="w-full justify-center">
+                                            Reset &amp; Parse Ulang
                                         </x-button>
                                     </form>
                                 </div>
+                                <form method="POST" action="{{ route('regulations.parse-cancel', $regulation) }}"
+                                    onsubmit="return confirm('Batalkan parse regulasi ini?')" class="mt-2">
+                                    @csrf
+                                    <x-button type="submit" variant="outline" class="w-full justify-center text-rose-600">
+                                        Batalkan
+                                    </x-button>
+                                </form>
                             @elseif($regulation->parse_status === 'parsing')
                                 <div class="space-y-2">
                                     <div
                                         class="flex items-center justify-between px-1 text-xs font-semibold text-[#667085]">
                                         <span
-                                            x-text="display < 5 ? 'Menyiapkan dokumen...' : 'Memproses halaman...'"></span>
+                                            x-text="display < 5 ? 'Menyiapkan dokumen...' : chunkLabel"></span>
                                         <span class="text-[#071833]" x-text="display + '%'"></span>
                                     </div>
                                     <div class="h-2.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
@@ -1212,7 +1279,10 @@
                 main: {
                     progress: null,
                     status: '',
-                    parsedAt: null
+                    parsedAt: null,
+                    total_pages: null,
+                    resume_page: null,
+                    chunk_size: 10
                 },
                 docs: [],
                 timer: null,
@@ -1226,6 +1296,18 @@
                 docProgress(id) {
                     const found = this.docs.find((d) => d.id === id);
                     return found ? found.progress : null;
+                },
+                docChunkLabel(id) {
+                    const found = this.docs.find((d) => d.id === id);
+                    if (!found || !found.total_pages) return '';
+                    const to = Math.min((found.resume_page ?? 1) + (found.chunk_size ?? 10) - 1, found.total_pages);
+                    return `Hal ${found.resume_page ?? 1}-${to} / ${found.total_pages}`;
+                },
+                get chunkLabel() {
+                    if (!this.main.total_pages) return 'Memproses halaman...';
+                    const from = this.main.resume_page ?? 1;
+                    const to = Math.min(from + (this.main.chunk_size ?? 10) - 1, this.main.total_pages);
+                    return `Memproses halaman ${from}-${to} / ${this.main.total_pages}`;
                 },
                 async poll() {
                     try {

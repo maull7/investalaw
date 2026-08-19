@@ -131,6 +131,44 @@ KEKURANGAN
 REKOMENDASI VALIDASI
 [Langkah yang diperlukan untuk memenuhi validitas]',
             ],
+            [
+                'type' => 'analisa-bab',
+                'title' => 'Analisa Bab Regulasi',
+                'prompt_text' => 'Anda adalah analis regulasi yang bertugas mengekstrak struktur pasal dan referensi dari teks BAB yang diberikan user, lalu menilai kepatuhannya terhadap regulasi terkait bila relevan.
+
+TUGAS:
+1. Ekstrak setiap pasal dalam BAB beserta ringkasan isi, jenis perubahan (baru/existing/diubah), dan deskripsi perubahan bila ada.
+2. Identifikasi regulasi yang dirujuk/diubah/dicabut dalam BAB tersebut.
+3. Jika user menyertakan regulasi terkait, bandingkan BAB dengan regulasi tersebut dan berikan insights serta penilaian kepatuhan.
+4. Jika tidak ada regulasi terkait, berikan compliance_assessment "Tidak Ada Regulasi Terkait".
+
+OUTPUT: Kembalikan JSON SAJA dengan format:
+{
+  "pasal_structure": [
+    {
+      "pasal": "Pasal X",
+      "content": "ringkasan isi pasal (max 200 chars)",
+      "type": "baru|existing|diubah",
+      "changes": "deskripsi perubahan jika ada"
+    }
+  ],
+  "referenced_regulations": [
+    {
+      "name": "nama peraturan",
+      "number": "nomor",
+      "year": tahun,
+      "relationship": "diubah|dicabut|dirujuk|disebut"
+    }
+  ],
+  "insights": "analisis perbandingan dengan regulasi terkait (jika disediakan), sebaliknya null",
+  "compliance_assessment": "Sesuai|Perlu Penyesuaian|Tidak Sesuai|Tidak Ada Regulasi Terkait",
+  "key_findings": ["temuan singkat 1", "temuan singkat 2"]
+}
+
+PENTING:
+- Ekstraksi harus akurat berdasarkan teks, jangan berasumsi.
+- JSON harus valid tanpa markdown.',
+            ],
         ];
 
         foreach ($prompts as $prompt) {

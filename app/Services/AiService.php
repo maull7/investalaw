@@ -114,7 +114,7 @@ DAFTAR REGULASI TERSEDIA:
 PERTANYAAN: {$query}
 
 Kembalikan JSON SAJA dengan format:
-[{"id": <id regulasi>, "alasan": "singkat mengapa relevan, maks 1 kalimat"}]
+{"result": [{"id": <id regulasi>, "alasan": "singkat mengapa relevan, maks 1 kalimat"}]}
 Maksimal 15 hasil, hanya id yang ada di daftar.
 PROMPT;
 
@@ -170,6 +170,84 @@ PROMPT;
     }
 
     /**
+     * Follow-up search dalam konteks hasil sebelumnya.
+     *
+     * @param  array<int, int>  $previousIds  id regulasi yang sudah ditemukan
+     * @return array<int, string> keyed by regulation id, value is alasan
+     */
+    public function refineRegulationSearch(string $query, array $previousIds): array
+    {
+        $previous = Regulation::query()
+            ->whereIn('id', $previousIds)
+            ->get()
+            ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
+            ->implode("\n");
+
+        $prompt = <<<PROMPT
+Anda adalah pencari regulasi dalam database. User memberikan pertanyaan lanjutan untuk memfilter atau memperluas hasil pencarian sebelumnya.
+
+HASIL SEBELUMNYA:
+{$previous}
+
+PERTANYAAN LANJUTAN: {$query}
+
+Kembalikan JSON SAJA dengan format:
+{"result": [{"id": <id regulasi>, "alasan": "singkat mengapa relevan, maks 1 kalimat"}]}
+Ambil hanya dari daftar HASIL SEBELUMNYA di atas, jangan buat id baru. Maksimal 15 hasil. Jika tidak ada yang relevan, kembalikan {"result": []}.
+PROMPT;
+
+        $providers = [
+            'openai' => [
+                'api_key' => config('ai.openai.api_key'),
+                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
+                'model' => config('ai.openai.model', 'gpt-4o-mini'),
+            ],
+        ];
+
+        $content = null;
+
+        foreach ($providers as $provider) {
+            if (empty($provider['api_key'])) {
+                continue;
+            }
+
+            try {
+                $response = Http::withToken($provider['api_key'])
+                    ->timeout(120)
+                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
+                        'model' => $provider['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                            ['role' => 'user', 'content' => $prompt],
+                        ],
+                        'max_tokens' => 1024,
+                        'temperature' => 0.1,
+                        'response_format' => ['type' => 'json_object'],
+                    ]);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $content = $response->json('choices.0.message.content');
+                if ($content) {
+                    break;
+                }
+            } catch (Exception $e) {
+                Log::warning("AI refine search provider failed: {$e->getMessage()}");
+
+                continue;
+            }
+        }
+
+        if (! $content) {
+            return [];
+        }
+
+        return $this->parseRegulationIds($content);
+    }
+
+    /**
      * @return array<int, string> keyed by regulation id, value is explanation
      */
     public function selectRelevantRegulations(LegalCase $case): array
@@ -202,6 +280,16 @@ PROMPT;
         $decoded = json_decode(trim($clean), true);
 
         if (is_array($decoded)) {
+            // response_format json_object membungkus array dalam object: {"result": [...]}
+            if (! array_is_list($decoded)) {
+                foreach ($decoded as $value) {
+                    if (is_array($value) && array_is_list($value)) {
+                        $decoded = $value;
+                        break;
+                    }
+                }
+            }
+
             $map = [];
             foreach ($decoded as $item) {
                 if (is_array($item) && isset($item['id'])) {

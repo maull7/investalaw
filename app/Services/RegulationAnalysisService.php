@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiPrompt;
 use App\Models\Regulation;
 use App\Models\RegulationAnalysis;
 use Illuminate\Support\Facades\Http;
@@ -679,38 +680,19 @@ PROMPT;
         ];
 
         $results = [];
+        $systemMessage = AiPrompt::active()->where('type', 'analisa-bab')->first()?->prompt_text
+            ?: $this->getDefaultBabPrompt();
+
         foreach ($babs as $i => $bab) {
             $babLabel = $bab['label'];
             $babText = $bab['text'];
 
-            $prompt = <<<PROMPT
-Anda adalah ekstraktor pasal. Dari teks BAB berikut, ekstrak struktur pasal dan referensi ke peraturan lain.
-
+            $userContext = <<<CONTEXT
 BAB: {$babLabel}
 
 TEKS:
 {$babText}
-
-Kembalikan JSON SAJA dengan format:
-{
-  "pasal_structure": [
-    {
-      "pasal": "Pasal X",
-      "content": "ringkasan isi pasal (max 200 chars)",
-      "type": "baru|existing|diubah",
-      "changes": "deskripsi perubahan jika ada"
-    }
-  ],
-  "referenced_regulations": [
-    {
-      "name": "nama peraturan",
-      "number": "nomor",
-      "year": tahun,
-      "relationship": "diubah|dicabut|dirujuk|disebut"
-    }
-  ]
-}
-PROMPT;
+CONTEXT;
 
             $result = ['pasal_structure' => [], 'referenced_regulations' => []];
 
@@ -724,8 +706,8 @@ PROMPT;
                         ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
                             'model' => $provider['model'],
                             'messages' => [
-                                ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                                ['role' => 'user', 'content' => $prompt],
+                                ['role' => 'system', 'content' => $systemMessage],
+                                ['role' => 'user', 'content' => $userContext],
                             ],
                             'max_tokens' => 4096,
                             'temperature' => 0.1,
@@ -799,38 +781,18 @@ PROMPT;
             ],
         ];
 
-        $prompt = <<<PROMPT
-Anda adalah analis regulasi. Analisis BAB berikut dari {$regulation->regulation_number} - {$regulation->title} ({$regulation->year}).
+        $systemMessage = AiPrompt::active()->where('type', 'analisa-bab')->first()?->prompt_text
+            ?: $this->getDefaultBabPrompt();
+
+        $userContext = <<<CONTEXT
+REGULASI: {$regulation->regulation_number} - {$regulation->title} ({$regulation->year})
 
 BAB: {$babLabel}
 
 Konten BAB:
 {$babText}
 {$relatedBlock}
-
-Berikan analisis JSON dengan format:
-{
-  "pasal_structure": [
-    {
-      "pasal": "Pasal X",
-      "content": "ringkasan isi pasal",
-      "type": "baru|existing|diubah",
-      "changes": "deskripsi perubahan jika ada"
-    }
-  ],
-  "referenced_regulations": [
-    {
-      "name": "nama peraturan",
-      "number": "nomor",
-      "year": tahun,
-      "relationship": "diubah|dicabut|dirujuk|disebut"
-    }
-  ],
-  "insights": "analisis perbandingan bab ini dengan regulasi terkait, apakah ada kesesuaian, perubahan, atau celah",
-  "compliance_assessment": "Sesuai|Perlu Penyesuaian|Tidak Sesuai|Tidak Ada Regulasi Terkait",
-  "key_findings": ["temuan singkat 1", "temuan singkat 2"]
-}
-PROMPT;
+CONTEXT;
 
         $result = ['pasal_structure' => [], 'referenced_regulations' => [], 'insights' => null, 'compliance_assessment' => null, 'key_findings' => []];
         foreach ($providers as $provider) {
@@ -843,8 +805,8 @@ PROMPT;
                     ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
                         'model' => $provider['model'],
                         'messages' => [
-                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                            ['role' => 'user', 'content' => $prompt],
+                            ['role' => 'system', 'content' => $systemMessage],
+                            ['role' => 'user', 'content' => $userContext],
                         ],
                         'max_tokens' => 4096,
                         'temperature' => 0.1,
@@ -958,5 +920,45 @@ PROMPT;
             'change_analysis' => implode("\n", $changes),
             'revocation_analysis' => implode("\n", $revocations),
         ];
+    }
+
+    private function getDefaultBabPrompt(): string
+    {
+        return <<<'PROMPT'
+Anda adalah analis regulasi yang bertugas mengekstrak struktur pasal dan referensi dari teks BAB yang diberikan user, lalu menilai kepatuhannya terhadap regulasi terkait bila relevan.
+
+TUGAS:
+1. Ekstrak setiap pasal dalam BAB beserta ringkasan isi, jenis perubahan (baru/existing/diubah), dan deskripsi perubahan bila ada.
+2. Identifikasi regulasi yang dirujuk/diubah/dicabut dalam BAB tersebut.
+3. Jika user menyertakan regulasi terkait, bandingkan BAB dengan regulasi tersebut dan berikan insights serta penilaian kepatuhan.
+4. Jika tidak ada regulasi terkait, berikan compliance_assessment "Tidak Ada Regulasi Terkait".
+
+OUTPUT: Kembalikan JSON SAJA dengan format:
+{
+  "pasal_structure": [
+    {
+      "pasal": "Pasal X",
+      "content": "ringkasan isi pasal (max 200 chars)",
+      "type": "baru|existing|diubah",
+      "changes": "deskripsi perubahan jika ada"
+    }
+  ],
+  "referenced_regulations": [
+    {
+      "name": "nama peraturan",
+      "number": "nomor",
+      "year": tahun,
+      "relationship": "diubah|dicabut|dirujuk|disebut"
+    }
+  ],
+  "insights": "analisis perbandingan dengan regulasi terkait (jika disediakan), sebaliknya null",
+  "compliance_assessment": "Sesuai|Perlu Penyesuaian|Tidak Sesuai|Tidak Ada Regulasi Terkait",
+  "key_findings": ["temuan singkat 1", "temuan singkat 2"]
+}
+
+PENTING:
+- Ekstraksi harus akurat berdasarkan teks, jangan berasumsi.
+- JSON harus valid tanpa markdown.
+PROMPT;
     }
 }

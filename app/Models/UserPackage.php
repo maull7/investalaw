@@ -31,6 +31,10 @@ class UserPackage extends Model
 
     public function startsAt(): ?Carbon
     {
+        if ($this->status !== 'active') {
+            return null;
+        }
+
         if ($this->type === 'trial') {
             return $this->created_at;
         }
@@ -54,5 +58,23 @@ class UserPackage extends Model
         return $this->type === 'trial'
             ? $this->trial_ends_at
             : $this->startsAt()?->copy()->addMonth();
+    }
+
+    public function startDateDisplay(): string
+    {
+        if ($this->status === 'pending') {
+            return 'Menunggu Konfirmasi';
+        }
+
+        return $this->startsAt()?->format('d M Y') ?? '-';
+    }
+
+    public function endDateDisplay(): string
+    {
+        if ($this->status === 'pending') {
+            return 'Menunggu Konfirmasi';
+        }
+
+        return $this->endsAt()?->format('d M Y') ?? '-';
     }
 }

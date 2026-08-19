@@ -19,15 +19,33 @@
                     @csrf
                     @method('PUT')
 
-                    <div>
+                    @if ($aiPrompt->type_prompt_id)
+                        <div>
+                            <input type="hidden" name="type_prompt_id" id="type_prompt_id"
+                                value="{{ old('type_prompt_id', $aiPrompt->type_prompt_id) }}" class="input-premium"
+                                placeholder="Type prompt">
+                            @error('type_prompt_id')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @else
+                        <div>
+                            <label for="type_prompt_id" class="block text-sm font-semibold text-[#071833] mb-2">Type <span
+                                    class="text-[#c99a3e]">*</span></label>
+                            <select name="type_prompt_id" id="type_prompt_id" required class="select-premium">
+                                <option value="">-- Pilih Type --</option>
+                                @foreach ($typePrompts as $type)
+                                    <option value="{{ $type->id }}"
+                                        {{ old('type_prompt_id', $aiPrompt->type_prompt_id) == $type->id ? 'selected' : '' }}>
+                                        {{ $type->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('type_prompt_id')
+                                <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    @endif
 
-                        <input type="hidden" name="type_prompt_id" id="type_prompt_id"
-                            value="{{ old('type_prompt_id', $aiPrompt->type_prompt_id) }}" class="input-premium"
-                            placeholder="Type prompt">
-                        @error('type_prompt_id')
-                            <p class="mt-1.5 text-xs font-medium text-rose-600">{{ $message }}</p>
-                        @enderror
-                    </div>
 
                     <div>
                         <label for="title" class="block text-sm font-semibold text-[#071833] mb-2">Title</label>

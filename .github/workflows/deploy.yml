@@ -76,3 +76,5 @@ jobs:
 
             echo "Check Horizon"
             php artisan horizon:status
+
+            sudo supervisorctl restart horizon-law

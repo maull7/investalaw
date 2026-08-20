@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['user_id', 'regulation_id', 'role', 'content'])]
+#[Fillable(['user_id', 'regulation_id', 'role', 'content', 'citations', 'confidence', 'prompt_text', 'provider_used', 'model_used', 'context_hash'])]
 class RegulationChatMessage extends Model
 {
     /** @return BelongsTo<User, RegulationChatMessage> */
@@ -19,5 +19,10 @@ class RegulationChatMessage extends Model
     public function regulation(): BelongsTo
     {
         return $this->belongsTo(Regulation::class);
+    }
+
+    protected function casts(): array
+    {
+        return ['citations' => 'array'];
     }
 }

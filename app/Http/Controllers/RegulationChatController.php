@@ -69,10 +69,20 @@ class RegulationChatController extends Controller
                 'regulation_id' => $regulation->id,
                 'role' => 'assistant',
                 'content' => $reply,
+                'citations' => $result['citations'] ?? [],
+                'confidence' => $result['confidence'] ?? 'low',
+                'prompt_text' => $result['prompt_text'] ?? null,
+                'provider_used' => $result['provider'] ?? null,
+                'model_used' => $result['model'] ?? null,
+                'context_hash' => $result['context_hash'] ?? null,
             ]);
 
             if ($request->wantsJson()) {
-                return response()->json(['reply' => $reply]);
+                return response()->json([
+                    'reply' => $reply,
+                    'citations' => $result['citations'] ?? [],
+                    'confidence' => $result['confidence'] ?? 'low',
+                ]);
             }
 
             return redirect()->route('regulations.show', [$regulation, 'tab' => 'vesa'])

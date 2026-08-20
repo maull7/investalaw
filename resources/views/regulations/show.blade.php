@@ -843,9 +843,26 @@
                                             V </div>
                                         <div
                                             class="max-w-[85%] min-w-0 rounded-2xl rounded-tl-md bg-[#f6f8fb] px-4 py-3 text-sm leading-6 text-[#071833] shadow-sm ring-1 ring-[#e7eaf0]">
-                                            <div class="chat-message whitespace-pre-wrap break-words"> {{ $msg->content }}
-                                            </div>
-                                        </div>
+                                             <div class="chat-message whitespace-pre-wrap break-words"> {{ $msg->content }}
+                                             </div>
+                                             @if ($msg->citations)
+                                                 <div class="mt-3 border-t border-[#dfe4ec] pt-2 text-xs">
+                                                     <p class="font-bold text-[#071833]">Sumber terverifikasi</p>
+                                                     @foreach ($msg->citations as $citation)
+                                                         <div class="mt-2 rounded-lg bg-white p-2 ring-1 ring-[#e7eaf0]">
+                                                             <p class="font-semibold">{{ $citation['source_label'] ?? 'Sumber regulasi' }}{{ !empty($citation['page']) ? ' · Halaman '.$citation['page'] : '' }}</p>
+                                                             @if (!empty($citation['quote']))
+                                                                 <p class="mt-1 text-[#667085]">“{{ $citation['quote'] }}”</p>
+                                                             @endif
+                                                             @if (empty($citation['verified']))
+                                                                 <p class="mt-1 text-amber-700">Kutipan perlu diverifikasi.</p>
+                                                             @endif
+                                                         </div>
+                                                     @endforeach
+                                                 </div>
+                                             @endif
+                                             <p class="mt-2 text-[10px] text-[#667085]">Confidence: {{ ucfirst($msg->confidence ?? 'low') }}. Tetap verifikasi ke dokumen asli.</p>
+                                         </div>
                                     </div>
                                 @endif
                             @empty
@@ -1220,7 +1237,7 @@
                             return;
                         }
 
-                        this.appendBubble('assistant', data.reply);
+                         this.appendBubble('assistant', data.reply, false, data.citations || [], data.confidence || 'low');
                     } catch (e) {
                         this.removeTyping();
                         this.appendBubble('assistant', 'Koneksi gagal. Coba lagi.');
@@ -1228,7 +1245,7 @@
                         this.sending = false;
                     }
                 },
-                appendBubble(role, text, typing = false) {
+                appendBubble(role, text, typing = false, citations = [], confidence = 'low') {
                     this.$refs.empty?.remove();
 
                     const wrap = document.createElement('div');
@@ -1250,6 +1267,29 @@
                             'rounded-tl-md bg-[#f6f8fb] ring-1 ring-[#e7eaf0] text-[#071833]') +
                         ' px-4 py-3 text-sm leading-relaxed whitespace-pre-line break-words';
                     bubble.textContent = text;
+
+                    if (role === 'assistant') {
+                        const meta = document.createElement('div');
+                        meta.className = 'mt-2 text-[10px] text-[#667085]';
+                        meta.textContent = `Confidence: ${confidence.charAt(0).toUpperCase() + confidence.slice(1)}. Tetap verifikasi ke dokumen asli.`;
+                        bubble.appendChild(meta);
+
+                        if (citations.length) {
+                            const sources = document.createElement('div');
+                            sources.className = 'mt-3 border-t border-[#dfe4ec] pt-2 text-xs';
+                            const title = document.createElement('p');
+                            title.className = 'font-bold text-[#071833]';
+                            title.textContent = 'Sumber terverifikasi';
+                            sources.appendChild(title);
+                            citations.forEach((citation) => {
+                                const item = document.createElement('div');
+                                item.className = 'mt-2 rounded-lg bg-white p-2 ring-1 ring-[#e7eaf0]';
+                                item.textContent = `${citation.source_label || 'Sumber regulasi'}${citation.page ? ` · Halaman ${citation.page}` : ''}${citation.quote ? `\n“${citation.quote}”` : ''}`;
+                                sources.appendChild(item);
+                            });
+                            bubble.appendChild(sources);
+                        }
+                    }
 
                     if (role === 'user') {
                         wrap.appendChild(bubble);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ConsultationChatMessage;
 use App\Models\ConsultationSession;
 use App\Models\Package;
 use App\Models\Regulation;
@@ -9,6 +10,7 @@ use App\Models\RegulationCategory;
 use App\Models\RegulationType;
 use App\Models\User;
 use App\Models\UserPackage;
+use App\Services\AiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -136,6 +138,47 @@ class KakVestaConsultationTest extends TestCase
 
         $session = ConsultationSession::firstOrFail();
         $this->assertSame(3, $session->regulations()->count());
+    }
+
+    public function test_consultation_saves_validated_citations_from_ai_result(): void
+    {
+        $user = $this->paidUser();
+        $regulationId = $this->makeRegulations(1)[0];
+        $regulation = Regulation::findOrFail($regulationId);
+        $regulation->update(['parsed_text' => 'Pasal 1 mengatur kewajiban pelaporan.']);
+        $session = ConsultationSession::create(['user_id' => $user->id, 'title' => 'Sesi citation']);
+        $session->regulations()->attach($regulation);
+
+        $this->mock(AiService::class, function ($mock) use ($regulation): void {
+            $mock->shouldReceive('askConsultation')->once()->andReturn([
+                'content' => 'Kewajiban pelaporan harus dipenuhi.',
+                'citations' => [[
+                    'source_type' => 'regulation',
+                    'source_id' => $regulation->id,
+                    'source_label' => 'POJK/1/2026 - Regulasi Test 1',
+                    'page' => null,
+                    'quote' => 'Pasal 1 mengatur kewajiban pelaporan.',
+                    'verified' => true,
+                ]],
+                'confidence' => 'high',
+                'provider' => 'openai',
+                'model' => 'gpt-test',
+                'prompt_text' => 'prompt snapshot',
+                'context_hash' => str_repeat('b', 64),
+                'total_tokens' => 20,
+            ]);
+        });
+
+        $this->actingAs($user)->postJson(route('consultations.chat.ask', $session), [
+            'question' => 'Apa kewajiban pelaporannya?',
+        ])->assertOk()
+            ->assertJsonPath('confidence', 'high')
+            ->assertJsonPath('citations.0.verified', true);
+
+        $message = ConsultationChatMessage::where('role', 'assistant')->firstOrFail();
+        $this->assertSame('high', $message->confidence);
+        $this->assertSame('gpt-test', $message->model_used);
+        $this->assertTrue($message->citations[0]['verified']);
     }
 
     public function test_session_requires_min_one_regulation(): void

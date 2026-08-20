@@ -58,6 +58,45 @@ class RegulationChatTest extends TestCase
         $this->assertSame(2, RegulationChatMessage::where('regulation_id', $regulation->id)->count());
     }
 
+    public function test_json_reply_persists_validated_citations_and_confidence(): void
+    {
+        $this->mock(AiService::class, function ($mock): void {
+            $mock->shouldReceive('askRegulation')
+                ->once()
+                ->andReturn([
+                    'content' => 'Jawaban dengan sumber.',
+                    'citations' => [[
+                        'source_type' => 'regulation',
+                        'source_id' => 1,
+                        'source_label' => 'POJK/10/2026 - Regulasi Chat Test',
+                        'page' => null,
+                        'quote' => 'Pasal 1 mengatur keterbukaan informasi.',
+                        'verified' => true,
+                    ]],
+                    'confidence' => 'high',
+                    'provider' => 'openai',
+                    'model' => 'gpt-test',
+                    'prompt_text' => 'prompt snapshot',
+                    'context_hash' => str_repeat('a', 64),
+                    'total_tokens' => 50,
+                ]);
+        });
+
+        $user = User::factory()->create();
+        $regulation = $this->makeRegulation();
+
+        $this->actingAs($user)->postJson(route('regulations.chat.ask', $regulation), [
+            'question' => 'Apa isi Pasal 1?',
+        ])->assertOk()
+            ->assertJsonPath('confidence', 'high')
+            ->assertJsonPath('citations.0.verified', true);
+
+        $message = RegulationChatMessage::where('role', 'assistant')->firstOrFail();
+        $this->assertSame('high', $message->confidence);
+        $this->assertSame('gpt-test', $message->model_used);
+        $this->assertTrue($message->citations[0]['verified']);
+    }
+
     public function test_chat_history_is_isolated_per_account(): void
     {
         $userA = User::factory()->create();

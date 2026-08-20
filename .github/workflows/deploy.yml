@@ -71,10 +71,16 @@ jobs:
             sudo systemctl restart php8.3-fpm # SESUAIKAN
             sudo systemctl reload nginx
 
-            echo "Terminate Horizon workers"
-            php artisan horizon:terminate
-
-            echo "Check Horizon"
-            php artisan horizon:status
+            echo "Restart Horizon"
 
             sudo supervisorctl restart horizon-law
+
+            echo "Wait for Horizon"
+            sleep 5
+
+            echo "Check Supervisor"
+            sudo supervisorctl status horizon-law
+
+            echo "Check Laravel Horizon"
+            php artisan horizon:status
+  

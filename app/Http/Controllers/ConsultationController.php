@@ -286,6 +286,12 @@ class ConsultationController extends Controller
                 'user_id' => $request->user()->id,
                 'role' => 'assistant',
                 'content' => $reply,
+                'citations' => $result['citations'] ?? [],
+                'confidence' => $result['confidence'] ?? 'low',
+                'prompt_text' => $result['prompt_text'] ?? null,
+                'provider_used' => $result['provider'] ?? null,
+                'model_used' => $result['model'] ?? null,
+                'context_hash' => $result['context_hash'] ?? null,
             ]);
 
             if ($generatedFile) {
@@ -303,6 +309,8 @@ class ConsultationController extends Controller
                         'url' => route('consultations.generated.download', $generatedFile),
                     ] : null,
                     'image_url' => $imageUrl,
+                    'citations' => $result['citations'] ?? [],
+                    'confidence' => $result['confidence'] ?? 'low',
                 ]);
             }
 

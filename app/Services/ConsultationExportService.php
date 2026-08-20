@@ -82,7 +82,7 @@ class ConsultationExportService
 
             return [
                 'role' => $msg->role,
-                'content' => $msg->content.$attachments,
+                'content' => $this->contentWithCitations($msg->content, $msg->citations).$attachments,
                 'created_at' => $msg->created_at->format('d M Y, H:i'),
             ];
         })->toArray();
@@ -113,7 +113,7 @@ class ConsultationExportService
             'messagesData' => [
                 [
                     'role' => 'assistant',
-                    'content' => $message->content.$attachments,
+                    'content' => $this->contentWithCitations($message->content, $message->citations).$attachments,
                     'created_at' => $message->created_at->format('d M Y, H:i'),
                 ],
             ],
@@ -157,6 +157,23 @@ class ConsultationExportService
         $this->addWordFooter($section);
 
         return $phpWord;
+    }
+
+    private function contentWithCitations(string $content, ?array $citations): string
+    {
+        if (empty($citations)) {
+            return $content;
+        }
+
+        $sources = collect($citations)->map(function (array $citation): string {
+            $label = $citation['source_label'] ?? 'Sumber regulasi';
+            $page = ! empty($citation['page']) ? " (halaman {$citation['page']})" : '';
+            $quote = ! empty($citation['quote']) ? "\n\"{$citation['quote']}\"" : '';
+
+            return "- {$label}{$page}{$quote}";
+        })->implode("\n");
+
+        return $content."\n\nSumber:\n{$sources}";
     }
 
     private function addWordHeader($section, ConsultationSession $session): void

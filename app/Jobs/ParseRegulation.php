@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Exceptions\ParsingCancelledException;
 use App\Models\Regulation;
 use App\Services\RegulationParserService;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,13 +14,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
-class ParseRegulation implements ShouldQueue
+class ParseRegulation implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, SerializesModels;
 
     public $queue = 'parsing';
 
-    public $timeout = 600;
+    public $timeout = 1700;
 
     public $tries = 1;
 
@@ -32,16 +33,37 @@ class ParseRegulation implements ShouldQueue
         return "parse_cancel:regulation:{$this->regulation->id}";
     }
 
+    public function uniqueId(): string
+    {
+        return (string) $this->regulation->id;
+    }
+
+    public function uniqueFor(): int
+    {
+        return 3600;
+    }
+
     public function handle(RegulationParserService $parser): void
+    {
+        $shouldContinue = Cache::lock("parse_lock:regulation:{$this->regulation->id}", $this->timeout + 60)
+            ->get(fn (): bool => $this->process($parser));
+
+        $regulation = $shouldContinue === true ? $this->regulation->fresh() : null;
+        if ($regulation) {
+            self::dispatch($regulation);
+        }
+    }
+
+    private function process(RegulationParserService $parser): bool
     {
         $regulation = $this->regulation->fresh();
 
         if (! $regulation) {
-            return;
+            return false;
         }
 
         if ($regulation->parse_status === 'complete') {
-            return;
+            return false;
         }
 
         try {
@@ -51,11 +73,17 @@ class ParseRegulation implements ShouldQueue
             $regulation->fresh()?->update(['parse_status' => 'incomplete', 'parse_error' => null]);
             Cache::forget($this->cancelKey());
 
-            return;
+            return false;
         }
 
         $stats = $regulation->parse_stats ?? [];
         $fromPage = (int) ($stats['resume_page'] ?? 1);
+
+        if (empty($stats['pdf_type']) && empty($stats['page_counts']) && $parser->extractTextPages($regulation, 'text')) {
+            Log::info("ParseRegulation extracted text for regulation {$regulation->id}");
+
+            return false;
+        }
 
         if ($regulation->parse_status !== 'parsing') {
             $regulation->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
@@ -68,7 +96,7 @@ class ParseRegulation implements ShouldQueue
             $regulation->fresh()?->update(['parse_status' => 'incomplete', 'parse_error' => null]);
             Cache::forget($this->cancelKey());
 
-            return;
+            return false;
         } catch (\Throwable $e) {
             Log::error("ParseRegulation exception for regulation {$regulation->id}: {$e->getMessage()}");
             $regulation->fresh()?->update(['parse_status' => 'failed', 'parse_error' => $this->truncateError($e->getMessage())]);
@@ -80,17 +108,17 @@ class ParseRegulation implements ShouldQueue
             Log::warning("ParseRegulation chunk failed for regulation {$regulation->id}: {$result['message']}");
             $regulation->fresh()?->update(['parse_status' => 'failed', 'parse_error' => $this->truncateError($result['message'])]);
 
-            return;
+            return false;
         }
 
         if ($result['done']) {
             $parser->finalizeOcrParsed($regulation->fresh());
             Log::info("ParseRegulation finished for regulation {$regulation->id}");
 
-            return;
+            return false;
         }
 
-        self::dispatch($regulation->fresh());
+        return true;
     }
 
     public function failed(\Throwable $e): void

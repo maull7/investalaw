@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Exceptions\ParsingCancelledException;
 use App\Models\RegulationDocument;
 use App\Services\RegulationParserService;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -12,16 +13,14 @@ use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Smalot\PdfParser\Parser;
 
-class ParseRegulationDocument implements ShouldQueue
+class ParseRegulationDocument implements ShouldBeUniqueUntilProcessing, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, SerializesModels;
 
     public $queue = 'parsing';
 
-    public $timeout = 600;
+    public $timeout = 1700;
 
     public $tries = 1;
 
@@ -34,16 +33,37 @@ class ParseRegulationDocument implements ShouldQueue
         return "parse_cancel:document:{$this->document->id}";
     }
 
+    public function uniqueId(): string
+    {
+        return (string) $this->document->id;
+    }
+
+    public function uniqueFor(): int
+    {
+        return 3600;
+    }
+
     public function handle(RegulationParserService $parser): void
+    {
+        $shouldContinue = Cache::lock("parse_lock:document:{$this->document->id}", $this->timeout + 60)
+            ->get(fn (): bool => $this->process($parser));
+
+        $document = $shouldContinue === true ? $this->document->fresh() : null;
+        if ($document) {
+            self::dispatch($document);
+        }
+    }
+
+    private function process(RegulationParserService $parser): bool
     {
         $document = $this->document->fresh();
 
         if (! $document) {
-            return;
+            return false;
         }
 
         if ($document->parse_status === 'complete') {
-            return;
+            return false;
         }
 
         try {
@@ -53,7 +73,7 @@ class ParseRegulationDocument implements ShouldQueue
             $document->fresh()?->update(['parse_status' => 'incomplete', 'parse_error' => null]);
             Cache::forget($this->cancelKey());
 
-            return;
+            return false;
         }
 
         $ext = strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION));
@@ -61,41 +81,21 @@ class ParseRegulationDocument implements ShouldQueue
         if ($ext === 'docx') {
             $parser->parseDocumentChunk($document, 1);
 
-            return;
+            return false;
         }
 
         if ($ext !== 'pdf') {
             $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => 'Format file tidak didukung. Hanya PDF dan DOCX.']);
 
-            return;
+            return false;
         }
 
         $stats = $document->parse_stats ?? [];
         $fromPage = (int) ($stats['resume_page'] ?? 1);
 
         // First run: coba ekstraksi teks langsung dulu (bukan scan), kalau ada isi langsung selesai.
-        if (empty($stats['resume_page']) && empty($stats['pdf_type'])) {
-            $fullPath = Storage::disk('public')->path($document->file_path);
-            $pdfParser = new Parser;
-
-            try {
-                $pdf = $pdfParser->parseFile($fullPath);
-                $hasText = false;
-                foreach ($pdf->getPages() as $page) {
-                    if (mb_strlen(trim(preg_replace('/\s+/', ' ', $page->getText()))) > 10) {
-                        $hasText = true;
-                        break;
-                    }
-                }
-            } catch (\Throwable $e) {
-                $hasText = false;
-            }
-
-            if ($hasText) {
-                $parser->extractTextPages($document, 'text');
-
-                return;
-            }
+        if (empty($stats['pdf_type']) && empty($stats['page_counts']) && $parser->extractTextPages($document, 'text')) {
+            return false;
         }
 
         if ($document->parse_status !== 'parsing') {
@@ -109,7 +109,7 @@ class ParseRegulationDocument implements ShouldQueue
             $document->fresh()?->update(['parse_status' => 'incomplete', 'parse_error' => null]);
             Cache::forget($this->cancelKey());
 
-            return;
+            return false;
         } catch (\Throwable $e) {
             Log::error("ParseRegulationDocument exception for doc {$document->id}: {$e->getMessage()}");
             $document->fresh()?->update(['parse_status' => 'failed', 'parse_error' => $this->truncateError($e->getMessage())]);
@@ -121,17 +121,17 @@ class ParseRegulationDocument implements ShouldQueue
             Log::warning("ParseRegulationDocument chunk failed for doc {$document->id}: {$result['message']}");
             $document->fresh()?->update(['parse_status' => 'failed', 'parse_error' => $this->truncateError($result['message'])]);
 
-            return;
+            return false;
         }
 
         if ($result['done']) {
             $parser->finalizeOcrParsed($document->fresh());
             Log::info("ParseRegulationDocument finished for doc {$document->id}");
 
-            return;
+            return false;
         }
 
-        self::dispatch($document->fresh());
+        return true;
     }
 
     public function failed(\Throwable $e): void

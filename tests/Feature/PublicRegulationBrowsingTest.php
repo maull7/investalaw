@@ -1,0 +1,92 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Regulation;
+use App\Models\RegulationCategory;
+use App\Models\RegulationType;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class PublicRegulationBrowsingTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function migrateFreshUsing(): array
+    {
+        return ['--schema-path' => '/dev/null'];
+    }
+
+    public function test_guest_can_search_regulations_by_number_or_title_from_landing_page(): void
+    {
+        $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+        $other = $this->makeRegulation('UU/1/2020', 'Ketenagakerjaan');
+
+        $this->get(route('index-dash', ['search' => 'digital']))
+            ->assertOk()
+            ->assertSee($match->regulation_number)
+            ->assertDontSee($other->regulation_number);
+    }
+
+    public function test_guest_can_filter_landing_regulations_by_category_and_year(): void
+    {
+        $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital', 'Pasar Modal', 2026);
+        $other = $this->makeRegulation('POJK/11/2025', 'Pasar Modal Lama', 'Pasar Modal', 2025);
+
+        $this->get(route('index-dash', [
+            'category_id' => $match->category_id,
+            'year' => $match->year,
+        ]))
+            ->assertOk()
+            ->assertSee($match->regulation_number)
+            ->assertDontSee($other->regulation_number);
+    }
+
+    public function test_guest_can_open_regulation_detail_and_see_all_tabs(): void
+    {
+        $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+
+        $this->get(route('regulations.show', $regulation))
+            ->assertOk()
+            ->assertSee('Info')
+            ->assertSee('Short Review')
+            ->assertSee('Tanya Kak Vesta')
+            ->assertSee('Silakan login terlebih dahulu untuk menggunakan fitur Tanya Kak Vesta.')
+            ->assertDontSee('role="dialog"')
+            ->assertSee(route('login'));
+    }
+
+    public function test_guest_chat_request_is_redirected_to_login(): void
+    {
+        $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+
+        $this->post(route('regulations.chat.ask', $regulation), [
+            'question' => 'Apa isi regulasi ini?',
+        ])->assertRedirect(route('login'));
+    }
+
+    public function test_guest_is_redirected_to_login_from_regulation_create(): void
+    {
+        $this->get(route('regulations.create'))
+            ->assertRedirect(route('login'));
+    }
+
+    private function makeRegulation(
+        string $number,
+        string $title,
+        string $categoryName = 'Pasar Modal',
+        int $year = 2026,
+    ): Regulation {
+        $type = RegulationType::create(['name' => 'POJK', 'level' => 1]);
+        $category = RegulationCategory::create(['name' => $categoryName]);
+
+        return Regulation::create([
+            'regulation_number' => $number,
+            'title' => $title,
+            'regulation_type_id' => $type->id,
+            'category_id' => $category->id,
+            'year' => $year,
+            'file_path' => 'regulations/fixture.pdf',
+        ]);
+    }
+}

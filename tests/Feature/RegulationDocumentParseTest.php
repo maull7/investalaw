@@ -7,6 +7,7 @@ use App\Models\RegulationCategory;
 use App\Models\RegulationDocument;
 use App\Models\RegulationType;
 use App\Services\RegulationParserService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -59,6 +60,25 @@ class RegulationDocumentParseTest extends TestCase
 
         $this->assertFalse($result['success']);
         $this->assertStringContainsString('PDF dan DOCX', $result['message']);
+    }
+
+    public function test_text_pdf_is_extracted_without_ocr(): void
+    {
+        Storage::fake('public');
+
+        $regulation = $this->makeRegulation();
+        Storage::disk('public')->put(
+            $regulation->file_path,
+            Pdf::loadHTML('<p>Peraturan ini mengatur kewajiban pelaporan investasi.</p>')->output(),
+        );
+
+        $result = app(RegulationParserService::class)->extractTextPages($regulation, 'text');
+        $regulation->refresh();
+
+        $this->assertTrue($result);
+        $this->assertSame('complete', $regulation->parse_status);
+        $this->assertSame('text', $regulation->parse_stats['pdf_type']);
+        $this->assertStringContainsString('kewajiban pelaporan investasi', $regulation->parsed_text);
     }
 
     private function makeRegulation(): Regulation

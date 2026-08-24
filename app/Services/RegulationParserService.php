@@ -11,9 +11,7 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 
 class RegulationParserService
 {
-    public const CHUNK_SIZE = 10;
-
-    private const OCR_GOOD_THRESHOLD = 0.9;
+    public const CHUNK_SIZE = 5;
 
     public function parseRegulationChunk(Regulation $regulation, int $fromPage, ?callable $progress = null): array
     {
@@ -23,7 +21,7 @@ class RegulationParserService
             return ['success' => false, 'message' => 'File tidak ditemukan.'];
         }
 
-        set_time_limit(600);
+        set_time_limit(1700);
 
         $total = $this->getTotalPages($fullPath);
         if ($total <= 0) {
@@ -131,7 +129,7 @@ class RegulationParserService
             return ['success' => false, 'message' => 'File tidak ditemukan.'];
         }
 
-        set_time_limit(600);
+        set_time_limit(1700);
 
         $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
 
@@ -208,7 +206,7 @@ class RegulationParserService
         ];
     }
 
-    public function extractTextPages(RegulationDocument|Regulation $model, string $pdfType): void
+    public function extractTextPages(RegulationDocument|Regulation $model, string $pdfType): bool
     {
         $fullPath = Storage::disk('public')->path($model->file_path);
         $parser = new Parser;
@@ -225,10 +223,18 @@ class RegulationParserService
                 ];
             }
 
+            $meaningfulPages = collect($pages)->filter(fn (array $page): bool => $page['char_count'] > 10)->count();
+            if ($meaningfulPages === 0 || ($meaningfulPages / count($pages)) < 0.95) {
+                return false;
+            }
+
             $this->finalizeTextParsed($model, $pages, $pdfType);
-        } catch (\Exception $e) {
+
+            return true;
+        } catch (\Throwable $e) {
             Log::warning("Text extraction failed for {$model->file_path}: {$e->getMessage()}");
-            $model->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => mb_substr($e->getMessage(), 0, 500)]);
+
+            return false;
         }
     }
 
@@ -346,36 +352,35 @@ class RegulationParserService
 
     private function ocrWithBestOrientation(string $image, bool $psm6, string $tmpDir): string
     {
+        $best = '';
+
         try {
-            $text = $this->ocrImage($image, $psm6);
-            if ($this->ocrQuality($text) >= self::OCR_GOOD_THRESHOLD) {
-                return $text;
+            $best = $this->ocrImage($image, $psm6);
+            if (mb_strlen($best) >= 10) {
+                return $best;
             }
         } catch (\Throwable $e) {
             Log::warning("OCR initial failed: {$e->getMessage()}");
-            $text = '';
         }
 
-        $best = $text;
-        $bestScore = $this->ocrQuality($best);
-
-        foreach (['180', '90', '270', 'flip'] as $variant) {
+        foreach (['90', '180', '270'] as $variant) {
             $rotated = $this->rotateImage($image, $variant, $tmpDir);
             if ($rotated === null) {
                 continue;
             }
+
             try {
                 $candidate = $this->ocrImage($rotated, $psm6);
+                if (mb_strlen($candidate) > mb_strlen($best)) {
+                    $best = $candidate;
+                }
+                if (mb_strlen($best) >= 10) {
+                    return $best;
+                }
+            } catch (\Throwable $e) {
+                Log::warning("OCR {$variant} degree rotation failed: {$e->getMessage()}");
             } finally {
                 @unlink($rotated);
-            }
-            $score = $this->ocrQuality($candidate);
-            if ($score > $bestScore) {
-                $best = $candidate;
-                $bestScore = $score;
-            }
-            if ($bestScore >= self::OCR_GOOD_THRESHOLD) {
-                break;
             }
         }
 
@@ -390,20 +395,6 @@ class RegulationParserService
         }
 
         return trim($ocr->run());
-    }
-
-    private function ocrQuality(string $text): float
-    {
-        $len = mb_strlen($text);
-        if ($len === 0) {
-            return 0.0;
-        }
-
-        $letters = preg_match_all('/[a-zA-Z]/u', $text);
-        $digits = preg_match_all('/[0-9]/u', $text);
-        $spaces = preg_match_all('/\s/u', $text);
-
-        return ($letters + $digits + $spaces) / $len;
     }
 
     private function rotateImage(string $image, string $variant, string $tmpDir): ?string

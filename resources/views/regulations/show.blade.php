@@ -4,6 +4,13 @@
 @section('header', $regulation->regulation_number)
 
 @section('content')
+    @php
+        $user = auth()->user();
+        $canUploadRegulations = $user?->hasPermission('upload_regulations') ?? false;
+        $canDownloadDocuments = $user !== null && $user->role !== 'user';
+        $userInitial = $user ? strtoupper(mb_substr($user->name, 0, 1)) : '';
+    @endphp
+
     {{-- Hero --}}
     <section class="relative overflow-hidden rounded-[24px] bg-navy-gradient text-white p-7 sm:p-9">
         <div class="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-[#c99a3e]/18 blur-3xl"></div>
@@ -86,14 +93,14 @@
                 <div class="flex items-center gap-1 rounded-2xl bg-[#f6f8fb] p-1 w-fit mb-6">
                     <button type="button" @click="tab = 'info'"
                         :class="tab === 'info' ? 'bg-white shadow-sm text-[#071833]' : 'text-[#667085] hover:text-[#071833]'"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition">Info</button>
+                        class="px-4 py-2 text-lg font-bold rounded-xl transition">Info</button>
                     <button type="button" @click="tab = 'short-review'"
                         :class="tab === 'short-review' ? 'bg-white shadow-sm text-[#071833]' :
                             'text-[#667085] hover:text-[#071833]'"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition">Short Review</button>
+                        class="px-4 py-2 text-lg font-bold rounded-xl transition">Short Review</button>
                     <button type="button" @click="tab = 'vesa'"
                         :class="tab === 'vesa' ? 'bg-white shadow-sm text-[#071833]' : 'text-[#667085] hover:text-[#071833]'"
-                        class="px-4 py-2 text-xs font-bold rounded-xl transition">Tanya Kak Vesta</button>
+                        class="px-4 py-2 text-lg font-bold rounded-xl transition">Tanya Kak Vesta</button>
                 </div>
 
                 <div x-show="tab === 'info'" class="space-y-6">
@@ -191,7 +198,7 @@
                                     <p class="text-xs text-[#667085] mt-0.5">Regulasi yang saling berkaitan</p>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    @if (auth()->user()->hasPermission('upload_regulations'))
+                                    @if ($canUploadRegulations)
                                         @if ($extractProcessing)
                                             <span
                                                 class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 ring-1 ring-blue-200">
@@ -389,7 +396,7 @@
                             @php $progress = $regulation->documentsParseProgress(); @endphp
 
                             {{-- Banner: muncul jika main regulation sudah diparse & ada dokumen yang belum --}}
-                            @if ($regulation->isParsed() && $progress['pending'] > 0 && auth()->user()->hasPermission('upload_regulations'))
+                            @if ($regulation->isParsed() && $progress['pending'] > 0 && $canUploadRegulations)
                                 <div
                                     class="mx-6 mt-4 flex items-center justify-between gap-4 rounded-xl bg-blue-50 border border-blue-200 px-5 py-3">
                                     <div class="flex items-center gap-3">
@@ -489,7 +496,7 @@
                                                         x-text="(docProgress({{ $doc->id }}) ?? {{ $doc->parse_progress ?? 0 }}) + '%'"></span>
                                                     <span class="hidden sm:inline text-[10px] font-medium text-[#b0b8c5]"
                                                         x-text="docChunkLabel({{ $doc->id }})"></span>
-                                                    @if (auth()->user()->hasPermission('upload_regulations'))
+                                                    @if ($canUploadRegulations)
                                                         <form method="POST"
                                                             action="{{ route('regulations.documents.parse-cancel', [$regulation, $doc]) }}"
                                                             class="inline"
@@ -508,7 +515,7 @@
                                         </div>
                                         <div class="flex items-center gap-1.5">
                                             @if ($doc->isParsed())
-                                                @if (auth()->user()->hasPermission('upload_regulations'))
+                                                @if ($canUploadRegulations)
                                                     <form method="POST"
                                                         action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
                                                         class="inline">
@@ -524,7 +531,7 @@
                                                     </form>
                                                 @endif
                                             @else
-                                                @if (auth()->user()->hasPermission('upload_regulations'))
+                                                @if ($canUploadRegulations)
                                                     <form method="POST"
                                                         action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
                                                         class="inline">
@@ -562,15 +569,18 @@
                                                 </svg>
                                                 Preview
                                             </a>
-                                            <a href="{{ route('regulations.documents.view', $doc) }}" download
-                                                class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
-                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                                    stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                                </svg>
-                                                Download
-                                            </a>
+                                            @if ($canDownloadDocuments)
+                                                <a href="{{ route('regulations.documents.view', $doc) }}" download
+                                                    class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                                    </svg>
+                                                    Download
+                                                </a>
+                                            @endif
+
                                         </div>
                                     </li>
                                 @endforeach
@@ -579,7 +589,7 @@
                     </x-card>
 
                     @if ($regulation->isParsed())
-                        @if (auth()->user()->role != 'user')
+                        @if ($canDownloadDocuments)
                             <x-card id="hasil-parse" x-data="{ parseTab: 'result' }">
                                 <x-slot name="header">
                                     <div class="flex items-center justify-between">
@@ -663,7 +673,7 @@
                                                     @if (($stats['resume_page'] ?? null) !== null && ($stats['total_pages'] ?? 0) > 0)
                                                         {{ max(0, $stats['total_pages'] - $stats['resume_page'] + 1) }}
                                                     @else
-                                                        {{ $stats['total_pages'] - ($stats['completed_pages'] ?? $stats['parsed_pages'] ?? 0) }}
+                                                        {{ $stats['total_pages'] - ($stats['completed_pages'] ?? ($stats['parsed_pages'] ?? 0)) }}
                                                     @endif
                                                 </p>
                                             </div>
@@ -675,10 +685,17 @@
                                                     {{ $stats['chunk_size'] ?? 10 }}
                                                 </p>
                                                 @php
-                                                    $chunksDone = $stats['completed_pages'] ?? ($stats['parsed_pages'] ?? 0);
+                                                    $chunksDone =
+                                                        $stats['completed_pages'] ?? ($stats['parsed_pages'] ?? 0);
                                                     $totalPages = $stats['total_pages'] ?? 0;
-                                                    $totalChunks = $totalPages > 0 ? (int) ceil($totalPages / ($stats['chunk_size'] ?? 10)) : 0;
-                                                    $chunksDoneCount = $totalPages > 0 ? (int) ceil($chunksDone / ($stats['chunk_size'] ?? 10)) : 0;
+                                                    $totalChunks =
+                                                        $totalPages > 0
+                                                            ? (int) ceil($totalPages / ($stats['chunk_size'] ?? 10))
+                                                            : 0;
+                                                    $chunksDoneCount =
+                                                        $totalPages > 0
+                                                            ? (int) ceil($chunksDone / ($stats['chunk_size'] ?? 10))
+                                                            : 0;
                                                 @endphp
                                                 @if ($totalChunks > 0)
                                                     <p class="mt-1 text-[11px] font-semibold text-[#667085]">
@@ -731,7 +748,7 @@
                         @endif
                     @endif
 
-                    @if (auth()->user()->hasPermission('upload_regulations'))
+                    @if ($canUploadRegulations)
                         <x-card id="generate-ai">
                             <x-slot name="header">
                                 <div>
@@ -803,7 +820,7 @@
                             @else
                                 <div class="text-center py-10">
                                     <p class="text-sm text-[#667085]">Belum ada hasil Short Review untuk regulasi ini.</p>
-                                    @if (auth()->user()->hasPermission('upload_regulations'))
+                                    @if ($canUploadRegulations)
                                         <p class="text-xs text-[#667085] mt-1">Generate melalui tab Info.</p>
                                     @endif
                                 </div>
@@ -813,7 +830,7 @@
                 </div>
 
                 <div x-show="tab === 'vesa'" x-cloak class="space-y-6">
-                    <x-card id="tanya-kak-vesa" x-data="vesaChat('{{ route('regulations.chat.ask', $regulation) }}', '{{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}')">
+                    <x-card id="tanya-kak-vesa" x-data="vesaChat('{{ route('regulations.chat.ask', $regulation) }}', '{{ $userInitial }}', {{ $user ? 'false' : 'true' }}, '{{ route('login') }}')">
                         <x-slot name="header">
                             <div class="flex items-center justify-between">
                                 <div>
@@ -834,7 +851,7 @@
                                         </div>
                                         <div
                                             class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#071b3a] to-[#0b2a55] text-xs font-bold text-white ring-1 ring-[#c99a3e]/40">
-                                            {{ strtoupper(mb_substr(auth()->user()->name, 0, 1)) }} </div>
+                                            {{ $userInitial }} </div>
                                     </div>
                                 @else
                                     {{-- AI Message --}} <div class="flex items-start gap-2.5">
@@ -843,26 +860,32 @@
                                             V </div>
                                         <div
                                             class="max-w-[85%] min-w-0 rounded-2xl rounded-tl-md bg-[#f6f8fb] px-4 py-3 text-sm leading-6 text-[#071833] shadow-sm ring-1 ring-[#e7eaf0]">
-                                             <div class="chat-message whitespace-pre-wrap break-words"> {{ $msg->content }}
-                                             </div>
-                                             @if ($msg->citations)
-                                                 <div class="mt-3 border-t border-[#dfe4ec] pt-2 text-xs">
-                                                     <p class="font-bold text-[#071833]">Sumber terverifikasi</p>
-                                                     @foreach ($msg->citations as $citation)
-                                                         <div class="mt-2 rounded-lg bg-white p-2 ring-1 ring-[#e7eaf0]">
-                                                             <p class="font-semibold">{{ $citation['source_label'] ?? 'Sumber regulasi' }}{{ !empty($citation['page']) ? ' · Halaman '.$citation['page'] : '' }}</p>
-                                                             @if (!empty($citation['quote']))
-                                                                 <p class="mt-1 text-[#667085]">“{{ $citation['quote'] }}”</p>
-                                                             @endif
-                                                             @if (empty($citation['verified']))
-                                                                 <p class="mt-1 text-amber-700">Kutipan perlu diverifikasi.</p>
-                                                             @endif
-                                                         </div>
-                                                     @endforeach
-                                                 </div>
-                                             @endif
-                                             <p class="mt-2 text-[10px] text-[#667085]">Confidence: {{ ucfirst($msg->confidence ?? 'low') }}. Tetap verifikasi ke dokumen asli.</p>
-                                         </div>
+                                            <div class="chat-message whitespace-pre-wrap break-words"> {{ $msg->content }}
+                                            </div>
+                                            @if ($msg->citations)
+                                                <div class="mt-3 border-t border-[#dfe4ec] pt-2 text-xs">
+                                                    <p class="font-bold text-[#071833]">Sumber terverifikasi</p>
+                                                    @foreach ($msg->citations as $citation)
+                                                        <div class="mt-2 rounded-lg bg-white p-2 ring-1 ring-[#e7eaf0]">
+                                                            <p class="font-semibold">
+                                                                {{ $citation['source_label'] ?? 'Sumber regulasi' }}{{ !empty($citation['page']) ? ' · Halaman ' . $citation['page'] : '' }}
+                                                            </p>
+                                                            @if (!empty($citation['quote']))
+                                                                <p class="mt-1 text-[#667085]">“{{ $citation['quote'] }}”
+                                                                </p>
+                                                            @endif
+                                                            @if (empty($citation['verified']))
+                                                                <p class="mt-1 text-amber-700">Kutipan perlu diverifikasi.
+                                                                </p>
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                            <p class="mt-2 text-[10px] text-[#667085]">Confidence:
+                                                {{ ucfirst($msg->confidence ?? 'low') }}. Tetap verifikasi ke dokumen asli.
+                                            </p>
+                                        </div>
                                     </div>
                                 @endif
                             @empty
@@ -909,13 +932,25 @@
                             </div>
                             <p x-show="error" x-cloak class="mt-2 text-xs font-medium text-rose-600" x-text="error"></p>
                         </div>
+
+                        <div x-show="toast.show" x-cloak x-transition
+                            class="fixed right-5 top-5 z-50 flex max-w-sm items-start gap-3 rounded-2xl border border-sky-200/60 bg-gradient-to-r from-sky-50 to-white p-4 shadow-[0_10px_30px_rgba(7,27,58,.12)]"
+                            role="status" aria-live="polite">
+                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+                                </svg>
+                            </div>
+                            <p class="pt-1 text-sm font-semibold leading-relaxed text-[#071833]" x-text="toast.message"></p>
+                        </div>
                     </x-card>
                 </div>
             </div>
         </div>
 
         <aside class="space-y-6">
-            @if (auth()->user()->hasPermission('upload_regulations'))
+            @if ($canUploadRegulations)
                 {{-- File Regulasi --}}
                 <x-card>
                     <x-slot name="header">
@@ -953,7 +988,7 @@
                         <h3 class="text-base font-bold text-[#071833]">Aksi</h3>
                     </x-slot>
                     <div class="space-y-2.5">
-                        @if (!auth()->user()->hasPermission('upload_regulations'))
+                        @if (!$canUploadRegulations)
                             <div
                                 class="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#f6f8fb] ring-1 ring-[#e7eaf0] text-xs font-semibold text-[#667085]">
                                 <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -994,7 +1029,7 @@
                                     Lihat Hasil Parse
                                 </a>
                             @elseif ($regulation->parse_status === 'incomplete')
-<div
+                                <div
                                     class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 text-xs font-bold">
                                     <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="2">
@@ -1055,7 +1090,8 @@
                                 <form method="POST" action="{{ route('regulations.parse-cancel', $regulation) }}"
                                     onsubmit="return confirm('Batalkan parse regulasi ini?')" class="mt-2">
                                     @csrf
-                                    <x-button type="submit" variant="outline" class="w-full justify-center text-rose-600">
+                                    <x-button type="submit" variant="outline"
+                                        class="w-full justify-center text-rose-600">
                                         Batalkan
                                     </x-button>
                                 </form>
@@ -1063,8 +1099,7 @@
                                 <div class="space-y-2">
                                     <div
                                         class="flex items-center justify-between px-1 text-xs font-semibold text-[#667085]">
-                                        <span
-                                            x-text="display < 5 ? 'Menyiapkan dokumen...' : chunkLabel"></span>
+                                        <span x-text="display < 5 ? 'Menyiapkan dokumen...' : chunkLabel"></span>
                                         <span class="text-[#071833]" x-text="display + '%'"></span>
                                     </div>
                                     <div class="h-2.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
@@ -1170,7 +1205,7 @@
         </aside>
     </div>
 
-    @if (auth()->user()->hasPermission('upload_regulations'))
+    @if ($canUploadRegulations)
         <x-modal name="confirm-delete-regulation" title="Hapus Regulasi" maxWidth="md">
             <div class="flex items-start gap-4">
                 <span class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 text-rose-500">
@@ -1197,12 +1232,23 @@
 
 @push('scripts')
     <script>
-        function vesaChat(url, userInitial) {
+        function vesaChat(url, userInitial, isGuest, loginUrl) {
             return {
                 question: '',
                 sending: false,
                 error: '',
+                toast: {
+                    show: false,
+                    message: '',
+                },
                 async send() {
+                    if (isGuest) {
+                        this.toast.message = 'Silakan login terlebih dahulu untuk menggunakan fitur Tanya Kak Vesta.';
+                        this.toast.show = true;
+                        setTimeout(() => window.location.href = loginUrl, 1500);
+                        return;
+                    }
+
                     const q = this.question.trim();
                     if (!q || this.sending) return;
 
@@ -1237,7 +1283,8 @@
                             return;
                         }
 
-                         this.appendBubble('assistant', data.reply, false, data.citations || [], data.confidence || 'low');
+                        this.appendBubble('assistant', data.reply, false, data.citations || [], data.confidence ||
+                            'low');
                     } catch (e) {
                         this.removeTyping();
                         this.appendBubble('assistant', 'Koneksi gagal. Coba lagi.');
@@ -1271,7 +1318,8 @@
                     if (role === 'assistant') {
                         const meta = document.createElement('div');
                         meta.className = 'mt-2 text-[10px] text-[#667085]';
-                        meta.textContent = `Confidence: ${confidence.charAt(0).toUpperCase() + confidence.slice(1)}. Tetap verifikasi ke dokumen asli.`;
+                        meta.textContent =
+                            `Confidence: ${confidence.charAt(0).toUpperCase() + confidence.slice(1)}. Tetap verifikasi ke dokumen asli.`;
                         bubble.appendChild(meta);
 
                         if (citations.length) {
@@ -1284,7 +1332,8 @@
                             citations.forEach((citation) => {
                                 const item = document.createElement('div');
                                 item.className = 'mt-2 rounded-lg bg-white p-2 ring-1 ring-[#e7eaf0]';
-                                item.textContent = `${citation.source_label || 'Sumber regulasi'}${citation.page ? ` · Halaman ${citation.page}` : ''}${citation.quote ? `\n“${citation.quote}”` : ''}`;
+                                item.textContent =
+                                    `${citation.source_label || 'Sumber regulasi'}${citation.page ? ` · Halaman ${citation.page}` : ''}${citation.quote ? `\n“${citation.quote}”` : ''}`;
                                 sources.appendChild(item);
                             });
                             bubble.appendChild(sources);

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ParseRegulation;
 use App\Jobs\ParseRegulationDocument;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
@@ -9,8 +10,10 @@ use App\Models\RegulationDocument;
 use App\Models\RegulationType;
 use App\Models\User;
 use App\Services\RegulationParserService;
+use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ParseJobStatusTest extends TestCase
@@ -134,5 +137,173 @@ class ParseJobStatusTest extends TestCase
         $this->actingAs($this->admin())
             ->get(route('regulations.parse-progress', $reg))
             ->assertJsonFragment(['status' => 'failed', 'error' => 'Gagal diparse']);
+    }
+
+    public function test_regulation_job_uses_text_extraction_before_ocr(): void
+    {
+        $regulation = $this->makeRegulation();
+        $parser = $this->mock(RegulationParserService::class);
+
+        $parser->shouldReceive('extractTextPages')
+            ->once()
+            ->withArgs(fn (Regulation $model, string $pdfType): bool => $model->is($regulation) && $pdfType === 'text')
+            ->andReturn(true);
+        $parser->shouldNotReceive('parseRegulationChunk');
+
+        (new ParseRegulation($regulation))->handle($parser);
+    }
+
+    public function test_timed_out_first_chunk_still_uses_text_extraction_on_retry(): void
+    {
+        $regulation = $this->makeRegulation();
+        $regulation->update([
+            'parse_status' => 'failed',
+            'parse_stats' => [
+                'total_pages' => 100,
+                'chunk_size' => 10,
+                'resume_page' => 1,
+                'completed_pages' => 0,
+            ],
+        ]);
+        $parser = $this->mock(RegulationParserService::class);
+
+        $parser->shouldReceive('extractTextPages')->once()->andReturn(true);
+        $parser->shouldNotReceive('parseRegulationChunk');
+
+        (new ParseRegulation($regulation))->handle($parser);
+    }
+
+    public function test_parsing_job_timeouts_are_below_redis_retry_after(): void
+    {
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+        ]);
+        $retryAfter = config('queue.connections.redis.retry_after');
+
+        $this->assertSame(1700, (new ParseRegulation($regulation))->timeout);
+        $this->assertSame(1700, (new ParseRegulationDocument($document))->timeout);
+        $this->assertLessThan($retryAfter, (new ParseRegulation($regulation))->timeout);
+    }
+
+    public function test_regulation_parser_processes_five_pages_per_chunk(): void
+    {
+        $this->assertSame(5, RegulationParserService::CHUNK_SIZE);
+    }
+
+    public function test_duplicate_regulation_job_does_not_run_parser(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $lock = Cache::lock("parse_lock:regulation:{$regulation->id}", 1760);
+        $this->assertTrue($lock->get());
+        $parser = $this->mock(RegulationParserService::class);
+        $parser->shouldNotReceive('extractTextPages');
+        $parser->shouldNotReceive('parseRegulationChunk');
+
+        try {
+            (new ParseRegulation($regulation))->handle($parser);
+        } finally {
+            $lock->release();
+        }
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_continuation_is_dispatched_after_regulation_lock_is_released(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $regulation->update(['parse_stats' => ['pdf_type' => 'image', 'resume_page' => 1]]);
+        $parser = $this->mock(RegulationParserService::class);
+        $parser->shouldReceive('parseRegulationChunk')
+            ->once()
+            ->andReturn(['success' => true, 'done' => false, 'next_page' => 6, 'total' => 100]);
+
+        (new ParseRegulation($regulation))->handle($parser);
+
+        Queue::assertPushed(ParseRegulation::class, 1);
+        $lock = Cache::lock("parse_lock:regulation:{$regulation->id}", 1760);
+        $this->assertTrue($lock->get());
+        $lock->release();
+    }
+
+    public function test_duplicate_document_job_does_not_run_parser(): void
+    {
+        Queue::fake();
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+        ]);
+        $lock = Cache::lock("parse_lock:document:{$document->id}", 1760);
+        $this->assertTrue($lock->get());
+        $parser = $this->mock(RegulationParserService::class);
+        $parser->shouldNotReceive('extractTextPages');
+        $parser->shouldNotReceive('parseDocumentChunk');
+
+        try {
+            (new ParseRegulationDocument($document))->handle($parser);
+        } finally {
+            $lock->release();
+        }
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_parse_jobs_are_unique_per_model(): void
+    {
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+        ]);
+        $regulationJob = new ParseRegulation($regulation);
+        $documentJob = new ParseRegulationDocument($document);
+
+        $this->assertInstanceOf(ShouldBeUniqueUntilProcessing::class, $regulationJob);
+        $this->assertInstanceOf(ShouldBeUniqueUntilProcessing::class, $documentJob);
+        $this->assertSame((string) $regulation->id, $regulationJob->uniqueId());
+        $this->assertSame((string) $document->id, $documentJob->uniqueId());
+        $this->assertSame(3600, $regulationJob->uniqueFor());
+        $this->assertSame(3600, $documentJob->uniqueFor());
+    }
+
+    public function test_parse_click_does_not_queue_duplicate_while_regulation_is_parsing(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $regulation->update(['parse_status' => 'parsing']);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.parse', $regulation))
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_parse_click_does_not_queue_duplicate_while_document_is_parsing(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'parsing',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.documents.parse', [$regulation, $document]))
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        Queue::assertNothingPushed();
     }
 }

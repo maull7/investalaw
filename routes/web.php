@@ -44,6 +44,12 @@ Route::get('/landing-page', function () {
 
 Route::get('/', [DashboardController::class, 'landing'])->name('index-dash');
 
+// Public regulation browsing.
+Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
+Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])
+    ->whereNumber('regulation')
+    ->name('regulations.show');
+
 Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
     ->name('legal-necessities.store')
     ->middleware('throttle:5,1');
@@ -153,13 +159,10 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
     Route::post('/review-documents/{reviewDocument}/partitions/parse-pdf', [DocumentPartitionController::class, 'parsePdf'])->name('partitions.parse-pdf')->middleware('throttle:3,1');
     Route::get('/review-documents/{reviewDocument}/partitions/{documentPartition}/content', [DocumentPartitionController::class, 'showPartitionContent'])->name('partitions.content');
 
-    // Regulations browsing (accessible by all authenticated roles)
-    Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
     Route::get('/regulations/ai-search', [RegulationController::class, 'aiSearch'])->name('regulations.ai-search')->middleware('throttle:5,1');
     Route::post('/regulations/ai-search/{session}/chat', [RegulationController::class, 'aiSearchChat'])->name('regulations.ai-search.chat')->middleware('throttle:5,1');
     Route::get('/regulations', [RegulationController::class, 'index'])->name('regulations.index');
     Route::get('/regulations/create', [RegulationController::class, 'create'])->name('regulations.create');
-    Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])->name('regulations.show');
     Route::post('/regulations/{regulation}/chat', [RegulationChatController::class, 'ask'])->name('regulations.chat.ask')->middleware('throttle:10,1');
     Route::get('/regulations/{regulation}/file', [RegulationController::class, 'viewer'])->name('regulations.file');
     Route::get('/regulations/{regulation}/file/raw', [RegulationController::class, 'viewFile'])->name('regulations.file-raw');

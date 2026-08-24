@@ -108,9 +108,10 @@ class RegulationController extends Controller
     public function show(Regulation $regulation): View
     {
         $regulation = $this->regulationRepository->findByIdWithRelations($regulation->id);
-        $aiPrompt = AiPrompt::all();
+        $aiPrompt = AiPrompt::where('title', 'Short Review')->get();
         $chatMessages = RegulationChatMessage::where('regulation_id', $regulation->id)
-            ->where('user_id', auth()->id())
+            ->when(auth()->check(), fn ($query) => $query->where('user_id', auth()->id()))
+            ->when(! auth()->check(), fn ($query) => $query->whereKey(-1))
             ->latest()
             ->limit(100)
             ->get()
@@ -530,26 +531,43 @@ class RegulationController extends Controller
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        if ($regulation->parse_status === 'complete') {
+        $lock = Cache::lock("parse_lock:regulation:{$regulation->id}", 30);
+        if (! $lock->get()) {
             return redirect()->route('regulations.show', $regulation)
-                ->with('info', 'Regulasi sudah diparse lengkap.');
+                ->with('info', 'Regulasi sedang diproses. Job parse baru tidak ditambahkan.');
         }
 
-        // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
-        if (request()->boolean('reset')) {
-            $regulation->update([
-                'parse_status' => 'parsing',
-                'parse_progress' => 0,
-                'parse_error' => null,
-                'parsed_text' => null,
-                'parse_stats' => null,
-            ]);
-        } else {
-            $regulation->update(['parse_status' => 'parsing', 'parse_error' => null]);
-        }
+        try {
+            $regulation->refresh();
 
-        Cache::forget("parse_cancel:regulation:{$regulation->id}");
-        $regulation->documents->each(fn ($d) => Cache::forget("parse_cancel:document:{$d->id}"));
+            if ($regulation->parse_status === 'parsing') {
+                return redirect()->route('regulations.show', $regulation)
+                    ->with('info', 'Regulasi sedang diproses. Job parse baru tidak ditambahkan.');
+            }
+
+            if ($regulation->parse_status === 'complete') {
+                return redirect()->route('regulations.show', $regulation)
+                    ->with('info', 'Regulasi sudah diparse lengkap.');
+            }
+
+            // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
+            if (request()->boolean('reset')) {
+                $regulation->update([
+                    'parse_status' => 'parsing',
+                    'parse_progress' => 0,
+                    'parse_error' => null,
+                    'parsed_text' => null,
+                    'parse_stats' => null,
+                ]);
+            } else {
+                $regulation->update(['parse_status' => 'parsing', 'parse_error' => null]);
+            }
+
+            Cache::forget("parse_cancel:regulation:{$regulation->id}");
+            $regulation->documents->each(fn ($d) => Cache::forget("parse_cancel:document:{$d->id}"));
+        } finally {
+            $lock->release();
+        }
 
         ParseRegulation::dispatch($regulation);
 
@@ -569,25 +587,42 @@ class RegulationController extends Controller
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        if ($document->parse_status === 'complete') {
+        $lock = Cache::lock("parse_lock:document:{$document->id}", 30);
+        if (! $lock->get()) {
             return redirect()->route('regulations.show', $regulation)
-                ->with('info', 'Dokumen sudah diparse lengkap.');
+                ->with('info', 'Dokumen sedang diproses. Job parse baru tidak ditambahkan.');
         }
 
-        // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
-        if (request()->boolean('reset')) {
-            $document->update([
-                'parse_status' => 'parsing',
-                'parse_progress' => 0,
-                'parse_error' => null,
-                'parsed_text' => null,
-                'parse_stats' => null,
-            ]);
-        } else {
-            $document->update(['parse_status' => 'parsing', 'parse_error' => null]);
-        }
+        try {
+            $document->refresh();
 
-        Cache::forget("parse_cancel:document:{$document->id}");
+            if ($document->parse_status === 'parsing') {
+                return redirect()->route('regulations.show', $regulation)
+                    ->with('info', 'Dokumen sedang diproses. Job parse baru tidak ditambahkan.');
+            }
+
+            if ($document->parse_status === 'complete') {
+                return redirect()->route('regulations.show', $regulation)
+                    ->with('info', 'Dokumen sudah diparse lengkap.');
+            }
+
+            // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
+            if (request()->boolean('reset')) {
+                $document->update([
+                    'parse_status' => 'parsing',
+                    'parse_progress' => 0,
+                    'parse_error' => null,
+                    'parsed_text' => null,
+                    'parse_stats' => null,
+                ]);
+            } else {
+                $document->update(['parse_status' => 'parsing', 'parse_error' => null]);
+            }
+
+            Cache::forget("parse_cancel:document:{$document->id}");
+        } finally {
+            $lock->release();
+        }
         ParseRegulationDocument::dispatch($document);
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses parse dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
@@ -606,20 +641,35 @@ class RegulationController extends Controller
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
 
-        $regulation->load('documents');
-        $pending = $regulation->documents->reject(fn ($d) => $d->isParsed());
+        $count = 0;
 
-        if ($pending->isEmpty()) {
-            return redirect()->route('regulations.show', $regulation)
-                ->with('info', 'Semua dokumen tambahan sudah diparse.');
+        foreach ($regulation->documents as $document) {
+            $lock = Cache::lock("parse_lock:document:{$document->id}", 30);
+            if (! $lock->get()) {
+                continue;
+            }
+
+            $shouldDispatch = false;
+            try {
+                $document->refresh();
+                if (! $document->isParsed() && $document->parse_status !== 'parsing') {
+                    $document->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
+                    Cache::forget("parse_cancel:document:{$document->id}");
+                    $shouldDispatch = true;
+                }
+            } finally {
+                $lock->release();
+            }
+
+            if ($shouldDispatch) {
+                ParseRegulationDocument::dispatch($document->fresh());
+                $count++;
+            }
         }
 
-        $count = $pending->count();
-
-        foreach ($pending as $document) {
-            $document->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
-            Cache::forget("parse_cancel:document:{$document->id}");
-            ParseRegulationDocument::dispatch($document);
+        if ($count === 0) {
+            return redirect()->route('regulations.show', $regulation)
+                ->with('info', 'Semua dokumen tambahan sudah diparse atau sedang diproses.');
         }
 
         UserActivityLog::log('parsed', Regulation::class, $regulation->id, "Memproses {$count} dokumen tambahan dari regulasi {$regulation->regulation_number}");

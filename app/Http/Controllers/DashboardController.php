@@ -21,7 +21,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -66,7 +66,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -87,6 +87,10 @@ class DashboardController extends Controller
 
     public function landing(Request $request)
     {
+        $search = trim((string) $request->query('search', ''));
+        $categoryId = trim((string) $request->query('category_id', ''));
+        $year = trim((string) $request->query('year', ''));
+        $hasFilters = $search !== '' || $categoryId !== '' || $year !== '';
 
         $documentsQuery = ReviewDocument::query();
         $reviewsQuery = Review::query();
@@ -98,11 +102,26 @@ class DashboardController extends Controller
             'total_reviews' => $reviewsQuery->count(),
         ];
 
-        $recentDocuments = $documentsQuery->with('user')->latest()->take(5)->get();
+        $recentDocuments = $documentsQuery
+            ->with('user')
+            ->whereHas('user', function ($query) {
+                $query->where('role', 'user');
+            })
+            ->latest()
+            ->take(5)
+            ->get();
 
         $latestRegulations = Regulation::with(['type', 'category'])
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('regulation_number', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%");
+                });
+            })
+            ->when($categoryId !== '', fn($query) => $query->where('category_id', $categoryId))
+            ->when($year !== '', fn($query) => $query->where('year', $year))
             ->orderByDesc('tanggal_tetapkan')
-            ->take(5)
+            ->when(! $hasFilters, fn($query) => $query->take(5))
             ->get();
 
         $regulationRelated = RegulationRelatedReference::with('regulation')
@@ -110,6 +129,21 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-        return view('index-dashboard', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated'));
+        $regulationFilterOptions = [
+            'categories' => RegulationCategory::orderBy('name')->get(),
+            'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
+        ];
+
+        return view('index-dashboard', compact(
+            'stats',
+            'recentDocuments',
+            'latestRegulations',
+            'regulationRelated',
+            'search',
+            'categoryId',
+            'year',
+            'hasFilters',
+            'regulationFilterOptions',
+        ));
     }
 }

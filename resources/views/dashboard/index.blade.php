@@ -156,7 +156,7 @@
                 <span class="px-2.5 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">⌘K</span>
             </div>
         </x-slot>
-        <div class="relative">
+        <div class="relative" @click.outside="open = false">
             <input x-ref="input" type="search" x-model="query" @focus="open = true; positionDropdown()"
                 @input="highlight = 0; positionDropdown()" @keydown.down.prevent="move(1)" @keydown.up.prevent="move(-1)"
                 @keydown.enter.prevent="go(highlight)" @keydown.esc="open = false; $event.target.blur()"

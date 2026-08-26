@@ -26,13 +26,13 @@
                     documents, reviews, and regulatory categories in one elegant view.</p>
 
                 <div class="mt-6 flex flex-wrap items-center gap-3">
-                    <x-button href="#" variant="primary">
+                    <x-button href="{{ route('review-documents.create') }}" variant="primary">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
                         Upload Document
                     </x-button>
-                    <a href="#"
+                    <a href="{{ route('reviews.index') }}"
                         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold text-white border border-white/15 bg-white/5 hover:bg-white/10 backdrop-blur transition">
                         View Reviews
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -92,52 +92,57 @@
     </section>
 
     {{-- Peraturan Terkini --}}
-    @if ($latestRegulations->isNotEmpty())
-        <x-card :padding="false" class="mt-7">
-            <x-slot name="header">
-                <div class="flex flex-wrap gap-3 justify-between items-center">
-                    <div>
-                        <h3 class="text-lg font-bold text-[#071833]">{{ $hasFilters ? 'Hasil Filter Regulasi' : 'Peraturan Terkini' }}</h3>
-                        <p class="text-xs text-[#667085] mt-0.5">{{ $hasFilters ? 'Sesuaikan pencarian berdasarkan nomor, judul, kategori, atau tahun' : '5 regulasi terbaru yang diundangkan' }}</p>
-                    </div>
-                    <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
-                        Semua Regulasi
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                    </x-button>
+    <x-card :padding="false" class="mt-7">
+        <x-slot name="header">
+            <div class="flex flex-wrap gap-3 justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-[#071833]">
+                        {{ $hasFilters ? 'Hasil Pencarian Regulasi' : ($showAllRegulations ? 'Semua Regulasi' : 'Peraturan Terkini') }}
+                    </h3>
+                    <p class="text-xs text-[#667085] mt-0.5">
+                        {{ $hasFilters ? 'Hasil pencarian regulasi' : ($showAllRegulations ? 'Daftar seluruh regulasi' : '5 regulasi terbaru yang diundangkan') }}
+                    </p>
                 </div>
-            </x-slot>
+                <x-button href="{{ route('index-dash', ['all' => 1]) }}" variant="outline" size="sm">
+                    Semua Regulasi
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                </x-button>
+            </div>
+        </x-slot>
 
-            <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b border-[#e7eaf0]">
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <input type="search" name="search" value="{{ $search }}"
-                        placeholder="Cari nomor atau judul regulasi..." class="input-premium">
-                    <select name="category_id" class="select-premium">
-                        <option value="">Semua Kategori</option>
-                        @foreach ($regulationFilterOptions['categories'] as $category)
-                            <option value="{{ $category->id }}" @selected($categoryId == $category->id)>
-                                {{ $category->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <select name="year" class="select-premium">
-                        <option value="">Semua Tahun</option>
-                        @foreach ($regulationFilterOptions['years'] as $regulationYear)
-                            <option value="{{ $regulationYear }}" @selected($year == $regulationYear)>
-                                {{ $regulationYear }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <x-button type="submit" variant="primary" size="md">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                        </svg>
-                        Cari
-                    </x-button>
-                </div>
-            </form>
+        <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b mt-5 border-[#e7eaf0]">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <input type="search" name="search" value="{{ $search }}"
+                    placeholder="Cari nomor atau judul regulasi..." class="input-premium">
+                <select name="category_id" class="select-premium">
+                    <option value="">Semua Kategori</option>
+                    @foreach ($regulationFilterOptions['categories'] as $category)
+                        <option value="{{ $category->id }}" @selected($categoryId == $category->id)>
+                            {{ $category->name }}
+                        </option>
+                    @endforeach
+                </select>
+                <select name="year" class="select-premium">
+                    <option value="">Semua Tahun</option>
+                    @foreach ($regulationFilterOptions['years'] as $regulationYear)
+                        <option value="{{ $regulationYear }}" @selected($year == $regulationYear)>
+                            {{ $regulationYear }}
+                        </option>
+                    @endforeach
+                </select>
+                <x-button type="submit" variant="primary" size="md">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                    </svg>
+                    Cari
+                </x-button>
+            </div>
+        </form>
 
+        @if ($latestRegulations->isNotEmpty())
             <div class="overflow-x-auto">
                 <table class="table-premium">
                     <thead>
@@ -188,13 +193,18 @@
                     </tbody>
                 </table>
             </div>
-        </x-card>
-    @elseif ($hasFilters)
-        <x-card class="mt-7 text-center">
-            <p class="text-sm font-semibold text-[#071833]">Regulasi tidak ditemukan.</p>
-            <p class="mt-1 text-xs text-[#667085]">Coba ubah kata kunci atau pilihan filter Anda.</p>
-        </x-card>
-    @endif
+
+            @if ($showAllRegulations && !$hasFilters)
+                <div class="border-t border-[#e7eaf0] px-6 py-4">
+                    {{ $latestRegulations->links() }}
+                </div>
+            @endif
+        @else
+            <div class="px-6 py-10 text-center">
+                <p class="text-sm font-semibold text-[#071833]">Tidak ada regulasi ditemukan.</p>
+            </div>
+        @endif
+    </x-card>
 
     {{-- Peraturan Terkait --}}
     @if ($regulationRelated->isNotEmpty())

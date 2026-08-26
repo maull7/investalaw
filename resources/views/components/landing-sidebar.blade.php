@@ -11,7 +11,7 @@
 
         <div class="relative flex flex-col h-full px-5 py-7">
             {{-- Brand --}}
-            <a href="#" class="flex items-center gap-3 px-2 group">
+            <a href="{{ route('index-dash') }}" class="flex items-center gap-3 px-2 group">
                 <div class="relative">
                     <div
                         class="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#c99a3e] to-[#e6c06a] flex items-center justify-center shadow-[0_10px_30px_rgba(201,154,62,.35)]">
@@ -73,7 +73,7 @@
                 <p class="px-3 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Overview</p>
                 <ul class="space-y-1.5">
                     <li>
-                        <a href="#" class="nav-item">
+                        <a href="{{ route('index-dash') }}" class="nav-item">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -90,7 +90,7 @@
                 <ul class="space-y-1.5">
 
                     <li>
-                        <a href="#"
+                        <a href="{{ route('user.regulation-categories.index') }}"
                             class="nav-item {{ request()->routeIs('user.regulation-categories.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -102,7 +102,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('user.sub-categories.index') }}"
                             class="nav-item {{ request()->routeIs('user.sub-categories.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -113,7 +113,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('user.regulation-types.index') }}"
                             class="nav-item {{ request()->routeIs('user.regulation-types.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -124,7 +124,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('index-dash', ['all' => 1]) }}"
                             class="nav-item {{ request()->routeIs('regulations.*') || request()->routeIs('partitions.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -138,7 +138,7 @@
                     <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">
                         Compliance</p>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('compliance.monitoring') }}"
                             class="nav-item {{ request()->routeIs('compliance.monitoring') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -149,7 +149,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('consultations.index') }}"
                             class="nav-item {{ request()->routeIs('consultations.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -160,7 +160,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('review-documents.index') }}"
                             class="nav-item {{ request()->routeIs('review-documents.*') || request()->routeIs('partitions.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -171,7 +171,7 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#"
+                        <a href="{{ route('reviews.index') }}"
                             class="nav-item {{ request()->routeIs('reviews.*') || request()->routeIs('reports.*') ? 'is-active' : '' }}">
                             <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                 stroke-width="1.6">
@@ -201,7 +201,7 @@
                             regulatory inquiry.</p>
                     </div>
                 </div>
-                <a href="#"
+                <a href="{{ route('consultations.index') }}"
                     class="mt-3 inline-flex items-center justify-center gap-2 w-full text-xs font-semibold text-[#071b3a] bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-xl py-2.5 hover:brightness-110 transition">
                     Contact Compliance
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
 use App\Models\RegulationType;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,18 +18,19 @@ class PublicRegulationBrowsingTest extends TestCase
         return ['--schema-path' => '/dev/null'];
     }
 
-    public function test_guest_can_search_regulations_by_number_or_title_from_landing_page(): void
+    public function test_landing_search_always_returns_no_regulations(): void
     {
         $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
         $other = $this->makeRegulation('UU/1/2020', 'Ketenagakerjaan');
 
         $this->get(route('index-dash', ['search' => 'digital']))
             ->assertOk()
-            ->assertSee($match->regulation_number)
+            ->assertSee('Tidak ada regulasi ditemukan.')
+            ->assertDontSee($match->regulation_number)
             ->assertDontSee($other->regulation_number);
     }
 
-    public function test_guest_can_filter_landing_regulations_by_category_and_year(): void
+    public function test_landing_category_and_year_filters_always_return_no_regulations(): void
     {
         $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital', 'Pasar Modal', 2026);
         $other = $this->makeRegulation('POJK/11/2025', 'Pasar Modal Lama', 'Pasar Modal', 2025);
@@ -38,11 +40,12 @@ class PublicRegulationBrowsingTest extends TestCase
             'year' => $match->year,
         ]))
             ->assertOk()
-            ->assertSee($match->regulation_number)
+            ->assertSee('Tidak ada regulasi ditemukan.')
+            ->assertDontSee($match->regulation_number)
             ->assertDontSee($other->regulation_number);
     }
 
-    public function test_guest_can_open_regulation_detail_and_see_all_tabs(): void
+    public function test_guest_can_open_regulation_detail_but_must_login_to_use_kak_vesta(): void
     {
         $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
 
@@ -52,8 +55,61 @@ class PublicRegulationBrowsingTest extends TestCase
             ->assertSee('Short Review')
             ->assertSee('Tanya Kak Vesta')
             ->assertSee('Silakan login terlebih dahulu untuk menggunakan fitur Tanya Kak Vesta.')
-            ->assertDontSee('role="dialog"')
             ->assertSee(route('login'));
+    }
+
+    public function test_authenticated_user_can_open_regulation_detail(): void
+    {
+        $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('regulations.show', $regulation))
+            ->assertOk()
+            ->assertSee('Info')
+            ->assertSee('Short Review')
+            ->assertSee('Tanya Kak Vesta');
+    }
+
+    public function test_all_regulations_stay_on_landing_page_and_are_paginated(): void
+    {
+        for ($day = 1; $day <= 16; $day++) {
+            $this->makeRegulation(
+                "REG/{$day}/2026",
+                "Regulasi {$day}",
+                date: sprintf('2026-01-%02d', $day),
+            );
+        }
+
+        $this->get(route('index-dash'))
+            ->assertOk()
+            ->assertSee('REG/16/2026')
+            ->assertDontSee('REG/11/2026');
+
+        $this->get(route('index-dash', ['all' => 1]))
+            ->assertOk()
+            ->assertSee('Semua Regulasi')
+            ->assertSee('REG/16/2026')
+            ->assertDontSee('REG/1/2026')
+            ->assertSee('page=2');
+
+        $this->get(route('index-dash', ['all' => 1, 'page' => 2]))
+            ->assertOk()
+            ->assertSee('REG/1/2026')
+            ->assertDontSee('REG/16/2026');
+    }
+
+    public function test_submitting_empty_search_form_returns_no_regulations(): void
+    {
+        $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+
+        $this->get(route('index-dash', [
+            'search' => '',
+            'category_id' => '',
+            'year' => '',
+        ]))
+            ->assertOk()
+            ->assertSee('Tidak ada regulasi ditemukan.')
+            ->assertDontSee($regulation->regulation_number);
     }
 
     public function test_guest_chat_request_is_redirected_to_login(): void
@@ -76,6 +132,7 @@ class PublicRegulationBrowsingTest extends TestCase
         string $title,
         string $categoryName = 'Pasar Modal',
         int $year = 2026,
+        ?string $date = null,
     ): Regulation {
         $type = RegulationType::create(['name' => 'POJK', 'level' => 1]);
         $category = RegulationCategory::create(['name' => $categoryName]);
@@ -87,6 +144,7 @@ class PublicRegulationBrowsingTest extends TestCase
             'category_id' => $category->id,
             'year' => $year,
             'file_path' => 'regulations/fixture.pdf',
+            'tanggal_tetapkan' => $date,
         ]);
     }
 }

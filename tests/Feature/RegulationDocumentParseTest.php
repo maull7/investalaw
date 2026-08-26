@@ -43,6 +43,33 @@ class RegulationDocumentParseTest extends TestCase
         $this->assertSame('docx', $document->parse_stats['pdf_type']);
     }
 
+    public function test_doc_is_parsed_to_text(): void
+    {
+        Storage::fake('public');
+
+        $contents = file_get_contents(base_path('tests/Fixtures/word97.doc'));
+        $this->assertNotFalse($contents);
+        Storage::disk('public')->put('regulation-documents/fixture.doc', $contents);
+
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'fixture',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulation-documents/fixture.doc',
+        ]);
+
+        $result = app(RegulationParserService::class)->parseDocumentChunk($document, 1);
+        $document->refresh();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('complete', $document->parse_status);
+        $this->assertSame(100, $document->parse_progress);
+        $this->assertNotNull($document->parsed_at);
+        $this->assertStringContainsString('Welcome to PhpWord', $document->parsed_text);
+        $this->assertSame('doc', $document->parse_stats['pdf_type']);
+        $this->assertFalse($document->parse_stats['used_ocr']);
+    }
+
     public function test_unsupported_format_returns_error(): void
     {
         Storage::fake('public');
@@ -59,7 +86,7 @@ class RegulationDocumentParseTest extends TestCase
         $result = app(RegulationParserService::class)->parseDocumentChunk($document, 1);
 
         $this->assertFalse($result['success']);
-        $this->assertStringContainsString('PDF dan DOCX', $result['message']);
+        $this->assertStringContainsString('PDF, DOC, dan DOCX', $result['message']);
     }
 
     public function test_text_pdf_is_extracted_without_ocr(): void

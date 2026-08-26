@@ -14,6 +14,7 @@ use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ParseJobStatusTest extends TestCase
@@ -56,6 +57,26 @@ class ParseJobStatusTest extends TestCase
         $fresh = $doc->fresh();
         $this->assertSame('failed', $fresh->parse_status);
         $this->assertStringContainsString('File tidak ditemukan', $fresh->parse_error);
+    }
+
+    public function test_corrupted_doc_sets_failed_status_and_error(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('regulation-documents/corrupted.doc', 'not a Word document');
+
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'Corrupted DOC',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulation-documents/corrupted.doc',
+        ]);
+
+        (new ParseRegulationDocument($document))->handle(app(RegulationParserService::class));
+
+        $document->refresh();
+        $this->assertSame('failed', $document->parse_status);
+        $this->assertNull($document->parse_progress);
+        $this->assertSame('Gagal membaca teks dokumen Word.', $document->parse_error);
     }
 
     public function test_document_failed_callback_records_error(): void

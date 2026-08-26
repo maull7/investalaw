@@ -78,14 +78,22 @@ class ParseRegulationDocument implements ShouldBeUniqueUntilProcessing, ShouldQu
 
         $ext = strtolower(pathinfo($document->file_path, PATHINFO_EXTENSION));
 
-        if ($ext === 'docx') {
-            $parser->parseDocumentChunk($document, 1);
+        if (in_array($ext, ['doc', 'docx'])) {
+            $result = $parser->parseDocumentChunk($document, 1);
+
+            if (! $result['success']) {
+                $document->fresh()?->update([
+                    'parse_status' => 'failed',
+                    'parse_progress' => null,
+                    'parse_error' => $this->truncateError($result['message']),
+                ]);
+            }
 
             return false;
         }
 
         if ($ext !== 'pdf') {
-            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => 'Format file tidak didukung. Hanya PDF dan DOCX.']);
+            $document->update(['parse_status' => 'failed', 'parse_progress' => null, 'parse_error' => 'Format file tidak didukung. Hanya PDF, DOC, dan DOCX.']);
 
             return false;
         }

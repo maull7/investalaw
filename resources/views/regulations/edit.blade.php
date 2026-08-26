@@ -435,7 +435,7 @@
                             class="text-[#c99a3e]">*</span></label>
                     <input type="file" name="file" id="doc-file" required
                         accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt" class="file-premium">
-                    <p class="mt-1.5 text-xs text-[#667085]">Format: PDF, DOCX, XLSX, PPTX (maks. 20MB)</p>
+                    <p class="mt-1.5 text-xs text-[#667085]">Format: PDF, DOC, DOCX, XLSX, PPTX (maks. 20MB)</p>
                 </div>
                 <div class="flex justify-end gap-3 pt-3 border-t border-[#e7eaf0]">
                     <x-button type="button" variant="outline"

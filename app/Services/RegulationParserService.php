@@ -6,6 +6,7 @@ use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\IOFactory;
 use Smalot\PdfParser\Parser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 
@@ -133,13 +134,26 @@ class RegulationParserService
 
         $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
 
-        if (! in_array($ext, ['pdf', 'docx'])) {
-            return ['success' => false, 'message' => 'Format file tidak didukung. Hanya PDF dan DOCX.'];
+        if (! in_array($ext, ['pdf', 'doc', 'docx'])) {
+            return ['success' => false, 'message' => 'Format file tidak didukung. Hanya PDF, DOC, dan DOCX.'];
         }
 
-        if ($ext === 'docx') {
-            $pages = $this->extractDocxText($fullPath);
-            $this->finalizeTextParsed($document, $pages, 'docx');
+        if (in_array($ext, ['doc', 'docx'])) {
+            try {
+                $pages = $ext === 'doc'
+                    ? $this->extractDocText($fullPath)
+                    : $this->extractDocxText($fullPath);
+            } catch (\Throwable $e) {
+                Log::warning("Word extraction failed for {$document->file_path}: {$e->getMessage()}");
+
+                return ['success' => false, 'message' => 'Gagal membaca teks dokumen Word.'];
+            }
+
+            if (empty($pages) || trim($pages[0]['text']) === '') {
+                return ['success' => false, 'message' => 'Dokumen Word tidak memiliki teks yang dapat dibaca.'];
+            }
+
+            $this->finalizeTextParsed($document, $pages, $ext);
 
             return ['success' => true, 'done' => true, 'next_page' => null, 'total' => 1];
         }
@@ -445,5 +459,46 @@ PY;
             'text' => $text,
             'char_count' => mb_strlen($text),
         ]];
+    }
+
+    private function extractDocText(string $fullPath): array
+    {
+        $phpWord = IOFactory::load($fullPath, 'MsDoc');
+        $texts = [];
+
+        foreach ($phpWord->getSections() as $section) {
+            foreach ($section->getElements() as $element) {
+                $text = trim($this->extractWordElementText($element));
+                if ($text !== '') {
+                    $texts[] = $text;
+                }
+            }
+        }
+
+        $text = implode("\n", $texts);
+
+        return [[
+            'page' => 1,
+            'text' => $text,
+            'char_count' => mb_strlen($text),
+        ]];
+    }
+
+    private function extractWordElementText(mixed $element): string
+    {
+        if (method_exists($element, 'getText')) {
+            return (string) $element->getText();
+        }
+
+        if (! method_exists($element, 'getElements')) {
+            return '';
+        }
+
+        $texts = [];
+        foreach ($element->getElements() as $child) {
+            $texts[] = $this->extractWordElementText($child);
+        }
+
+        return implode('', $texts);
     }
 }

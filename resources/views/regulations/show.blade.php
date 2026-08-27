@@ -50,7 +50,8 @@
             $regulation->parse_status === 'parsing' ||
             $regulation->documents->contains(fn($d) => $d->parse_status === 'parsing');
         $extractProcessing = $regulation->isAiProcessing('extract');
-        $aiProcessing = $regulation->isAiProcessing('regulation-ai');
+        $regulationAiStatus = $regulation->aiStatus('regulation-ai');
+        $aiProcessing = $regulationAiStatus?->status === 'processing';
     @endphp
 
     @if ($aiProcessing)
@@ -66,6 +67,13 @@
         <script>
             setTimeout(() => location.reload(), 4000);
         </script>
+    @endif
+
+    @if ($canUploadRegulations && $regulationAiStatus?->status === 'error')
+        <div class="mb-4 rounded-2xl bg-rose-50 ring-1 ring-rose-200 px-5 py-3">
+            <p class="text-sm font-bold text-rose-800">{{ $regulationAiStatus->message }}</p>
+            <p class="mt-1 text-xs text-rose-700">Silakan jalankan Generate AI kembali. Sistem akan membatasi teks regulasi secara otomatis.</p>
+        </div>
     @endif
 
     @if ($extractProcessing)

@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
 class GenerateRegulationAiResult implements ShouldQueue
 {
@@ -19,7 +20,9 @@ class GenerateRegulationAiResult implements ShouldQueue
 
     public $timeout = 200;
 
-    public $tries = 2;
+    public $tries = 3;
+
+    public bool $failOnTimeout = true;
 
     public function __construct(
         public Regulation $regulation,
@@ -33,11 +36,24 @@ class GenerateRegulationAiResult implements ShouldQueue
         try {
             $aiService->generateRegulationPrompt($this->regulation, $this->prompt);
             $this->regulation->aiStatus('regulation-ai')?->markDone("Generate AI {$this->prompt->title} selesai.");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
             $this->regulation->aiStatus('regulation-ai')?->markFailed('Gagal generate AI: '.$e->getMessage());
 
             throw $e;
         }
+    }
+
+    /** @return array<int, int> */
+    public function backoff(): array
+    {
+        return [5, 15];
+    }
+
+    public function failed(?Throwable $exception): void
+    {
+        $message = $exception?->getMessage() ?: 'Terjadi kesalahan yang tidak diketahui.';
+
+        $this->regulation->aiStatus('regulation-ai')?->markFailed('Gagal generate AI: '.$message);
     }
 }

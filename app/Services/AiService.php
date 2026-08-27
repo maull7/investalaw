@@ -16,6 +16,7 @@ use App\Models\RegulationAiResult;
 use App\Models\ReviewDocument;
 use App\Models\User;
 use Exception;
+use GuzzleHttp\Client as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -327,21 +328,19 @@ PROMPT;
 
     public function generateRegulationPrompt(Regulation $regulation, AiPrompt $prompt): RegulationAiResult
     {
-        $text = $regulation->parsed_text;
-        if (! $text) {
-            $text = $regulation->documents()
-                ->whereNotNull('parsed_text')
-                ->pluck('parsed_text')
-                ->implode("\n");
-        }
+        $context = $this->buildRegulationPromptContext($regulation);
 
         $messages = [
             ['role' => 'system', 'content' => $prompt->prompt_text],
-            ['role' => 'user', 'content' => $text
-                ?: "Regulasi: {$regulation->regulation_number} - {$regulation->title} ({$regulation->year})\n\n(Teks regulasi belum diparse, gunakan informasi di atas sebagai dasar analisa)."],
+            ['role' => 'user', 'content' => $context],
         ];
 
         $result = $this->callAi($messages);
+        $content = $this->cleanFormattedText($result['content']);
+
+        if ($content === '') {
+            throw new Exception('Provider AI tidak menghasilkan konten Short Review.');
+        }
 
         return RegulationAiResult::create([
             'regulation_id' => $regulation->id,
@@ -349,10 +348,51 @@ PROMPT;
             'type' => $prompt->type,
             'prompt_title' => $prompt->title,
             'prompt_text' => $prompt->prompt_text,
-            'result' => $this->cleanFormattedText($result['content']),
+            'result' => $content,
             'provider_used' => $result['provider'],
             'model_used' => $result['model'],
         ]);
+    }
+
+    protected function buildRegulationPromptContext(Regulation $regulation): string
+    {
+        $text = trim((string) $regulation->parsed_text);
+
+        if ($text === '') {
+            $text = trim($regulation->documents()
+                ->whereNotNull('parsed_text')
+                ->pluck('parsed_text')
+                ->implode("\n"));
+        }
+
+        if ($text === '') {
+            return "Regulasi: {$regulation->regulation_number} - {$regulation->title} ({$regulation->year})\n\n(Teks regulasi belum diparse, gunakan informasi di atas sebagai dasar analisa).";
+        }
+
+        $maximumCharacters = max(1000, (int) config('ai.regulation.max_context_characters', 60000));
+
+        return $this->limitRegulationContext($text, $maximumCharacters);
+    }
+
+    protected function limitRegulationContext(string $text, int $maximumCharacters): string
+    {
+        if (mb_strlen($text) <= $maximumCharacters) {
+            return $text;
+        }
+
+        $separator = "\n\n[... bagian dokumen dipotong agar sesuai batas pemrosesan AI ...]\n\n";
+        $excerptCount = 5;
+        $separatorCharacters = mb_strlen($separator) * ($excerptCount - 1);
+        $excerptCharacters = intdiv($maximumCharacters - $separatorCharacters, $excerptCount);
+        $lastStartPosition = mb_strlen($text) - $excerptCharacters;
+        $excerpts = [];
+
+        for ($index = 0; $index < $excerptCount; $index++) {
+            $startPosition = (int) round($lastStartPosition * ($index / ($excerptCount - 1)));
+            $excerpts[] = mb_substr($text, $startPosition, $excerptCharacters);
+        }
+
+        return mb_substr(implode($separator, $excerpts), 0, $maximumCharacters);
     }
 
     public function askRegulation(Regulation $regulation, string $question, array $history = [], ?User $user = null): array
@@ -1354,7 +1394,7 @@ PROMPT;
         }
     }
 
-    private function callAi(array $messages, int $maxTokens = 4096, ?array $responseFormat = null): array
+    protected function callAi(array $messages, int $maxTokens = 4096, ?array $responseFormat = null): array
     {
         $providers = [
             'openai' => [
@@ -1381,6 +1421,10 @@ PROMPT;
                     ->withApiKey($config['api_key'])
                     ->withBaseUri($config['base_url'])
                     ->withHttpHeader('OpenAI-Beta', 'assistants=v1')
+                    ->withHttpClient(new HttpClient([
+                        'connect_timeout' => config('ai.connect_timeout', 10),
+                        'timeout' => config('ai.request_timeout', 80),
+                    ]))
                     ->make();
 
                 $payload = [
@@ -1396,8 +1440,14 @@ PROMPT;
 
                 $response = $client->chat()->create($payload);
 
+                $content = trim((string) ($response->choices[0]->message->content ?? ''));
+
+                if ($content === '') {
+                    throw new Exception("AI provider {$name} mengembalikan respons kosong.");
+                }
+
                 return [
-                    'content' => $response->choices[0]->message->content ?? '',
+                    'content' => $content,
                     'provider' => $name,
                     'model' => $config['model'],
                     'total_tokens' => $response->usage?->totalTokens ?? 0,

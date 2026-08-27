@@ -369,14 +369,30 @@
                     {{-- Dokumen Tambahan --}}
                     <x-card :padding="false">
                         <x-slot name="header">
-                            <div class="flex items-center justify-between">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <h3 class="text-lg font-bold text-[#071833]">Dokumen Tambahan</h3>
                                     <p class="text-xs text-[#667085] mt-0.5">Dokumen pendukung untuk regulasi ini</p>
                                 </div>
-                                <span
-                                    class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulation->documents->count() }}
-                                    file</span>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    @if ($regulation->documents->isNotEmpty() && $canUploadRegulations)
+                                        <form method="POST"
+                                            action="{{ route('regulations.documents.parse-all', $regulation) }}">
+                                            @csrf
+                                            <x-button type="submit" variant="primary" size="sm">
+                                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                                                    stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5A3.375 3.375 0 0 0 10.125 2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v15A2.25 2.25 0 0 0 6.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-5.25ZM9 12h6m-6 3h6m-6 3h3" />
+                                                </svg>
+                                                Parse Semua Dokumen
+                                            </x-button>
+                                        </form>
+                                    @endif
+                                    <span
+                                        class="px-3 py-1 rounded-full bg-[#f6f8fb] text-xs font-bold text-[#667085]">{{ $regulation->documents->count() }}
+                                        file</span>
+                                </div>
                             </div>
                         </x-slot>
                         @if ($regulation->documents->isEmpty())
@@ -450,6 +466,8 @@
                                 @foreach ($regulation->documents as $doc)
                                     @php
                                         $ext = pathinfo($doc->file_path, PATHINFO_EXTENSION);
+                                        $parseStatus = $doc->effectiveParseStatus();
+                                        $parseError = $doc->effectiveParseError();
                                         $iconColor = match ($ext) {
                                             'pdf' => 'bg-rose-50 text-rose-500',
                                             'docx', 'doc' => 'bg-blue-50 text-blue-500',
@@ -457,7 +475,7 @@
                                             'pptx', 'ppt' => 'bg-orange-50 text-orange-500',
                                             default => 'bg-[#f6f8fb] text-[#667085]',
                                         };
-                                        $statusBadge = match ($doc->parse_status) {
+                                        $statusBadge = match ($parseStatus) {
                                             'complete' => 'bg-emerald-100 text-emerald-700',
                                             'incomplete' => 'bg-amber-100 text-amber-700',
                                             'parsing' => 'bg-blue-100 text-blue-700',
@@ -484,7 +502,7 @@
                                                 <span
                                                     class="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold {{ $statusBadge }}">{{ $doc->parseStatusLabel() }}</span>
                                             </p>
-                                            @if ($doc->parse_status === 'parsing')
+                                            @if ($parseStatus === 'parsing')
                                                 <div class="mt-2 flex items-center gap-2">
                                                     <div
                                                         class="flex-1 h-1.5 rounded-full bg-[#f6f8fb] ring-1 ring-[#e7eaf0] overflow-hidden">
@@ -508,9 +526,9 @@
                                                     @endif
                                                 </div>
                                             @endif
-                                            @if ($doc->parse_status === 'failed' && $doc->parse_error)
+                                            @if ($parseStatus === 'failed' && $parseError)
                                                 <p class="mt-1.5 text-[10px] font-medium text-rose-500 break-words">
-                                                    {{ $doc->parse_error }}</p>
+                                                    {{ $parseError }}</p>
                                             @endif
                                         </div>
                                         <div class="flex items-center gap-1.5">
@@ -520,6 +538,7 @@
                                                         action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
                                                         class="inline">
                                                         @csrf
+                                                        <input type="hidden" name="reset" value="1">
                                                         <x-button type="submit" variant="ghost" size="sm">
                                                             <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
                                                                 stroke="currentColor" stroke-width="2">
@@ -545,7 +564,7 @@
                                                             Parse
                                                         </x-button>
                                                     </form>
-                                                    @if (in_array($doc->parse_status, ['failed', 'incomplete']))
+                                                    @if (in_array($parseStatus, ['failed', 'incomplete'], true))
                                                         <form method="POST"
                                                             action="{{ route('regulations.documents.parse', [$regulation, $doc]) }}"
                                                             class="inline">

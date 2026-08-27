@@ -261,7 +261,7 @@ class RegulationParserService
 
         $fullText = collect($pages)->pluck('text')->implode("\n\n");
 
-        $parseStatus = $percentParsed >= 95 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
+        $parseStatus = $this->finalParseStatus($model, $percentParsed);
 
         $contentStartPage = $this->detectContentStartPage($pages);
         $pageOffset = $contentStartPage ? $contentStartPage - 1 : 0;
@@ -289,6 +289,7 @@ class RegulationParserService
             'parsed_text' => $this->sanitizeUtf8($fullText),
             'parse_stats' => $stats,
             'parse_progress' => 100,
+            'parse_error' => null,
         ]);
     }
 
@@ -300,7 +301,7 @@ class RegulationParserService
         $parsedCount = count(array_filter($pageCounts, fn ($c) => $c > 0));
         $percentParsed = $totalPages > 0 ? round(($parsedCount / $totalPages) * 100) : 0;
 
-        $parseStatus = $percentParsed >= 95 ? 'complete' : ($percentParsed > 0 ? 'incomplete' : 'not_parsed');
+        $parseStatus = $this->finalParseStatus($model, $percentParsed);
 
         $contentStartPage = $stats['content_start_page'] ?? null;
         $pageOffset = $contentStartPage ? $contentStartPage - 1 : 0;
@@ -325,7 +326,21 @@ class RegulationParserService
             'parse_status' => $parseStatus,
             'parse_stats' => $finalStats,
             'parse_progress' => 100,
+            'parse_error' => null,
         ]);
+    }
+
+    private function finalParseStatus(RegulationDocument|Regulation $model, int $percentParsed): string
+    {
+        if ($percentParsed >= 95) {
+            return 'complete';
+        }
+
+        if ($model instanceof RegulationDocument) {
+            return 'complete';
+        }
+
+        return $percentParsed > 0 ? 'incomplete' : 'not_parsed';
     }
 
     private function ocrPdfRange(string $fullPath, int $fromPage, int $toPage, bool $psm6): array

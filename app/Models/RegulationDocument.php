@@ -23,9 +23,27 @@ class RegulationDocument extends Model
         return $this->parsed_at !== null;
     }
 
+    public function effectiveParseStatus(): string
+    {
+        if ($this->shouldTreatUnreadableOcrAsComplete()) {
+            return 'complete';
+        }
+
+        return $this->parse_status ?? 'not_parsed';
+    }
+
+    public function effectiveParseError(): ?string
+    {
+        if ($this->shouldTreatUnreadableOcrAsComplete()) {
+            return null;
+        }
+
+        return $this->parse_error;
+    }
+
     public function parseStatusLabel(): string
     {
-        return match ($this->parse_status) {
+        return match ($this->effectiveParseStatus()) {
             'complete' => 'Complete',
             'incomplete' => 'InComplete',
             'parsing' => 'Parsing',
@@ -36,7 +54,7 @@ class RegulationDocument extends Model
 
     public function parseStatusBadgeColor(): string
     {
-        return match ($this->parse_status) {
+        return match ($this->effectiveParseStatus()) {
             'complete' => 'emerald',
             'incomplete' => 'amber',
             'parsing' => 'blue',
@@ -52,5 +70,12 @@ class RegulationDocument extends Model
             'parse_stats' => 'array',
             'parse_progress' => 'integer',
         ];
+    }
+
+    private function shouldTreatUnreadableOcrAsComplete(): bool
+    {
+        return $this->parsed_at !== null
+            && $this->parse_status === 'failed'
+            && str_starts_with((string) $this->parse_error, 'OCR hanya berhasil membaca');
     }
 }

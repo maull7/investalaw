@@ -601,13 +601,15 @@ class RegulationController extends Controller
                     ->with('info', 'Dokumen sedang diproses. Job parse baru tidak ditambahkan.');
             }
 
-            if ($document->parse_status === 'complete') {
+            if ($document->effectiveParseStatus() === 'complete' && ! request()->boolean('reset')) {
                 return redirect()->route('regulations.show', $regulation)
                     ->with('info', 'Dokumen sudah diparse lengkap.');
             }
 
-            // Reset penuh jika user klik "Reset & Parse Ulang", lanjut dari resume jika parse gagal/cancel.
-            if (request()->boolean('reset')) {
+            $shouldResetParse = request()->boolean('reset')
+                || in_array($document->parse_status, ['failed', 'incomplete', 'not_parsed'], true);
+
+            if ($shouldResetParse) {
                 $document->update([
                     'parse_status' => 'parsing',
                     'parse_progress' => 0,
@@ -652,8 +654,14 @@ class RegulationController extends Controller
             $shouldDispatch = false;
             try {
                 $document->refresh();
-                if (! $document->isParsed() && $document->parse_status !== 'parsing') {
-                    $document->update(['parse_status' => 'parsing', 'parse_progress' => 0, 'parse_error' => null]);
+                if ($document->effectiveParseStatus() !== 'complete' && $document->parse_status !== 'parsing') {
+                    $document->update([
+                        'parse_status' => 'parsing',
+                        'parse_progress' => 0,
+                        'parse_error' => null,
+                        'parsed_text' => null,
+                        'parse_stats' => null,
+                    ]);
                     Cache::forget("parse_cancel:document:{$document->id}");
                     $shouldDispatch = true;
                 }
@@ -698,8 +706,8 @@ class RegulationController extends Controller
             'documents' => $regulation->documents->map(fn ($d) => [
                 'id' => $d->id,
                 'progress' => $d->parse_progress,
-                'status' => $d->parse_status,
-                'error' => $d->parse_error,
+                'status' => $d->effectiveParseStatus(),
+                'error' => $d->effectiveParseError(),
                 'total_pages' => $docStats($d)['total_pages'] ?? null,
                 'resume_page' => $docStats($d)['resume_page'] ?? null,
                 'chunk_size' => $docStats($d)['chunk_size'] ?? RegulationParserService::CHUNK_SIZE,

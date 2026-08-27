@@ -174,6 +174,25 @@ class ParseJobStatusTest extends TestCase
         (new ParseRegulation($regulation))->handle($parser);
     }
 
+    public function test_document_job_uses_text_extraction_before_ocr(): void
+    {
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+        ]);
+        $parser = $this->mock(RegulationParserService::class);
+
+        $parser->shouldReceive('extractTextPages')
+            ->once()
+            ->withArgs(fn (RegulationDocument $model, string $pdfType): bool => $model->is($document) && $pdfType === 'text')
+            ->andReturn(true);
+        $parser->shouldNotReceive('parseDocumentChunk');
+
+        (new ParseRegulationDocument($document))->handle($parser);
+    }
+
     public function test_timed_out_first_chunk_still_uses_text_extraction_on_retry(): void
     {
         $regulation = $this->makeRegulation();
@@ -213,6 +232,182 @@ class ParseJobStatusTest extends TestCase
     public function test_regulation_parser_processes_five_pages_per_chunk(): void
     {
         $this->assertSame(5, RegulationParserService::CHUNK_SIZE);
+    }
+
+    public function test_partial_document_ocr_is_marked_complete(): void
+    {
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_stats' => [
+                'total_pages' => 5,
+                'page_counts' => [
+                    1 => 120,
+                    2 => 0,
+                    3 => 0,
+                    4 => 0,
+                    5 => 0,
+                ],
+            ],
+        ]);
+
+        app(RegulationParserService::class)->finalizeOcrParsed($document);
+
+        $document->refresh();
+        $this->assertSame('complete', $document->parse_status);
+        $this->assertNull($document->parse_error);
+    }
+
+    public function test_legacy_partial_document_ocr_error_is_treated_as_complete(): void
+    {
+        $document = RegulationDocument::create([
+            'regulation_id' => $this->makeRegulation()->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'failed',
+            'parse_error' => 'OCR hanya berhasil membaca 3 dari 4 halaman. Silakan unggah PDF dengan kualitas scan lebih jelas lalu parse ulang.',
+            'parsed_at' => now(),
+            'parsed_text' => 'partial text',
+            'parse_progress' => 100,
+        ]);
+
+        $this->assertSame('complete', $document->effectiveParseStatus());
+        $this->assertNull($document->effectiveParseError());
+        $this->assertSame('Complete', $document->parseStatusLabel());
+        $this->assertSame('emerald', $document->parseStatusBadgeColor());
+    }
+
+    public function test_parse_progress_treats_legacy_partial_document_ocr_error_as_complete(): void
+    {
+        $regulation = $this->makeRegulation();
+        RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'failed',
+            'parse_error' => 'OCR hanya berhasil membaca 3 dari 4 halaman. Silakan unggah PDF dengan kualitas scan lebih jelas lalu parse ulang.',
+            'parsed_at' => now(),
+            'parsed_text' => 'partial text',
+            'parse_progress' => 100,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->get(route('regulations.parse-progress', $regulation))
+            ->assertJsonFragment([
+                'status' => 'complete',
+                'error' => null,
+            ]);
+    }
+
+    public function test_parse_all_documents_skips_legacy_partial_document_ocr_error(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'failed',
+            'parse_error' => 'OCR hanya berhasil membaca 3 dari 4 halaman. Silakan unggah PDF dengan kualitas scan lebih jelas lalu parse ulang.',
+            'parsed_at' => now(),
+            'parsed_text' => 'partial text',
+            'parse_progress' => 100,
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.documents.parse-all', $regulation))
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        Queue::assertNothingPushed();
+    }
+
+    public function test_parse_all_documents_includes_failed_partial_documents(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'failed',
+            'parsed_at' => now(),
+            'parse_error' => 'File tidak ditemukan.',
+            'parsed_text' => 'partial old text',
+            'parse_stats' => ['pdf_type' => 'image', 'resume_page' => null],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.documents.parse-all', $regulation))
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        $document->refresh();
+        $this->assertSame('parsing', $document->parse_status);
+        $this->assertNull($document->parsed_text);
+        $this->assertNull($document->parse_stats);
+        Queue::assertPushed(ParseRegulationDocument::class, 1);
+    }
+
+    public function test_reparse_failed_document_queues_fresh_parse_that_can_check_text_pdf_first(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'failed',
+            'parse_progress' => 100,
+            'parsed_at' => now(),
+            'parsed_text' => 'partial old text',
+            'parse_stats' => ['pdf_type' => 'image', 'resume_page' => null],
+            'parse_error' => 'File tidak ditemukan.',
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.documents.parse', [$regulation, $document]))
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        $document->refresh();
+        $this->assertSame('parsing', $document->parse_status);
+        $this->assertSame(0, $document->parse_progress);
+        $this->assertNull($document->parsed_text);
+        $this->assertNull($document->parse_stats);
+        Queue::assertPushed(ParseRegulationDocument::class, 1);
+    }
+
+    public function test_reparse_complete_document_with_reset_queues_fresh_parse(): void
+    {
+        Queue::fake();
+        $regulation = $this->makeRegulation();
+        $document = RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Doc',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulations/fixture.pdf',
+            'parse_status' => 'complete',
+            'parse_progress' => 100,
+            'parsed_at' => now(),
+            'parsed_text' => 'old text',
+            'parse_stats' => ['total_pages' => 5],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('regulations.documents.parse', [$regulation, $document]), ['reset' => '1'])
+            ->assertRedirect(route('regulations.show', $regulation));
+
+        $document->refresh();
+        $this->assertSame('parsing', $document->parse_status);
+        $this->assertSame(0, $document->parse_progress);
+        $this->assertNull($document->parsed_text);
+        $this->assertNull($document->parse_stats);
+        Queue::assertPushed(ParseRegulationDocument::class, 1);
     }
 
     public function test_duplicate_regulation_job_does_not_run_parser(): void

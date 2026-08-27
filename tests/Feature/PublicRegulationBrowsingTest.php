@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
+use App\Models\RegulationDocument;
 use App\Models\RegulationType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -68,6 +69,22 @@ class PublicRegulationBrowsingTest extends TestCase
             ->assertSee('Info')
             ->assertSee('Short Review')
             ->assertSee('Tanya Kak Vesta');
+    }
+
+    public function test_admin_sees_parse_all_documents_button_on_regulation_detail(): void
+    {
+        $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+        RegulationDocument::create([
+            'regulation_id' => $regulation->id,
+            'name' => 'Lampiran',
+            'document_type' => 'lampiran',
+            'file_path' => 'regulation-documents/lampiran.pdf',
+        ]);
+
+        $this->actingAs(User::factory()->create(['role' => 'admin']))
+            ->get(route('regulations.show', $regulation))
+            ->assertOk()
+            ->assertSee('Parse Semua Dokumen');
     }
 
     public function test_all_regulations_stay_on_landing_page_and_are_paginated(): void

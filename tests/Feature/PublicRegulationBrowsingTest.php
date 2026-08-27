@@ -18,19 +18,19 @@ class PublicRegulationBrowsingTest extends TestCase
         return ['--schema-path' => '/dev/null'];
     }
 
-    public function test_landing_search_always_returns_no_regulations(): void
+    public function test_landing_search_returns_matching_regulations(): void
     {
         $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
         $other = $this->makeRegulation('UU/1/2020', 'Ketenagakerjaan');
 
         $this->get(route('index-dash', ['search' => 'digital']))
             ->assertOk()
-            ->assertSee('Tidak ada regulasi ditemukan.')
-            ->assertDontSee($match->regulation_number)
+            ->assertSee('Hasil Pencarian Regulasi')
+            ->assertSee($match->regulation_number)
             ->assertDontSee($other->regulation_number);
     }
 
-    public function test_landing_category_and_year_filters_always_return_no_regulations(): void
+    public function test_landing_category_and_year_filters_return_matching_regulations(): void
     {
         $match = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital', 'Pasar Modal', 2026);
         $other = $this->makeRegulation('POJK/11/2025', 'Pasar Modal Lama', 'Pasar Modal', 2025);
@@ -40,8 +40,8 @@ class PublicRegulationBrowsingTest extends TestCase
             'year' => $match->year,
         ]))
             ->assertOk()
-            ->assertSee('Tidak ada regulasi ditemukan.')
-            ->assertDontSee($match->regulation_number)
+            ->assertSee('Hasil Pencarian Regulasi')
+            ->assertSee($match->regulation_number)
             ->assertDontSee($other->regulation_number);
     }
 
@@ -98,7 +98,7 @@ class PublicRegulationBrowsingTest extends TestCase
             ->assertDontSee('REG/16/2026');
     }
 
-    public function test_submitting_empty_search_form_returns_no_regulations(): void
+    public function test_submitting_empty_search_form_returns_default_latest_regulations(): void
     {
         $regulation = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
 
@@ -108,8 +108,8 @@ class PublicRegulationBrowsingTest extends TestCase
             'year' => '',
         ]))
             ->assertOk()
-            ->assertSee('Tidak ada regulasi ditemukan.')
-            ->assertDontSee($regulation->regulation_number);
+            ->assertSee('Peraturan Terkini')
+            ->assertSee($regulation->regulation_number);
     }
 
     public function test_guest_chat_request_is_redirected_to_login(): void

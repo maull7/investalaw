@@ -194,7 +194,7 @@
                 </table>
             </div>
 
-            @if ($showAllRegulations && !$hasFilters)
+            @if ($showAllRegulations || $hasFilters)
                 <div class="border-t border-[#e7eaf0] px-6 py-4">
                     {{ $latestRegulations->links() }}
                 </div>

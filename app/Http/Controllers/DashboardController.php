@@ -7,6 +7,7 @@ use App\Models\RegulationCategory;
 use App\Models\RegulationRelatedReference;
 use App\Models\Review;
 use App\Models\ReviewDocument;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -90,7 +91,7 @@ class DashboardController extends Controller
         $search = trim((string) $request->query('search', ''));
         $categoryId = trim((string) $request->query('category_id', ''));
         $year = trim((string) $request->query('year', ''));
-        $hasFilters = $request->hasAny(['search', 'category_id', 'year']);
+        $hasFilters = $search !== '' || $categoryId !== '' || $year !== '';
         $showAllRegulations = $request->boolean('all');
 
         $documentsQuery = ReviewDocument::query();
@@ -113,10 +114,17 @@ class DashboardController extends Controller
             ->get();
 
         $regulationsQuery = Regulation::with(['type', 'category'])
-            ->when($hasFilters, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($search !== '', function (Builder $query) use ($search) {
+                $query->where(function (Builder $query) use ($search) {
+                    $query->where('regulation_number', 'like', "%{$search}%")
+                        ->orWhere('title', 'like', "%{$search}%");
+                });
+            })
+            ->when($categoryId !== '', fn (Builder $query) => $query->where('category_id', $categoryId))
+            ->when($year !== '', fn (Builder $query) => $query->where('year', $year))
             ->orderByDesc('tanggal_tetapkan');
 
-        $latestRegulations = $showAllRegulations && ! $hasFilters
+        $latestRegulations = $showAllRegulations || $hasFilters
             ? $regulationsQuery->paginate(15)->withQueryString()
             : $regulationsQuery->take(5)->get();
 

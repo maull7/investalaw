@@ -1,11 +1,31 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+<html lang="id" class="h-full">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'InvestaLaw') }} — @yield('title', 'Compliance Workspace')</title>
+    <meta name="description" content="@yield('meta_description', 'Investalawco menyediakan informasi regulasi, analisis kepatuhan, dan solusi hukum investasi serta pasar modal Indonesia.')">
+    <meta name="robots" content="@yield('robots', 'noindex, nofollow')">
+    <link rel="canonical" href="@yield('canonical', url()->current())">
+
+    <meta property="og:locale" content="id_ID">
+    <meta property="og:type" content="@yield('og_type', 'website')">
+    <meta property="og:site_name" content="{{ config('app.name', 'InvestaLawCo') }}">
+    <meta property="og:title" content="@yield('og_title', config('app.name', 'InvestaLawCo').' — '.trim($__env->yieldContent('title', 'Compliance Workspace')))">
+    <meta property="og:description" content="@yield('meta_description', 'Investalawco menyediakan informasi regulasi, analisis kepatuhan, dan solusi hukum investasi serta pasar modal Indonesia.')">
+    <meta property="og:url" content="@yield('canonical', url()->current())">
+    @hasSection('og_image')
+        <meta property="og:image" content="@yield('og_image')">
+    @endif
+
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="@yield('og_title', config('app.name', 'InvestaLawCo').' — '.trim($__env->yieldContent('title', 'Compliance Workspace')))">
+    <meta name="twitter:description" content="@yield('meta_description', 'Investalawco menyediakan informasi regulasi, analisis kepatuhan, dan solusi hukum investasi serta pasar modal Indonesia.')">
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+
+    @stack('structured-data')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,6 +87,7 @@
             </main>
         </div>
     </div>
+    @stack('floating')
     @stack('scripts')
 </body>
 

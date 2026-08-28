@@ -270,6 +270,21 @@
                     </ul>
                 @endif
 
+                @if ($user->isSubAdmin())
+                    <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Compliance</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <a href="{{ route('activity-logs.index') }}"
+                                class="nav-item {{ request()->routeIs('activity-logs.*') ? 'is-active' : '' }}">
+                                <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                                <span>Log Aktivitas</span>
+                            </a>
+                        </li>
+                    </ul>
+                @endif
+
                 @if (!$user->isSubAdmin())
                     @if (!$user->isAdmin())
                         <p
@@ -339,6 +354,17 @@
                                 <span>Compliance Monitoring</span>
                             </a>
                         </li>
+                        @if ($user->isAdmin())
+                            <li>
+                                <a href="{{ route('activity-logs.index') }}"
+                                    class="nav-item {{ request()->routeIs('activity-logs.*') ? 'is-active' : '' }}">
+                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    </svg>
+                                    <span>Log Aktivitas</span>
+                                </a>
+                            </li>
+                        @endif
                         <li>
                             <a href="{{ route('consultations.index') }}"
                                 class="nav-item {{ request()->routeIs('consultations.*') ? 'is-active' : '' }}">

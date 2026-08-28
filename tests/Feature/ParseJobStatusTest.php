@@ -326,7 +326,7 @@ class ParseJobStatusTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_parse_all_documents_includes_failed_partial_documents(): void
+    public function test_parse_all_documents_preserves_failed_partial_documents(): void
     {
         Queue::fake();
         $regulation = $this->makeRegulation();
@@ -348,12 +348,12 @@ class ParseJobStatusTest extends TestCase
 
         $document->refresh();
         $this->assertSame('parsing', $document->parse_status);
-        $this->assertNull($document->parsed_text);
-        $this->assertNull($document->parse_stats);
+        $this->assertSame('partial old text', $document->parsed_text);
+        $this->assertSame(['pdf_type' => 'image', 'resume_page' => null], $document->parse_stats);
         Queue::assertPushed(ParseRegulationDocument::class, 1);
     }
 
-    public function test_reparse_failed_document_queues_fresh_parse_that_can_check_text_pdf_first(): void
+    public function test_reparse_failed_document_preserves_partial_text_by_default(): void
     {
         Queue::fake();
         $regulation = $this->makeRegulation();
@@ -377,8 +377,8 @@ class ParseJobStatusTest extends TestCase
         $document->refresh();
         $this->assertSame('parsing', $document->parse_status);
         $this->assertSame(0, $document->parse_progress);
-        $this->assertNull($document->parsed_text);
-        $this->assertNull($document->parse_stats);
+        $this->assertSame('partial old text', $document->parsed_text);
+        $this->assertSame(['pdf_type' => 'image', 'resume_page' => null], $document->parse_stats);
         Queue::assertPushed(ParseRegulationDocument::class, 1);
     }
 

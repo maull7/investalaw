@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AiPreviewController;
 use App\Http\Controllers\AiPromptController;
 use App\Http\Controllers\AiSummaryController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\RegulationTypeController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\ReviewDocumentController;
 use App\Http\Controllers\ReviewReportController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubCategoryController;
 use App\Http\Controllers\TypePromptController;
@@ -43,6 +45,8 @@ Route::get('/landing-page', function () {
 })->name('index');
 
 Route::get('/', [DashboardController::class, 'landing'])->name('index-dash');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
 // Public regulation browsing.
 Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
@@ -177,6 +181,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 
     // Admin management routes (admin & sub_admin only)
     Route::middleware('role:admin,sub_admin')->group(function () {
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
         Route::get('/legal-necessities', [LegalNecessityController::class, 'index'])->name('legal-necessities.index');
 
         Route::resource('regulation-categories', RegulationCategoryController::class);

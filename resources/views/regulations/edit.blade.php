@@ -498,7 +498,7 @@
                 searchQuery: '',
                 searchResults: [],
                 searchLoading: false,
-                pdfPreviewUrl: '{{ Storage::disk('public')->url($regulation->file_path) }}',
+                pdfPreviewUrl: '{{ route('regulations.file-raw', $regulation) }}',
                 editDocument: null,
 
                 previewFile(event) {

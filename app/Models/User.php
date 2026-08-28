@@ -37,6 +37,12 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(UserActivityLog::class);
     }
 
+    /** @return HasMany<Regulation> */
+    public function createdRegulations(): HasMany
+    {
+        return $this->hasMany(Regulation::class, 'created_by');
+    }
+
     /** @return HasMany<Review> */
     public function reviews(): HasMany
     {

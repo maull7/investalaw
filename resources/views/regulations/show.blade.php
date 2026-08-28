@@ -1,7 +1,34 @@
 @extends('layouts.app')
 
-@section('title', $regulation->regulation_number)
+@section('title', $regulation->regulation_number.' — '.$regulation->title)
 @section('header', $regulation->regulation_number)
+@section('meta_description', \Illuminate\Support\Str::limit('Baca informasi '.$regulation->regulation_number.' tentang '.$regulation->title.', termasuk status, tanggal berlaku, dan dokumen terkait di Investalawco.', 160))
+@section('canonical', route('regulations.show', $regulation))
+@section('robots', 'index, follow, max-image-preview:large')
+@section('og_type', 'article')
+@section('og_title', $regulation->regulation_number.' — '.$regulation->title)
+
+@push('structured-data')
+    <script type="application/ld+json">
+        {!! json_encode([
+            chr(64).'context' => 'https://schema.org',
+            '@type' => 'Legislation',
+            'name' => $regulation->title,
+            'legislationIdentifier' => $regulation->regulation_number,
+            'datePublished' => $regulation->tanggal_diundangkan?->toDateString() ?? $regulation->tanggal_tetapkan?->toDateString(),
+            'dateModified' => $regulation->updated_at?->toAtomString(),
+            'legislationDate' => $regulation->tanggal_tetapkan?->toDateString(),
+            'legislationDateVersion' => $regulation->effective_date?->toDateString(),
+            'url' => route('regulations.show', $regulation),
+            'inLanguage' => 'id-ID',
+            'publisher' => [
+                '@type' => 'Organization',
+                'name' => 'InvestaLawCo',
+                'url' => route('index-dash'),
+            ],
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}
+    </script>
+@endpush
 
 @section('content')
     @php
@@ -28,7 +55,7 @@
                             {{ $regulation->type->level }}</x-badge>
                     @endif
                 </div>
-                <h2 class="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">{{ $regulation->title }}</h2>
+                <h1 class="mt-4 text-2xl sm:text-3xl font-bold tracking-tight">{{ $regulation->title }}</h1>
                 <p class="mt-2 text-white/70 text-sm">{{ $regulation->regulation_number }}</p>
             </div>
 
@@ -1176,20 +1203,22 @@
                                 </svg>
                                 Edit Regulasi
                             </x-button>
-                            <form method="POST" action="{{ route('regulations.destroy', $regulation) }}"
-                                id="delete-regulation-form">
-                                @csrf
-                                @method('DELETE')
-                                <x-button type="button" variant="danger" class="w-full justify-start"
-                                    @click="$dispatch('open-modal-confirm-delete-regulation')">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                    </svg>
-                                    Hapus Regulasi
-                                </x-button>
-                            </form>
+                            @can('delete', $regulation)
+                                <form method="POST" action="{{ route('regulations.destroy', $regulation) }}"
+                                    id="delete-regulation-form">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-button type="button" variant="danger" class="w-full justify-start"
+                                        @click="$dispatch('open-modal-confirm-delete-regulation')">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                            stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                        </svg>
+                                        Hapus Regulasi
+                                    </x-button>
+                                </form>
+                            @endcan
                         @endif
                         <x-button href="{{ route('regulations.index') }}" variant="ghost" class="w-full justify-start">
                             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -1232,7 +1261,7 @@
         </aside>
     </div>
 
-    @if ($canUploadRegulations)
+    @can('delete', $regulation)
         <x-modal name="confirm-delete-regulation" title="Hapus Regulasi" maxWidth="md">
             <div class="flex items-start gap-4">
                 <span class="shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-rose-50 text-rose-500">
@@ -1254,7 +1283,7 @@
                     onclick="document.getElementById('delete-regulation-form').submit()">Hapus</x-button>
             </x-slot>
         </x-modal>
-    @endif
+    @endcan
 @endsection
 
 @push('scripts')

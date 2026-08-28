@@ -66,6 +66,7 @@ class RegulationController extends Controller
         $filePath = $request->file('file')->store('regulations', 'public');
 
         $regulation = Regulation::create([
+            'created_by' => $request->user()->id,
             'regulation_number' => $data['regulation_number'],
             'title' => $data['title'],
             'regulation_type_id' => $data['regulation_type_id'],
@@ -288,6 +289,7 @@ class RegulationController extends Controller
     public function destroy(Regulation $regulation): RedirectResponse
     {
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
+        $this->authorize('delete', $regulation);
 
         Storage::disk('public')->delete($regulation->file_path);
 
@@ -606,8 +608,7 @@ class RegulationController extends Controller
                     ->with('info', 'Dokumen sudah diparse lengkap.');
             }
 
-            $shouldResetParse = request()->boolean('reset')
-                || in_array($document->parse_status, ['failed', 'incomplete', 'not_parsed'], true);
+            $shouldResetParse = request()->boolean('reset');
 
             if ($shouldResetParse) {
                 $document->update([
@@ -618,7 +619,11 @@ class RegulationController extends Controller
                     'parse_stats' => null,
                 ]);
             } else {
-                $document->update(['parse_status' => 'parsing', 'parse_error' => null]);
+                $document->update([
+                    'parse_status' => 'parsing',
+                    'parse_progress' => 0,
+                    'parse_error' => null,
+                ]);
             }
 
             Cache::forget("parse_cancel:document:{$document->id}");
@@ -659,8 +664,6 @@ class RegulationController extends Controller
                         'parse_status' => 'parsing',
                         'parse_progress' => 0,
                         'parse_error' => null,
-                        'parsed_text' => null,
-                        'parse_stats' => null,
                     ]);
                     Cache::forget("parse_cancel:document:{$document->id}");
                     $shouldDispatch = true;

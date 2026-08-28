@@ -22,8 +22,8 @@
                         </svg>
                         <span class="text-[#c99a3e] font-semibold">@yield('header', 'Dashboard')</span>
                     </div>
-                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-[#071833] truncate">@yield('header', 'Dashboard')
-                    </h1>
+                    <p class="text-lg sm:text-xl font-bold tracking-tight text-[#071833] truncate">@yield('header', 'Dashboard')
+                    </p>
                 </div>
             </div>
 

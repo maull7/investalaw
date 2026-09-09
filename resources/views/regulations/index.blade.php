@@ -127,6 +127,10 @@
                             </th>
                             <th class="text-center">Dok Tambahan</th>
                             <th class="text-center">Status Parser</th>
+                            @if ($canViewExtractionStatus)
+                                <th class="text-center">Status Ekstrak Peraturan Terkait</th>
+                                <th class="text-center">Status Short Review</th>
+                            @endif
 
                             <th class="text-right">Aksi</th>
                         </tr>
@@ -241,6 +245,29 @@
                                     @endphp
                                     <x-badge :color="$color">{{ $status }}</x-badge>
                                 </td>
+                                @if ($canViewExtractionStatus)
+                                    @php
+                                        $extractionStatus = $extractionStatuses->get($reg->id)?->status;
+                                        [$extractionLabel, $extractionColor] = match ($extractionStatus) {
+                                            'processing' => ['Sedang Diproses', 'blue'],
+                                            'error' => ['Gagal', 'rose'],
+                                            'done' => ['Sudah Diekstrak', 'emerald'],
+                                            default => $reg->related_references_exists
+                                                ? ['Sudah Diekstrak', 'emerald']
+                                                : ['Belum Diekstrak', 'gray'],
+                                        };
+                                    @endphp
+                                    <td class="text-center">
+                                        <x-badge :color="$extractionColor">{{ $extractionLabel }}</x-badge>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('regulations.show', [$reg, 'tab' => 'short-review']) }}">
+                                            <x-badge :color="$reg->short_review_exists ? 'emerald' : 'gray'">
+                                                {{ $reg->short_review_exists ? 'Sudah Dibuat' : 'Belum Dibuat' }}
+                                            </x-badge>
+                                        </a>
+                                    </td>
+                                @endif
 
                                 <td>
                                     <div class="flex items-center justify-end gap-2">

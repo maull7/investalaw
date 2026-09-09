@@ -28,6 +28,7 @@ class RegulationRepository
         }
 
         $query = Regulation::with(['type', 'category', 'subCategories', 'documents'])
+            ->whereHas('category.sector', fn(Builder $q) => $q->where('id', 1))
             ->withCount('documents');
 
         if (! empty($filters['search'])) {
@@ -109,7 +110,7 @@ class RegulationRepository
                 ->orWhere('title', 'like', "%{$query}%")
                 ->orWhere('year', 'like', "%{$query}%");
         })
-            ->when($excludeId, fn (Builder $q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId, fn(Builder $q) => $q->where('id', '!=', $excludeId))
             ->with('type')
             ->orderByDesc('year')
             ->limit(20)
@@ -133,7 +134,7 @@ class RegulationRepository
         return [
             'types' => RegulationType::where('is_active', true)->orderBy('level')->get(),
             'categories' => RegulationCategory::with([
-                'subCategories' => fn ($q) => $q->where('is_active', true),
+                'subCategories' => fn($q) => $q->where('is_active', true),
             ])
                 ->where('sector_id', 1)
                 ->orderBy('name')
@@ -198,12 +199,12 @@ class RegulationRepository
         }
 
         if ($pos === false) {
-            return mb_substr($text, 0, $length).'...';
+            return mb_substr($text, 0, $length) . '...';
         }
 
         $start = max(0, $pos - 100);
         $snippet = mb_substr($text, $start, $length);
 
-        return ($start > 0 ? '...' : '').$snippet.'...';
+        return ($start > 0 ? '...' : '') . $snippet . '...';
     }
 }

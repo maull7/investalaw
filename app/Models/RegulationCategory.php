@@ -30,4 +30,9 @@ class RegulationCategory extends Model
     {
         return $this->hasMany(Regulation::class, 'category_id');
     }
+
+    public function sector()
+    {
+        return $this->belongsTo(Sector::class, 'sector_id');
+    }
 }

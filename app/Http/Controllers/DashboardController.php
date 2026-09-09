@@ -114,6 +114,9 @@ class DashboardController extends Controller
             ->get();
 
         $regulationsQuery = Regulation::with(['type', 'category'])
+            ->whereHas('category.sector', function ($query) {
+                $query->where('sector_id', 1);
+            })
             ->when($search !== '', function (Builder $query) use ($search) {
                 $query->where(function (Builder $query) use ($search) {
                     $query->where('regulation_number', 'like', "%{$search}%")

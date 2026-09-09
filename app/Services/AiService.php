@@ -331,7 +331,7 @@ PROMPT;
         $context = $this->buildRegulationPromptContext($regulation);
 
         $messages = [
-            ['role' => 'system', 'content' => $prompt->prompt_text],
+            ['role' => 'system', 'content' => $this->indonesianRegulationPrompt($prompt->prompt_text)],
             ['role' => 'user', 'content' => $context],
         ];
 
@@ -352,6 +352,15 @@ PROMPT;
             'provider_used' => $result['provider'],
             'model_used' => $result['model'],
         ]);
+    }
+
+    private function indonesianRegulationPrompt(string $prompt): string
+    {
+        return trim($prompt)."\n\n"
+            .'ATURAN BAHASA WAJIB: Tulis seluruh jawaban hanya dalam Bahasa Indonesia. '
+            .'Jangan gunakan Bahasa Inggris, termasuk judul, label, ringkasan, istilah penjelas, dan kalimat pembuka. '
+            .'Istilah hukum atau nama resmi yang memang tercantum dalam dokumen boleh dipertahankan apa adanya. '
+            .'Jika dokumen sumber menggunakan Bahasa Inggris, terjemahkan penjelasannya ke Bahasa Indonesia.';
     }
 
     protected function buildRegulationPromptContext(Regulation $regulation): string

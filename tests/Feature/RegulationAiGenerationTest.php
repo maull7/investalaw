@@ -51,6 +51,8 @@ class RegulationAiGenerationTest extends TestCase
         $this->assertStringContainsString('AWAL-DOKUMEN', $context);
         $this->assertStringContainsString('AKHIR-DOKUMEN', $context);
         $this->assertStringContainsString('bagian dokumen dipotong', $context);
+        $this->assertStringContainsString('Tulis seluruh jawaban hanya dalam Bahasa Indonesia', $aiService->capturedMessages[0]['content']);
+        $this->assertStringContainsString('Jangan gunakan Bahasa Inggris', $aiService->capturedMessages[0]['content']);
         $this->assertSame('Short Review berhasil dibuat.', $result->result);
         $this->assertModelExists($result);
     }

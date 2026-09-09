@@ -22,7 +22,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -39,6 +39,9 @@ class DashboardController extends Controller
         $recentDocuments = $documentsQuery->with('user')->latest()->take(5)->get();
 
         $latestRegulations = Regulation::with(['type', 'category'])
+            ->whereHas('category.sector', function ($query) {
+                $query->where('sector_id', 1);
+            })
             ->orderByDesc('tanggal_tetapkan')
             ->take(5)
             ->get();
@@ -67,7 +70,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -123,8 +126,8 @@ class DashboardController extends Controller
                         ->orWhere('title', 'like', "%{$search}%");
                 });
             })
-            ->when($categoryId !== '', fn (Builder $query) => $query->where('category_id', $categoryId))
-            ->when($year !== '', fn (Builder $query) => $query->where('year', $year))
+            ->when($categoryId !== '', fn(Builder $query) => $query->where('category_id', $categoryId))
+            ->when($year !== '', fn(Builder $query) => $query->where('year', $year))
             ->orderByDesc('tanggal_tetapkan');
 
         $latestRegulations = $showAllRegulations || $hasFilters

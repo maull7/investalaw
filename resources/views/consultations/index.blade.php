@@ -4,6 +4,15 @@
 @section('header', 'Konsultasi Kak Vesta')
 
 @section('content')
+    @if ($freePromptAllowance)
+        <div class="mb-6 flex items-start gap-3 rounded-2xl bg-amber-50 px-5 py-4 ring-1 ring-amber-200">
+            <p class="text-sm font-semibold text-amber-800">
+                Akun free hanya dapat menggunakan Kak Vesta sebanyak {{ $freePromptAllowance['limit'] }} kali prompt.
+                Sisa prompt Anda: {{ $freePromptAllowance['remaining'] }}.
+            </p>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
             <x-card>

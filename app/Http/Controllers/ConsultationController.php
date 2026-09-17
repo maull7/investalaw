@@ -30,6 +30,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ConsultationController extends Controller
 {
+    private const FREE_PROMPT_LIMIT = 5;
+
     public function __construct(
         private readonly AiService $aiService,
         private readonly TokenLimitService $tokenLimit,
@@ -49,8 +51,7 @@ class ConsultationController extends Controller
             ->first();
 
         if (! $active) {
-            return redirect()->route('dashboard')
-                ->with('error', 'Fitur Konsultasi Kak Vesta hanya tersedia untuk pengguna dengan paket aktif.');
+            return null;
         }
 
         $quota = (int) ($active->package?->kak_vesta_tokens ?: 0);
@@ -101,7 +102,9 @@ class ConsultationController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('consultations.index', compact('sessions', 'categories'));
+        $freePromptAllowance = $this->freePromptAllowance(request()->user()->id);
+
+        return view('consultations.index', compact('sessions', 'categories', 'freePromptAllowance'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -144,8 +147,9 @@ class ConsultationController extends Controller
         }])->orderBy('name')->get();
 
         $selectedIds = $session->regulations->pluck('id')->all();
+        $freePromptAllowance = $this->freePromptAllowance(auth()->id());
 
-        return view('consultations.show', compact('session', 'categories', 'selectedIds'));
+        return view('consultations.show', compact('session', 'categories', 'selectedIds', 'freePromptAllowance'));
     }
 
     public function ask(Request $request, ConsultationSession $session): JsonResponse|RedirectResponse
@@ -168,6 +172,17 @@ class ConsultationController extends Controller
                 'max:10240',
             ],
         ]);
+
+        if ($this->hasReachedFreePromptLimit($request->user()->id)) {
+            $message = 'Batas 5 prompt Kak Vesta untuk akun free telah habis.';
+
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $message], 429);
+            }
+
+            return redirect()->route('consultations.show', $session)
+                ->with('error', $message);
+        }
 
         $attachmentsData = [];
 
@@ -331,6 +346,37 @@ class ConsultationController extends Controller
             return redirect()->route('consultations.show', $session)
                 ->with('error', 'Maaf, Kak Vesta sedang tidak dapat dihubungi.');
         }
+    }
+
+    private function hasReachedFreePromptLimit(int $userId): bool
+    {
+        $allowance = $this->freePromptAllowance($userId);
+
+        return $allowance !== null && $allowance['remaining'] === 0;
+    }
+
+    /**
+     * @return array{limit: int, used: int, remaining: int}|null
+     */
+    private function freePromptAllowance(int $userId): ?array
+    {
+        $hasActivePackage = UserPackage::where('user_id', $userId)
+            ->where('status', 'active')
+            ->exists();
+
+        if ($hasActivePackage) {
+            return null;
+        }
+
+        $used = ConsultationChatMessage::where('user_id', $userId)
+            ->where('role', 'user')
+            ->count();
+
+        return [
+            'limit' => self::FREE_PROMPT_LIMIT,
+            'used' => min($used, self::FREE_PROMPT_LIMIT),
+            'remaining' => max(0, self::FREE_PROMPT_LIMIT - $used),
+        ];
     }
 
     public function downloadGeneratedFile(ConsultationGeneratedFile $file): StreamedResponse|RedirectResponse

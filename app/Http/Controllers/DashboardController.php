@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
 use App\Models\RegulationRelatedReference;
+use App\Models\RegulationType;
 use App\Models\Review;
 use App\Models\ReviewDocument;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,7 +23,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -54,6 +55,7 @@ class DashboardController extends Controller
             ->get();
 
         $regulationFilterOptions = [
+            'types' => RegulationType::orderBy('level')->get(),
             'categories' => RegulationCategory::orderBy('name')->get(),
             'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
         ];
@@ -70,7 +72,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -126,8 +128,8 @@ class DashboardController extends Controller
                         ->orWhere('title', 'like', "%{$search}%");
                 });
             })
-            ->when($categoryId !== '', fn(Builder $query) => $query->where('category_id', $categoryId))
-            ->when($year !== '', fn(Builder $query) => $query->where('year', $year))
+            ->when($categoryId !== '', fn (Builder $query) => $query->where('category_id', $categoryId))
+            ->when($year !== '', fn (Builder $query) => $query->where('year', $year))
             ->orderByDesc('tanggal_tetapkan');
 
         $latestRegulations = $showAllRegulations || $hasFilters

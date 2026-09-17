@@ -7,6 +7,16 @@
     <x-button size="md" href="{{ route('consultations.index') }}" class="mb-4">
         Kembali
     </x-button>
+
+    @if ($freePromptAllowance)
+        <div class="mb-4 rounded-2xl bg-amber-50 px-5 py-4 ring-1 ring-amber-200">
+            <p class="text-sm font-semibold text-amber-800">
+                Akun free hanya dapat menggunakan Kak Vesta sebanyak {{ $freePromptAllowance['limit'] }} kali prompt.
+                Sisa prompt Anda: {{ $freePromptAllowance['remaining'] }}.
+            </p>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <div class="lg:col-span-2">

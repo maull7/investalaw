@@ -8,6 +8,7 @@
     <meta name="description"
         content="Layanan konsultan hukum investasi dan pasar modal untuk reksa dana, emisi efek, aksi korporasi, keterbukaan informasi, legal due diligence, dan perlindungan investor." />
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <x-google-analytics />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"

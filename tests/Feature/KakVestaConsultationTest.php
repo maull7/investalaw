@@ -74,6 +74,36 @@ class KakVestaConsultationTest extends TestCase
             ->assertOk();
     }
 
+    public function test_user_without_package_can_access_kak_vesta_but_is_limited_to_five_prompts(): void
+    {
+        $user = User::factory()->create(['role' => 'user']);
+        $session = ConsultationSession::create(['user_id' => $user->id, 'title' => 'Sesi free']);
+
+        $this->actingAs($user)
+            ->get(route('consultations.index'))
+            ->assertOk()
+            ->assertSee('Akun free hanya dapat menggunakan Kak Vesta sebanyak 5 kali prompt.')
+            ->assertSee('Sisa prompt Anda: 5.');
+
+        foreach (range(1, 5) as $number) {
+            ConsultationChatMessage::create([
+                'consultation_session_id' => $session->id,
+                'user_id' => $user->id,
+                'role' => 'user',
+                'content' => "Prompt {$number}",
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->postJson(route('consultations.chat.ask', $session), ['question' => 'Prompt keenam'])
+            ->assertStatus(429)
+            ->assertJsonPath('message', 'Batas 5 prompt Kak Vesta untuk akun free telah habis.');
+
+        $this->assertSame(5, ConsultationChatMessage::where('user_id', $user->id)
+            ->where('role', 'user')
+            ->count());
+    }
+
     public function test_free_trial_user_can_create_session_and_starts_clock(): void
     {
         $ids = $this->makeRegulations(2);

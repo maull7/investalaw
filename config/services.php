@@ -35,4 +35,12 @@ return [
         ],
     ],
 
+    'google_analytics' => [
+        'measurement_id' => env('GOOGLE_ANALYTICS_MEASUREMENT_ID'),
+    ],
+
+    'looker_studio' => [
+        'traffic_report_url' => env('LOOKER_STUDIO_TRAFFIC_REPORT_URL'),
+    ],
+
 ];

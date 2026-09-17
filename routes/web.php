@@ -27,6 +27,7 @@ use App\Http\Controllers\ReviewReportController;
 use App\Http\Controllers\SeoController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SubCategoryController;
+use App\Http\Controllers\TrafficMonitorController;
 use App\Http\Controllers\TypePromptController;
 use App\Http\Controllers\User\RegulationCategoryUserController;
 use App\Http\Controllers\User\RegulationTypeUserController;
@@ -177,6 +178,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 
         Route::get('/settings/paket-trial', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/settings/paket-trial', [SettingController::class, 'update'])->name('settings.update');
+        Route::get('/monitor-traffic', [TrafficMonitorController::class, 'index'])->name('traffic-monitor.index');
     });
 
     // Admin management routes (admin & sub_admin only)

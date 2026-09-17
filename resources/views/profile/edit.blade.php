@@ -27,12 +27,13 @@
             <div class="lg:col-span-2">
                 @unless (auth()->user()->hasCompletedProfile())
                     <div class="mb-6 flex items-start gap-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-5 py-4">
-                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                            stroke-width="2">
+                        <svg class="w-5 h-5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
                         </svg>
-                        <p class="text-sm font-semibold text-amber-800">Anda belum melengkapi data pribadi. Isi formulir di bawah
+                        <p class="text-sm font-semibold text-amber-800">Anda belum melengkapi data pribadi. Isi formulir di
+                            bawah
                             untuk mengaktifkan akses penuh.</p>
                     </div>
                 @endunless
@@ -101,17 +102,22 @@
                     </x-slot>
                     <div class="space-y-4">
                         <div class="flex items-start gap-3">
-                            <span class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <span
+                                class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                                 </svg>
                             </span>
-                            <p class="text-sm text-[#667085] leading-relaxed">Memungkinkan pendampingan hukum yang disesuaikan
+                            <p class="text-sm text-[#667085] leading-relaxed">Memungkinkan pendampingan hukum yang
+                                disesuaikan
                                 dengan profil kelembagaan Anda.</p>
                         </div>
                         <div class="flex items-start gap-3">
-                            <span class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <span
+                                class="shrink-0 w-8 h-8 rounded-lg bg-[#f6f8fb] text-[#c99a3e] flex items-center justify-center">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                 </svg>
@@ -124,7 +130,11 @@
             </div>
         </div>
 
-        <x-card :padding="false" class="mt-6">
+        <div class="mt-6 flex justify-end">
+            <x-button type="submit" variant="primary" size="lg">Simpan Data Pribadi</x-button>
+        </div>
+
+        {{-- <x-card :padding="false" class="mt-6">
             <x-slot name="header">
                 <div>
                     <h3 class="text-lg font-bold text-[#071833]">Paket &amp; Harga</h3>
@@ -212,7 +222,7 @@
                     <x-button type="submit" variant="primary" size="lg">Simpan Data Pribadi</x-button>
                 </div>
             </div>
-        </x-card>
+        </x-card> --}}
     </form>
 
     @if ($purchaseHistory->isNotEmpty())
@@ -228,30 +238,40 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-[#e7eaf0]">
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Paket</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tipe</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Harga</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Status</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Mulai</th>
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Tanggal Berakhir</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Paket</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Tipe</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Harga</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Status</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Tanggal Mulai</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Tanggal Berakhir</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-[#e7eaf0]">
                         @foreach ($purchaseHistory as $purchase)
                             <tr class="hover:bg-[#f6f8fb] transition">
-                                <td class="py-3.5 px-4 font-semibold text-[#071833]">{{ $purchase->package?->name ?? '-' }}</td>
+                                <td class="py-3.5 px-4 font-semibold text-[#071833]">
+                                    {{ $purchase->package?->name ?? '-' }}</td>
                                 <td class="py-3.5 px-4">
                                     @if ($purchase->type === 'trial')
-                                        <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-700">Trial</span>
+                                        <span
+                                            class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-700">Trial</span>
                                     @else
-                                        <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-sky-100 text-sky-700">Berbayar</span>
+                                        <span
+                                            class="px-2 py-1 text-[10px] font-bold uppercase rounded-full bg-sky-100 text-sky-700">Berbayar</span>
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-[#667085]">
                                     @if ($purchase->type === 'trial')
                                         Free
                                     @else
-                                        Rp{{ $purchase->package?->price ?? '-' }} <span class="text-[#b0b8c5]">{{ $purchase->package?->price_period }}</span>
+                                        Rp{{ $purchase->package?->price ?? '-' }} <span
+                                            class="text-[#b0b8c5]">{{ $purchase->package?->price_period }}</span>
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4">
@@ -265,7 +285,8 @@
                                             default => 'bg-gray-100 text-gray-600',
                                         };
                                     @endphp
-                                    <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full {{ $statusColor }}">
+                                    <span
+                                        class="px-2 py-1 text-[10px] font-bold uppercase rounded-full {{ $statusColor }}">
                                         {{ $purchase->status }}
                                     </span>
                                 </td>

@@ -181,6 +181,17 @@
                             <span>Reviews &amp; Reports</span>
                         </a>
                     </li>
+                    <li>
+                        <a href="{{ route('legal-necessities.create') }}"
+                            class="nav-item {{ request()->routeIs('legal-necessities.create') ? 'is-active' : '' }}">
+                            <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                stroke-width="1.6">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M12 3v18M7 7l5-3 5 3M4 7h16M5.5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5.5 7Zm13 0L16 13a2.5 2.5 0 0 0 5 0l-2.5-6ZM8 21h8" />
+                            </svg>
+                            <span>Konsultasi Hukum</span>
+                        </a>
+                    </li>
                 </ul>
 
             </nav>

@@ -54,6 +54,12 @@ class AiSearchRegulationsTest extends TestCase
             ->assertDontSee('UU/13/2003');
     }
 
+    public function test_ai_search_requires_login(): void
+    {
+        $this->get(route('regulations.ai-search', ['q' => 'sanksi emiten']))
+            ->assertRedirect(route('login'));
+    }
+
     public function test_ai_search_requires_min_three_characters(): void
     {
         $user = User::factory()->create();

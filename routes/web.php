@@ -59,6 +59,9 @@ Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
     ->name('legal-necessities.store')
     ->middleware('throttle:5,1');
 
+Route::get('/konsultasi-hukum', [LegalNecessityController::class, 'create'])
+    ->name('legal-necessities.create');
+
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'create'])->name('login');
     Route::post('/login', [LoginController::class, 'store'])->middleware('throttle:5,1');

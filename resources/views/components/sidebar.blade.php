@@ -134,7 +134,7 @@
                                 <span>Kebutuhan Hukum</span>
                             </a>
                             <a href="{{ route('packages.index') }}"
-                                class="nav-item {{ request()->routeIs('packages.*') && ! request()->routeIs('packages.payment*') ? 'is-active' : '' }}">
+                                class="nav-item {{ request()->routeIs('packages.*') && !request()->routeIs('packages.payment*') ? 'is-active' : '' }}">
                                 <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="1.6">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -271,13 +271,16 @@
                 @endif
 
                 @if ($user->isSubAdmin())
-                    <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">Compliance</p>
+                    <p class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">
+                        Compliance</p>
                     <ul class="space-y-1.5">
                         <li>
                             <a href="{{ route('activity-logs.index') }}"
                                 class="nav-item {{ request()->routeIs('activity-logs.*') ? 'is-active' : '' }}">
-                                <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="1.6">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                 </svg>
                                 <span>Log Aktivitas</span>
                             </a>
@@ -342,7 +345,7 @@
                         @endif
                         <p
                             class="px-3 mt-7 mb-2 text-[10.5px] font-semibold tracking-[0.18em] uppercase text-white/45">
-                            Compliance</p>
+                            Legal</p>
                         <li>
                             <a href="{{ route('compliance.monitoring') }}"
                                 class="nav-item {{ request()->routeIs('compliance.monitoring') ? 'is-active' : '' }}">
@@ -358,8 +361,10 @@
                             <li>
                                 <a href="{{ route('activity-logs.index') }}"
                                     class="nav-item {{ request()->routeIs('activity-logs.*') ? 'is-active' : '' }}">
-                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                                     </svg>
                                     <span>Log Aktivitas</span>
                                 </a>
@@ -367,8 +372,10 @@
                             <li>
                                 <a href="{{ route('traffic-monitor.index') }}"
                                     class="nav-item {{ request()->routeIs('traffic-monitor.*') ? 'is-active' : '' }}">
-                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7.5 15l3-3 2.25 2.25L18 9" />
+                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 3v18h18M7.5 15l3-3 2.25 2.25L18 9" />
                                     </svg>
                                     <span>Monitor Traffic</span>
                                 </a>
@@ -382,7 +389,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                                 </svg>
-                                <span>Konsultasi Kak Vesta</span>
+                                <span>Tanya Kak Vesta</span>
                             </a>
                         </li>
                         <li>
@@ -407,6 +414,17 @@
                                 <span>Reviews &amp; Reports</span>
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('legal-necessities.create') }}"
+                                class="nav-item {{ request()->routeIs('legal-necessities.create') ? 'is-active' : '' }}">
+                                <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="1.6">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 3v18M7 7l5-3 5 3M4 7h16M5.5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5.5 7Zm13 0L16 13a2.5 2.5 0 0 0 5 0l-2.5-6ZM8 21h8" />
+                                </svg>
+                                <span>Konsultasi Hukum</span>
+                            </a>
+                        </li>
                     </ul>
                 @endif
             </nav>
@@ -429,7 +447,7 @@
                 </div>
                 <a href="{{ route('profile.edit') }}"
                     class="mt-3 inline-flex items-center justify-center gap-2 w-full text-xs font-semibold text-[#071b3a] bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-xl py-2.5 hover:brightness-110 transition">
-                    Contact Compliance
+                    Contact Legal
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M5 12h14M13 5l7 7-7 7" />

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LegalNecessity;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -16,7 +17,12 @@ class LegalNecessityController extends Controller
         return view('legal-necessities.index', compact('requests'));
     }
 
-    public function store(Request $request): JsonResponse
+    public function create(): View
+    {
+        return view('legal-necessities.create');
+    }
+
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -31,6 +37,11 @@ class LegalNecessityController extends Controller
 
         LegalNecessity::create($data);
 
-        return response()->json(['message' => 'Kebutuhan hukum berhasil disimpan.']);
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Kebutuhan hukum berhasil disimpan.']);
+        }
+
+        return redirect()->route('legal-necessities.create')
+            ->with('success', 'Terima kasih. Kami akan menghubungi Anda kembali.');
     }
 }

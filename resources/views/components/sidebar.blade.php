@@ -415,14 +415,14 @@
                             </a>
                         </li>
                         <li>
-                            <a href="{{ route('legal-necessities.create') }}"
-                                class="nav-item {{ request()->routeIs('legal-necessities.create') ? 'is-active' : '' }}">
+                            <a href="{{ route('profile.edit') }}"
+                                class="nav-item {{ request()->routeIs('profile.edit') ? 'is-active' : '' }}">
                                 <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                     stroke-width="1.6">
                                     <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M12 3v18M7 7l5-3 5 3M4 7h16M5.5 7l-2.5 6a2.5 2.5 0 0 0 5 0L5.5 7Zm13 0L16 13a2.5 2.5 0 0 0 5 0l-2.5-6ZM8 21h8" />
+                                        d="M15.75 6.75a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
                                 </svg>
-                                <span>Konsultasi Hukum</span>
+                                <span>Profile</span>
                             </a>
                         </li>
                     </ul>
@@ -440,14 +440,14 @@
                         </svg>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-white">Need Assistance?</p>
-                        <p class="text-[11px] text-white/60 leading-relaxed mt-0.5">Reach our compliance desk for any
-                            regulatory inquiry.</p>
+                        <p class="text-sm font-semibold text-white">Need Legal Assistance?</p>
+                        <p class="text-[11px] text-white/60 leading-relaxed mt-0.5">Reach our Legal Advisor for any
+                            Investment and Financial Case</p>
                     </div>
                 </div>
-                <a href="{{ route('profile.edit') }}"
+                <a href="{{ route('legal-necessities.create') }}"
                     class="mt-3 inline-flex items-center justify-center gap-2 w-full text-xs font-semibold text-[#071b3a] bg-gradient-to-r from-[#c99a3e] to-[#e6c06a] rounded-xl py-2.5 hover:brightness-110 transition">
-                    Contact Legal
+                    Contact Legal Advisor
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                         stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M5 12h14M13 5l7 7-7 7" />

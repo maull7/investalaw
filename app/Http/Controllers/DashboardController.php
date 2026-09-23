@@ -113,14 +113,14 @@ class DashboardController extends Controller
             'total_reviews' => $reviewsQuery->count(),
         ];
 
-        $recentDocuments = $documentsQuery
-            ->with('user')
-            ->whereHas('user', function ($query) {
-                $query->where('role', 'user');
-            })
-            ->latest()
-            ->take(5)
-            ->get();
+        // $recentDocuments = $documentsQuery
+        //     ->with('user')
+        //     ->whereHas('user', function ($query) {
+        //         $query->where('role', 'user');
+        //     })
+        //     ->latest()
+        //     ->take(5)
+        //     ->get();
 
         $regulationsQuery = Regulation::with(['type', 'category'])
             ->whereHas('category.sector', function ($query) {
@@ -152,7 +152,6 @@ class DashboardController extends Controller
 
         return view('index-dashboard', compact(
             'stats',
-            'recentDocuments',
             'latestRegulations',
             'regulationRelated',
             'search',

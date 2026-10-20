@@ -26,7 +26,7 @@ class RegulationAiGenerationTest extends TestCase
             'AWAL-DOKUMEN '.str_repeat('bagian isi regulasi ', 2000).' AKHIR-DOKUMEN',
         );
         $prompt = $this->makePrompt();
-        $aiService = new class extends AiService
+        $aiService = new class(app(\App\Services\AiClient::class)) extends AiService
         {
             /** @var array<int, array{role: string, content: string}> */
             public array $capturedMessages = [];
@@ -61,7 +61,7 @@ class RegulationAiGenerationTest extends TestCase
     {
         $regulation = $this->makeRegulation('Isi regulasi');
         $prompt = $this->makePrompt();
-        $aiService = new class extends AiService
+        $aiService = new class(app(\App\Services\AiClient::class)) extends AiService
         {
             protected function callAi(array $messages, int $maxTokens = 4096, ?array $responseFormat = null): array
             {

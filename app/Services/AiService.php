@@ -16,14 +16,14 @@ use App\Models\RegulationAiResult;
 use App\Models\ReviewDocument;
 use App\Models\User;
 use Exception;
-use GuzzleHttp\Client as HttpClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use OpenAI;
 
 class AiService
 {
+    public function __construct(private readonly AiClient $aiClient) {}
+
     public function generateSummary(ReviewDocument $document, string $type): AiSummary
     {
         $prompt = AiPrompt::active()->where('type', $type)->firstOrFail();
@@ -119,51 +119,19 @@ Kembalikan JSON SAJA dengan format:
 Maksimal 15 hasil, hanya id yang ada di daftar.
 PROMPT;
 
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
+        try {
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 1024,
+                'temperature' => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ])['content'];
+        } catch (Exception $e) {
+            Log::warning("AI regulation search failed: {$e->getMessage()}");
 
-        $content = null;
-
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
-            }
-
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 1024,
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-                if ($content) {
-                    break;
-                }
-            } catch (Exception $e) {
-                Log::warning("AI search provider {$provider['model']} failed: {$e->getMessage()}");
-
-                continue;
-            }
-        }
-
-        if (! $content) {
             return [];
         }
 
@@ -197,51 +165,19 @@ Kembalikan JSON SAJA dengan format:
 Ambil hanya dari daftar HASIL SEBELUMNYA di atas, jangan buat id baru. Maksimal 15 hasil. Jika tidak ada yang relevan, kembalikan {"result": []}.
 PROMPT;
 
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
+        try {
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 1024,
+                'temperature' => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ])['content'];
+        } catch (Exception $e) {
+            Log::warning("AI regulation search failed: {$e->getMessage()}");
 
-        $content = null;
-
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
-            }
-
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 1024,
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-                if ($content) {
-                    break;
-                }
-            } catch (Exception $e) {
-                Log::warning("AI refine search provider failed: {$e->getMessage()}");
-
-                continue;
-            }
-        }
-
-        if (! $content) {
             return [];
         }
 
@@ -1405,69 +1341,11 @@ PROMPT;
 
     protected function callAi(array $messages, int $maxTokens = 4096, ?array $responseFormat = null): array
     {
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url'),
-                'model' => config('ai.openai.model'),
-            ],
-            'groq' => [
-                'api_key' => config('ai.groq.api_key'),
-                'base_url' => config('ai.groq.base_url'),
-                'model' => config('ai.groq.model'),
-            ],
-        ];
-
-        $lastException = null;
-
-        foreach ($providers as $name => $config) {
-            if (empty($config['api_key'])) {
-                continue;
-            }
-
-            try {
-                $client = OpenAI::factory()
-                    ->withApiKey($config['api_key'])
-                    ->withBaseUri($config['base_url'])
-                    ->withHttpHeader('OpenAI-Beta', 'assistants=v1')
-                    ->withHttpClient(new HttpClient([
-                        'connect_timeout' => config('ai.connect_timeout', 10),
-                        'timeout' => config('ai.request_timeout', 80),
-                    ]))
-                    ->make();
-
-                $payload = [
-                    'model' => $config['model'],
-                    'messages' => $messages,
-                    'temperature' => 0.3,
-                    'max_tokens' => $maxTokens,
-                ];
-
-                if ($responseFormat) {
-                    $payload['response_format'] = $responseFormat;
-                }
-
-                $response = $client->chat()->create($payload);
-
-                $content = trim((string) ($response->choices[0]->message->content ?? ''));
-
-                if ($content === '') {
-                    throw new Exception("AI provider {$name} mengembalikan respons kosong.");
-                }
-
-                return [
-                    'content' => $content,
-                    'provider' => $name,
-                    'model' => $config['model'],
-                    'total_tokens' => $response->usage?->totalTokens ?? 0,
-                ];
-            } catch (Exception $e) {
-                $lastException = $e;
-                Log::warning("AI provider {$name} failed: {$e->getMessage()}");
-                usleep(500_000);
-            }
-        }
-
-        throw $lastException ?? new Exception('No AI provider available');
+        return $this->aiClient->complete([
+            'messages' => $messages,
+            'max_tokens' => $maxTokens,
+            'temperature' => 0.3,
+            ...($responseFormat ? ['response_format' => $responseFormat] : []),
+        ], allowGroq: true);
     }
 }

@@ -5,11 +5,12 @@ namespace App\Services;
 use App\Models\AiPrompt;
 use App\Models\Regulation;
 use App\Models\RegulationAnalysis;
-use Illuminate\Support\Facades\Http;
 
 class RegulationAnalysisService
 {
     private const MAX_TEXT_LENGTH = 30000;
+
+    public function __construct(private readonly AiClient $aiClient) {}
 
     public function analyze(Regulation $regulation): ?RegulationAnalysis
     {
@@ -132,13 +133,6 @@ class RegulationAnalysisService
 
     public function extractRegulationsFromText(string $text): ?array
     {
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
 
         $prompt = <<<PROMPT
 Anda adalah ekstraktor regulasi Indonesia. Dari teks peraturan berikut, ekstrak:
@@ -176,47 +170,24 @@ Kembalikan JSON SAJA (tanpa markdown, tanpa penjelasan) dengan format:
 Jika tidak ada data, gunakan array kosong [] untuk "referenced_regulations" dan "pasal_structure".
 PROMPT;
 
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
-            }
+        try {
+            // OpenAI utama; otomatis Hermes saat kredit habis atau OPENAI_API_KEY kosong
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 4096,
+                'temperature' => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ])['content'];
 
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 4096,
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-
-                if (empty($content)) {
-                    continue;
-                }
-
-                $decoded = json_decode($content, true);
-
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    continue;
-                }
-
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
                 return $decoded;
-            } catch (\Throwable $e) {
-                report($e);
-
-                continue;
             }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return null;
@@ -224,13 +195,6 @@ PROMPT;
 
     public function extractDatesFromText(string $text): array
     {
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
 
         $prompt = <<<PROMPT
 Anda adalah ekstraktor tanggal dari teks peraturan Indonesia. Dari bagian akhir dokumen (footer/penandatanganan) berikut, temukan:
@@ -249,47 +213,24 @@ Kembalikan JSON SAJA (tanpa markdown) dengan format:
 Gunakan null jika tidak ditemukan. Format tanggal wajib ISO 8601 (YYYY-MM-DD). Tulis tanggal secara literal (misal "2026-06-23") tanpa teks lain.
 PROMPT;
 
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
-            }
+        try {
+            // OpenAI utama; otomatis Hermes saat kredit habis atau OPENAI_API_KEY kosong
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 512,
+                'temperature' => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ])['content'];
 
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'Anda adalah asisten yang hanya mengembalikan JSON valid.'],
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 512,
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-
-                if (empty($content)) {
-                    continue;
-                }
-
-                $decoded = json_decode($content, true);
-
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    continue;
-                }
-
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
                 return $decoded;
-            } catch (\Throwable $e) {
-                report($e);
-
-                continue;
             }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return ['tanggal_tetapkan' => null, 'tanggal_diundangkan' => null];
@@ -400,19 +341,6 @@ PROMPT;
 
     private function tryAiAnalysis(string $context, array $relatedData, ?string $parsedText): ?array
     {
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-            'groq' => [
-                'api_key' => config('ai.groq.api_key'),
-                'base_url' => config('ai.groq.base_url', 'https://api.groq.com/openai/v1'),
-                'model' => config('ai.groq.model', 'llama-3.3-70b-versatile'),
-            ],
-        ];
-
         $mainReg = $relatedData['main_regulation'];
         $regNumber = $mainReg['regulation_number'] ?? '';
         $regTitle = $mainReg['title'] ?? '';
@@ -462,39 +390,19 @@ Analisis perubahan apa saja yang dilakukan. Sebutkan pasal-pasal yang berubah, a
 Analisis pencabutan yang dilakukan. Sebutkan peraturan atau pasal apa yang dicabut dan dampaknya.
 PROMPT;
 
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
-            }
+        try {
+            // OpenAI utama; otomatis Hermes saat kredit habis atau OPENAI_API_KEY kosong
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 4096,
+                'temperature' => 0.3,
+            ], allowGroq: true)['content'];
 
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'user', 'content' => $prompt],
-                        ],
-                        'max_tokens' => 4096,
-                        'temperature' => 0.3,
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-
-                if (empty($content)) {
-                    continue;
-                }
-
-                return $this->parseAiResponse($content);
-            } catch (\Throwable $e) {
-                report($e);
-
-                continue;
-            }
+            return $this->parseAiResponse($content);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return null;
@@ -671,13 +579,6 @@ PROMPT;
 
         $babs = $this->splitTextToBabs($text);
 
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
 
         $results = [];
         $systemMessage = AiPrompt::active()->where('type', 'analisa-bab')->first()?->prompt_text
@@ -696,43 +597,24 @@ CONTEXT;
 
             $result = ['pasal_structure' => [], 'referenced_regulations' => []];
 
-            foreach ($providers as $provider) {
-                if (empty($provider['api_key'])) {
-                    continue;
+            try {
+                // OpenAI utama; otomatis Hermes saat kredit habis atau OPENAI_API_KEY kosong
+                $content = $this->aiClient->complete([
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemMessage],
+                        ['role' => 'user', 'content' => $userContext],
+                    ],
+                    'max_tokens' => 4096,
+                    'temperature' => 0.1,
+                    'response_format' => ['type' => 'json_object'],
+                ])['content'];
+
+                $decoded = json_decode($content, true);
+                if (is_array($decoded)) {
+                    $result = $decoded;
                 }
-                try {
-                    $response = Http::withToken($provider['api_key'])
-                        ->timeout(120)
-                        ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                            'model' => $provider['model'],
-                            'messages' => [
-                                ['role' => 'system', 'content' => $systemMessage],
-                                ['role' => 'user', 'content' => $userContext],
-                            ],
-                            'max_tokens' => 4096,
-                            'temperature' => 0.1,
-                            'response_format' => ['type' => 'json_object'],
-                        ]);
-
-                    if (! $response->successful()) {
-                        continue;
-                    }
-
-                    $content = $response->json('choices.0.message.content');
-                    if (empty($content)) {
-                        continue;
-                    }
-
-                    $decoded = json_decode($content, true);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        $result = $decoded;
-                        break;
-                    }
-                } catch (\Throwable $e) {
-                    report($e);
-
-                    continue;
-                }
+            } catch (\Throwable $e) {
+                report($e);
             }
 
             $results[] = [
@@ -773,13 +655,6 @@ CONTEXT;
         }
         $relatedBlock = $relatedTexts ? "\n\nREGULASI TERKAIT:\n".implode("\n\n", $relatedTexts) : '';
 
-        $providers = [
-            'openai' => [
-                'api_key' => config('ai.openai.api_key'),
-                'base_url' => config('ai.openai.base_url', 'https://api.openai.com/v1'),
-                'model' => config('ai.openai.model', 'gpt-4o-mini'),
-            ],
-        ];
 
         $systemMessage = AiPrompt::active()->where('type', 'analisa-bab')->first()?->prompt_text
             ?: $this->getDefaultBabPrompt();
@@ -795,43 +670,24 @@ Konten BAB:
 CONTEXT;
 
         $result = ['pasal_structure' => [], 'referenced_regulations' => [], 'insights' => null, 'compliance_assessment' => null, 'key_findings' => []];
-        foreach ($providers as $provider) {
-            if (empty($provider['api_key'])) {
-                continue;
+        try {
+            // OpenAI utama; otomatis Hermes saat kredit habis atau OPENAI_API_KEY kosong
+            $content = $this->aiClient->complete([
+                'messages' => [
+                    ['role' => 'system', 'content' => $systemMessage],
+                    ['role' => 'user', 'content' => $userContext],
+                ],
+                'max_tokens' => 4096,
+                'temperature' => 0.1,
+                'response_format' => ['type' => 'json_object'],
+            ])['content'];
+
+            $decoded = json_decode($content, true);
+            if (is_array($decoded)) {
+                $result = $decoded;
             }
-            try {
-                $response = Http::withToken($provider['api_key'])
-                    ->timeout(120)
-                    ->post(rtrim($provider['base_url'], '/').'/chat/completions', [
-                        'model' => $provider['model'],
-                        'messages' => [
-                            ['role' => 'system', 'content' => $systemMessage],
-                            ['role' => 'user', 'content' => $userContext],
-                        ],
-                        'max_tokens' => 4096,
-                        'temperature' => 0.1,
-                        'response_format' => ['type' => 'json_object'],
-                    ]);
-
-                if (! $response->successful()) {
-                    continue;
-                }
-
-                $content = $response->json('choices.0.message.content');
-                if (empty($content)) {
-                    continue;
-                }
-
-                $decoded = json_decode($content, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $result = $decoded;
-                    break;
-                }
-            } catch (\Throwable $e) {
-                report($e);
-
-                continue;
-            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return [

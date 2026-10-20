@@ -97,7 +97,7 @@ class ConsultationController extends Controller
             ->latest()
             ->get();
 
-        $categories = RegulationCategory::with('regulations')
+        $categories = RegulationCategory::with(['regulations' => fn ($q) => $this->pickerColumns($q)])
             ->whereHas('regulations')
             ->orderBy('name')
             ->get();
@@ -105,6 +105,16 @@ class ConsultationController extends Controller
         $freePromptAllowance = $this->freePromptAllowance(request()->user()->id);
 
         return view('consultations.index', compact('sessions', 'categories', 'freePromptAllowance'));
+    }
+
+    /**
+     * Kolom yang dipakai daftar pilihan regulasi saja. Tanpa ini, parsed_text (teks lengkap) semua regulasi ikut dimuat
+     * dan di production bisa menghabiskan memori PHP (HTTP 500). Relasi type dimuat sekaligus agar tidak N+1.
+     */
+    private function pickerColumns($query)
+    {
+        return $query->select(['id', 'category_id', 'regulation_type_id', 'regulation_number', 'title', 'year'])
+            ->with('type');
     }
 
     public function store(Request $request): RedirectResponse
@@ -142,9 +152,9 @@ class ConsultationController extends Controller
 
         $session->load(['messages', 'regulations']);
 
-        $categories = RegulationCategory::with(['regulations' => function ($q) {
-            $q->whereHas('documents');
-        }])->orderBy('name')->get();
+        $categories = RegulationCategory::with(['regulations' => fn ($q) => $this->pickerColumns($q)->whereHas('documents')])
+            ->orderBy('name')
+            ->get();
 
         $selectedIds = $session->regulations->pluck('id')->all();
         $freePromptAllowance = $this->freePromptAllowance(auth()->id());

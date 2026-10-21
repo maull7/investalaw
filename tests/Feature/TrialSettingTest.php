@@ -60,7 +60,7 @@ class TrialSettingTest extends TestCase
         $user = $this->user();
         $package = $this->trialPackage();
 
-        $this->actingAs($user)->post(route('profile.update'), [
+        $this->actingAs($user)->post(route('profile.package'), [
             'institution' => $user->institution,
             'position' => $user->position,
             'province' => $user->province,
@@ -77,7 +77,7 @@ class TrialSettingTest extends TestCase
         $user = $this->user();
         $package = $this->trialPackage();
 
-        $this->actingAs($user)->post(route('profile.update'), [
+        $this->actingAs($user)->post(route('profile.package'), [
             'institution' => $user->institution,
             'position' => $user->position,
             'province' => $user->province,

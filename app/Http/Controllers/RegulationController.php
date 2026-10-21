@@ -426,6 +426,7 @@ class RegulationController extends Controller
     private function hydrateAiResults(array $matches, string $query): Collection
     {
         return Regulation::with('type')
+            ->whereHas('category', fn ($q) => $q->where('sector_id', 1))
             ->whereIn('id', array_keys($matches))
             ->get()
             ->sortBy(fn ($reg) => (int) array_search($reg->id, array_keys($matches)))

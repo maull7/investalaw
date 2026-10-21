@@ -96,15 +96,11 @@ class AiService
      */
     public function searchRegulations(string $query): array
     {
-        $catalog = Regulation::query()
-            ->where(fn ($q) => $q->whereNotNull('parsed_text')
-                ->orWhereHas('documents', fn ($dq) => $dq->whereNotNull('parsed_text')))
-            ->latest('year')
-            ->latest('id')
-            ->limit(150)
-            ->get()
-            ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
-            ->implode("\n");
+        $catalog = $this->regulationCatalogText($query);
+
+        if ($catalog === '') {
+            return [];
+        }
 
         $prompt = <<<PROMPT
 Anda adalah pencari regulasi dalam database. Hanya boleh memilih regulasi dari daftar yang diberikan, tidak boleh membuat id baru.
@@ -205,6 +201,40 @@ PROMPT;
         $result = $this->callAi($messages, 1024);
 
         return $this->parseRegulationIds($result['content']);
+    }
+
+    /**
+     * Sector 1 regulations whose number or title contains a query keyword, one
+     * "id|number - title (year)" line each. Selects only these columns: loading
+     * parsed_text for the catalog exhausts PHP memory in production.
+     */
+    private function regulationCatalogText(string $keywords, int $maxCandidates = 300): string
+    {
+        $words = collect(preg_split('/[^\pL\pN]+/u', mb_strtolower($keywords), -1, PREG_SPLIT_NO_EMPTY))
+            ->filter(fn (string $word) => mb_strlen($word) >= 3)
+            ->unique()
+            ->take(8);
+
+        if ($words->isEmpty()) {
+            return '';
+        }
+
+        // ponytail: LIKE '%word%' full-scans titles and broad words keep an arbitrary 300; switch to a FULLTEXT index with relevance order if results or speed fall short
+        return Regulation::query()
+            ->select(['id', 'regulation_number', 'title', 'year'])
+            ->whereHas('category', fn ($q) => $q->where('sector_id', 1))
+            ->where(function ($query) use ($words) {
+                foreach ($words as $word) {
+                    $query->orWhere('title', 'like', "%{$word}%")
+                        ->orWhere('regulation_number', 'like', "%{$word}%");
+                }
+            })
+            ->orderBy('regulation_number')
+            ->limit($maxCandidates)
+            ->toBase()
+            ->get()
+            ->map(fn (object $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
+            ->implode("\n");
     }
 
     /**

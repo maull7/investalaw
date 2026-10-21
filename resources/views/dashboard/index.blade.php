@@ -92,7 +92,7 @@
     </section>
 
     {{-- Pencarian Menu --}}
-    <x-card-non-overflow class="overflow-visible" x-data="{
+    {{-- <x-card-non-overflow class="overflow-visible" x-data="{
         open: false,
         query: '',
         highlight: 0,
@@ -198,119 +198,120 @@
                 </div>
             </div>
         </div>
-        </x-card>
+        </x-card> --}}
 
-        @if ($latestRegulations->isNotEmpty())
-            <x-card :padding="false" class="mt-7">
-                <x-slot name="header">
-                    <div class="flex flex-wrap gap-3 justify-between items-center">
-                        <div>
-                            <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkini</h3>
-                            <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang ditetapkan</p>
-                        </div>
-                        <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
-                            Semua Regulasi
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                            </svg>
-                        </x-button>
+    @if ($latestRegulations->isNotEmpty())
+        <x-card :padding="false" class="mt-7">
+            <x-slot name="header">
+                <div class="flex flex-wrap gap-3 justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkini</h3>
+                        <p class="text-xs text-[#667085] mt-0.5">5 regulasi terbaru yang ditetapkan</p>
                     </div>
-                </x-slot>
-
-                <form method="GET" action="{{ route('regulations.index') }}" class="space-y-4 border-b border-[#e7eaf0] px-6 pb-5">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                        <input type="text" name="search" placeholder="Cari nomor atau judul regulasi..."
-                            class="input-premium h-10 text-sm lg:col-span-2">
-
-                        <select name="category_id" class="select-premium text-sm h-10">
-                            <option value="">Semua Kategori</option>
-                            @foreach($regulationFilterOptions['categories'] as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                            @endforeach
-                        </select>
-
-                        <select name="year" class="select-premium text-sm h-10">
-                            <option value="">Semua Tahun</option>
-                            @foreach($regulationFilterOptions['years'] as $y)
-                                <option value="{{ $y }}">{{ $y }}</option>
-                            @endforeach
-                        </select>
-
-                        <select name="type_id" class="select-premium text-sm h-10">
-                            <option value="">Semua Jenis</option>
-                            @foreach($regulationFilterOptions['types'] as $type)
-                                <option value="{{ $type->id }}">{{ $type->name }}</option>
-                            @endforeach
-                        </select>
-
-                        <x-button type="submit" variant="primary" size="md" class="w-full h-10">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                            </svg>
-                            Cari
-                        </x-button>
-                    </div>
-                    <div class="border-t border-[#e7eaf0] pt-4">
-                        <label for="latest-regulations-search-content" class="mb-2 block text-sm font-semibold text-[#071833]">Cari dalam Isi Dokumen</label>
-                        <input type="text" name="search_content" id="latest-regulations-search-content"
-                            class="input-premium h-10 text-sm"
-                            placeholder="Cari kata dalam isi dokumen regulasi... (gunakan &quot;kata&quot; untuk kata utuh)">
-                    </div>
-                </form>
-
-                <div class="overflow-x-auto">
-                    <table class="table-premium">
-                        <thead>
-                            <tr>
-                                <th class="text-left">No. Regulasi</th>
-                                <th class="text-left">Judul</th>
-                                <th class="text-center">Jenis</th>
-                                <th class="text-center">Kategori</th>
-                                <th class="text-center">Tahun</th>
-                                <th class="text-right">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($latestRegulations as $reg)
-                                <tr>
-                                    <td>
-                                        <a href="{{ route('regulations.show', $reg) }}"
-                                            class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('regulations.show', $reg) }}"
-                                            class="text-sm font-medium text-[#071833] hover:text-[#c99a3e] transition line-clamp-2">{{ $reg->title }}</a>
-                                    </td>
-                                    <td class="text-center">
-                                        @if ($reg->type)
-                                            <x-badge :color="$reg->type->levelBadgeColor()">{{ $reg->type->name }}</x-badge>
-                                        @else
-                                            <span class="text-xs text-[#667085]">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center text-sm text-[#667085]">{{ $reg->category?->name ?? '-' }}</td>
-                                    <td class="text-center">
-                                        <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
-                                    </td>
-                                    <td class="text-right">
-                                        <a href="{{ route('regulations.show', $reg) }}"
-                                            class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
-                                            Detail
-                                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
-                                                stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                                            </svg>
-                                        </a>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                    <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
+                        Semua Regulasi
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                    </x-button>
                 </div>
-    </x-card-non-overflow>
+            </x-slot>
+
+            <form method="GET" action="{{ route('regulations.index') }}"
+                class="space-y-4 border-b border-[#e7eaf0] px-6 pb-5">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                    <input type="text" name="search" placeholder="Cari nomor atau judul regulasi..."
+                        class="input-premium h-10 text-sm lg:col-span-2">
+
+                    <select name="category_id" class="select-premium text-sm h-10">
+                        <option value="">Semua Kategori</option>
+                        @foreach ($regulationFilterOptions['categories'] as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+
+                    <select name="year" class="select-premium text-sm h-10">
+                        <option value="">Semua Tahun</option>
+                        @foreach ($regulationFilterOptions['years'] as $y)
+                            <option value="{{ $y }}">{{ $y }}</option>
+                        @endforeach
+                    </select>
+
+                    <select name="type_id" class="select-premium text-sm h-10">
+                        <option value="">Semua Jenis</option>
+                        @foreach ($regulationFilterOptions['types'] as $type)
+                            <option value="{{ $type->id }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
+
+                    <x-button type="submit" variant="primary" size="md" class="w-full h-10">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                        Cari
+                    </x-button>
+                </div>
+                <div class="border-t border-[#e7eaf0] pt-4">
+                    <label for="latest-regulations-search-content"
+                        class="mb-2 block text-sm font-semibold text-[#071833]">Cari dalam Isi Dokumen</label>
+                    <input type="text" name="search_content" id="latest-regulations-search-content"
+                        class="input-premium h-10 text-sm"
+                        placeholder="Cari kata dalam isi dokumen regulasi... (gunakan &quot;kata&quot; untuk kata utuh)">
+                </div>
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="table-premium">
+                    <thead>
+                        <tr>
+                            <th class="text-left">No. Regulasi</th>
+                            <th class="text-left">Judul</th>
+                            <th class="text-center">Jenis</th>
+                            <th class="text-center">Kategori</th>
+                            <th class="text-center">Tahun</th>
+                            <th class="text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($latestRegulations as $reg)
+                            <tr>
+                                <td>
+                                    <a href="{{ route('regulations.show', $reg) }}"
+                                        class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $reg->regulation_number }}</a>
+                                </td>
+                                <td>
+                                    <a href="{{ route('regulations.show', $reg) }}"
+                                        class="text-sm font-medium text-[#071833] hover:text-[#c99a3e] transition line-clamp-2">{{ $reg->title }}</a>
+                                </td>
+                                <td class="text-center">
+                                    @if ($reg->type)
+                                        <x-badge :color="$reg->type->levelBadgeColor()">{{ $reg->type->name }}</x-badge>
+                                    @else
+                                        <span class="text-xs text-[#667085]">-</span>
+                                    @endif
+                                </td>
+                                <td class="text-center text-sm text-[#667085]">{{ $reg->category?->name ?? '-' }}</td>
+                                <td class="text-center">
+                                    <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
+                                </td>
+                                <td class="text-right">
+                                    <a href="{{ route('regulations.show', $reg) }}"
+                                        class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
+                                        Detail
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                                        </svg>
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            </x-card-non-overflow>
     @endif
 
     {{-- Peraturan Terkait --}}
@@ -321,51 +322,54 @@
                     <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkait</h3>
                     <p class="text-xs text-[#667085] mt-0.5">5 peraturan terkait terbaru berdasarkan data linkage
                     </p>
-                    </div>
-                </x-slot>
+                </div>
+            </x-slot>
 
-                <form method="GET" action="{{ route('regulations.index') }}" class="space-y-4 border-b border-[#e7eaf0] px-6 pb-5">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                        <input type="text" name="search" placeholder="Cari nomor atau judul regulasi..."
-                            class="input-premium h-10 text-sm lg:col-span-2">
+            <form method="GET" action="{{ route('regulations.index') }}"
+                class="space-y-4 border-b border-[#e7eaf0] px-6 pb-5">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                    <input type="text" name="search" placeholder="Cari nomor atau judul regulasi..."
+                        class="input-premium h-10 text-sm lg:col-span-2">
 
-                        <select name="category_id" class="select-premium text-sm h-10">
-                            <option value="">Semua Kategori</option>
-                            @foreach($regulationFilterOptions['categories'] as $cat)
-                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                            @endforeach
-                        </select>
+                    <select name="category_id" class="select-premium text-sm h-10">
+                        <option value="">Semua Kategori</option>
+                        @foreach ($regulationFilterOptions['categories'] as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
 
-                        <select name="year" class="select-premium text-sm h-10">
-                            <option value="">Semua Tahun</option>
-                            @foreach($regulationFilterOptions['years'] as $y)
-                                <option value="{{ $y }}">{{ $y }}</option>
-                            @endforeach
-                        </select>
+                    <select name="year" class="select-premium text-sm h-10">
+                        <option value="">Semua Tahun</option>
+                        @foreach ($regulationFilterOptions['years'] as $y)
+                            <option value="{{ $y }}">{{ $y }}</option>
+                        @endforeach
+                    </select>
 
-                        <select name="type_id" class="select-premium text-sm h-10">
-                            <option value="">Semua Jenis</option>
-                            @foreach($regulationFilterOptions['types'] as $type)
-                                <option value="{{ $type->id }}">{{ $type->name }}</option>
-                            @endforeach
-                        </select>
+                    <select name="type_id" class="select-premium text-sm h-10">
+                        <option value="">Semua Jenis</option>
+                        @foreach ($regulationFilterOptions['types'] as $type)
+                            <option value="{{ $type->id }}">{{ $type->name }}</option>
+                        @endforeach
+                    </select>
 
-                        <x-button type="submit" variant="primary" size="md" class="w-full h-10">
-                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-                            </svg>
-                            Cari
-                        </x-button>
-                    </div>
-                    <div class="border-t border-[#e7eaf0] pt-4">
-                        <label for="related-regulations-search-content" class="mb-2 block text-sm font-semibold text-[#071833]">Cari dalam Isi Dokumen</label>
-                        <input type="text" name="search_content" id="related-regulations-search-content"
-                            class="input-premium h-10 text-sm"
-                            placeholder="Cari kata dalam isi dokumen regulasi... (gunakan &quot;kata&quot; untuk kata utuh)">
-                    </div>
-                </form>
+                    <x-button type="submit" variant="primary" size="md" class="w-full h-10">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                        </svg>
+                        Cari
+                    </x-button>
+                </div>
+                <div class="border-t border-[#e7eaf0] pt-4">
+                    <label for="related-regulations-search-content"
+                        class="mb-2 block text-sm font-semibold text-[#071833]">Cari dalam Isi Dokumen</label>
+                    <input type="text" name="search_content" id="related-regulations-search-content"
+                        class="input-premium h-10 text-sm"
+                        placeholder="Cari kata dalam isi dokumen regulasi... (gunakan &quot;kata&quot; untuk kata utuh)">
+                </div>
+            </form>
 
-                <div class="overflow-x-auto">
+            <div class="overflow-x-auto">
                 <table class="table-premium">
                     <thead>
                         <tr>

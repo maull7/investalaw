@@ -192,8 +192,7 @@
                         </p>
                         <p class="text-[10px] {{ $package->is_popular ? 'text-white/70' : 'text-[#667085]' }} mt-0.5">
                             {{ $package->tagline }}</p>
-                        <p
-                            class="mt-4 text-3xl font-bold {{ $package->is_popular ? 'text-white' : 'text-[#071833]' }}">
+                        <p class="mt-4 text-3xl font-bold {{ $package->is_popular ? 'text-white' : 'text-[#071833]' }}">
                             @if ($package->isTrial())
                                 <span class="text-[#c99a3e]">Free</span>
                             @else
@@ -258,6 +257,9 @@
                                 Harga</th>
                             <th
                                 class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Tanggal Pembelian</th>
+                            <th
+                                class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
                                 Status</th>
                             <th
                                 class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
@@ -289,6 +291,8 @@
                                             class="text-[#b0b8c5]">{{ $purchase->package?->price_period }}</span>
                                     @endif
                                 </td>
+                                <td class="py-3.5 px-4 text-[#667085]">
+                                    {{ $purchase->created_at->format('d M Y H:i') }}</td>
                                 <td class="py-3.5 px-4">
                                     @php
                                         $statusColor = match ($purchase->status) {

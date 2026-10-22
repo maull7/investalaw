@@ -58,7 +58,11 @@ class PackagePaymentController extends Controller
         abort_unless(auth()->user()->isAdmin(), 403);
 
         if ($userPackage->status === 'pending') {
-            $userPackage->update(['status' => 'active', 'confirmed_at' => now()]);
+            $userPackage->update([
+                'status' => 'active',
+                'confirmed_at' => now(),
+                'trial_ends_at' => $userPackage->type === 'trial' ? now()->addMonth() : $userPackage->trial_ends_at,
+            ]);
             UserActivityLog::log('updated', UserPackage::class, $userPackage->id, "Mengkonfirmasi pembayaran paket {$userPackage->package->name} oleh {$userPackage->user->email}");
         }
 

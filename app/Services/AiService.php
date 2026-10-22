@@ -124,7 +124,7 @@ PROMPT;
                 'max_tokens' => 1024,
                 'temperature' => 0.1,
                 'response_format' => ['type' => 'json_object'],
-            ])['content'];
+            ], preferHermes: true)['content'];
         } catch (Exception $e) {
             Log::warning("AI regulation search failed: {$e->getMessage()}");
 
@@ -170,7 +170,7 @@ PROMPT;
                 'max_tokens' => 1024,
                 'temperature' => 0.1,
                 'response_format' => ['type' => 'json_object'],
-            ])['content'];
+            ], preferHermes: true)['content'];
         } catch (Exception $e) {
             Log::warning("AI regulation search failed: {$e->getMessage()}");
 

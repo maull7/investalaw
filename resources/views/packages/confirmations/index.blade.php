@@ -28,18 +28,27 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="border-b border-[#e7eaf0]">
-                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">User</th>
-                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Paket</th>
-                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Status</th>
+                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">User
+                        </th>
+                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                            Paket</th>
+                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                            Tanggal Pembelian</th>
+                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                            Status</th>
                         @if ($tab === 'pending')
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Bukti</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Bukti</th>
                         @endif
-                        <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Diperbarui</th>
+
                         @unless ($tab === 'pending')
-                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Terkonfirmasi</th>
+                            <th class="text-left py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Terkonfirmasi</th>
                         @endunless
                         @if ($tab === 'pending')
-                            <th class="text-right py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">Aksi</th>
+                            <th
+                                class="text-right py-3.5 px-4 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                                Aksi</th>
                         @endif
                     </tr>
                 </thead>
@@ -52,10 +61,13 @@
                             </td>
                             <td class="py-3.5 px-4">
                                 <p class="font-bold text-[#071833]">{{ $payment->package->name }}</p>
-                                <p class="text-xs text-[#667085]">Rp{{ $payment->package->price }} {{ $payment->package->price_period }}</p>
+                                <p class="text-xs text-[#667085]">Rp{{ $payment->package->price }}
+                                    {{ $payment->package->price_period }}</p>
                             </td>
+                            <td class="py-3.5 px-4 text-[#667085]">{{ $payment->created_at->format('d M Y H:i') }}</td>
                             <td class="py-3.5 px-4">
-                                <span class="px-2 py-1 text-[10px] font-bold uppercase rounded-full
+                                <span
+                                    class="px-2 py-1 text-[10px] font-bold uppercase rounded-full
                                     {{ $payment->status === 'active' ? 'bg-emerald-100 text-emerald-700' : ($payment->status === 'pending' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600') }}">
                                     {{ $payment->status }}
                                 </span>
@@ -63,8 +75,9 @@
                             @if ($tab === 'pending')
                                 <td class="py-3.5 px-4">
                                     @if ($payment->payment_proof)
-                                        <a href="{{ asset('storage/'.$payment->payment_proof) }}" target="_blank" rel="noopener">
-                                            <img src="{{ asset('storage/'.$payment->payment_proof) }}" alt="Bukti"
+                                        <a href="{{ asset('storage/' . $payment->payment_proof) }}" target="_blank"
+                                            rel="noopener">
+                                            <img src="{{ asset('storage/' . $payment->payment_proof) }}" alt="Bukti"
                                                 class="w-16 h-16 object-contain rounded-lg ring-1 ring-[#e7eaf0] bg-white">
                                         </a>
                                     @else
@@ -72,14 +85,16 @@
                                     @endif
                                 </td>
                             @endif
-                            <td class="py-3.5 px-4 text-[#667085]">{{ $payment->updated_at->diffForHumans() }}</td>
+
                             @unless ($tab === 'pending')
-                                <td class="py-3.5 px-4 text-[#667085]">{{ $payment->confirmed_at?->format('d M Y H:i') ?? '-' }}</td>
+                                <td class="py-3.5 px-4 text-[#667085]">
+                                    {{ $payment->confirmed_at?->format('d M Y H:i') ?? '-' }}</td>
                             @endunless
                             @if ($tab === 'pending')
                                 <td class="py-3.5 px-4 text-right">
                                     @if ($payment->status === 'pending')
-                                        <form method="POST" action="{{ route('packages.payment.confirm', $payment) }}" class="inline"
+                                        <form method="POST" action="{{ route('packages.payment.confirm', $payment) }}"
+                                            class="inline"
                                             onsubmit="return confirm('Konfirmasi pembayaran {{ $payment->user->name }}?')">
                                             @csrf
                                             <button type="submit" @disabled(!$payment->payment_proof && $payment->type !== 'trial')

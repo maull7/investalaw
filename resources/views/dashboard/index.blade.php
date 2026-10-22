@@ -91,6 +91,21 @@
         </div>
     </section>
 
+    {{-- AI Search --}}
+    <x-card class="mt-7">
+        <form method="GET" action="{{ route('regulations.ai-search') }}" class="flex flex-col sm:flex-row gap-3">
+            <input type="text" name="q" minlength="3" required class="input-premium flex-1"
+                placeholder="Pencarian AI: tanya dalam bahasa natural, mis. sanksi untuk emiten yang terlambat lapor keuangan?">
+            <x-button type="submit" variant="primary" size="lg">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+                Pencarian AI
+            </x-button>
+        </form>
+    </x-card>
+
     {{-- Pencarian Menu --}}
     {{-- <x-card-non-overflow class="overflow-visible" x-data="{
         open: false,
@@ -210,8 +225,10 @@
                     </div>
                     <x-button href="{{ route('regulations.index') }}" variant="outline" size="sm">
                         Semua Regulasi
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
                     </x-button>
                 </div>
@@ -219,7 +236,7 @@
 
             <form method="GET" action="{{ route('regulations.index') }}"
                 class="space-y-4 border-b border-[#e7eaf0] px-6 pb-5">
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                {{-- <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
                     <input type="text" name="search" placeholder="Cari nomor atau judul regulasi..."
                         class="input-premium h-10 text-sm lg:col-span-2">
 
@@ -258,7 +275,7 @@
                     <input type="text" name="search_content" id="latest-regulations-search-content"
                         class="input-premium h-10 text-sm"
                         placeholder="Cari kata dalam isi dokumen regulasi... (gunakan &quot;kata&quot; untuk kata utuh)">
-                </div>
+                </div> --}}
             </form>
 
             <div class="overflow-x-auto">

@@ -171,7 +171,7 @@
             </div>
         </x-slot>
 
-        <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b mt-5 border-[#e7eaf0]">
+        {{-- <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b mt-5 border-[#e7eaf0]">
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="search" name="search" value="{{ $search }}"
                     placeholder="Cari nomor atau judul regulasi..." class="input-premium">
@@ -199,7 +199,7 @@
                     Cari
                 </x-button>
             </div>
-        </form>
+        </form> --}}
 
         @if ($latestRegulations->isNotEmpty())
             <div class="overflow-x-auto">

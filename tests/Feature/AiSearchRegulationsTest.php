@@ -129,4 +129,48 @@ class AiSearchRegulationsTest extends TestCase
             ->assertOk()
             ->assertSee('tidak menemukan regulasi yang relevan');
     }
+
+    public function test_ai_search_uses_hermes_when_configured(): void
+    {
+        config(['hermes.token' => 'hermes-token', 'hermes.base_url' => 'http://hermes.test/v1']);
+        $matched = $this->makeRegulation('UU/8/1995', 'Pasar Modal', null);
+
+        Http::fake([
+            'hermes.test/*' => Http::response([
+                'status' => 'completed',
+                'output' => '{"result": [{"id": '.$matched->id.', "alasan": "dipilih oleh hermes"}]}',
+            ]),
+            '*' => Http::response([], 500),
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('regulations.ai-search', ['q' => 'pasar modal']))
+            ->assertOk()
+            ->assertSee('dipilih oleh hermes');
+
+        Http::assertNotSent(fn ($request) => ! str_contains($request->url(), 'hermes.test'));
+    }
+
+    public function test_ai_search_falls_back_when_hermes_fails(): void
+    {
+        config([
+            'hermes.token' => 'hermes-token',
+            'hermes.base_url' => 'http://hermes.test/v1',
+            'ai.openai.api_key' => 'openai-key',
+            'ai.openai.base_url' => 'http://openai.test/v1',
+        ]);
+        $matched = $this->makeRegulation('UU/8/1995', 'Pasar Modal', null);
+
+        Http::fake([
+            'hermes.test/*' => Http::response([], 503),
+            'openai.test/*' => Http::response([
+                'choices' => [['message' => ['content' => '{"result": [{"id": '.$matched->id.', "alasan": "dipilih oleh openai"}]}']]],
+            ]),
+        ]);
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('regulations.ai-search', ['q' => 'pasar modal']))
+            ->assertOk()
+            ->assertSee('dipilih oleh openai');
+    }
 }

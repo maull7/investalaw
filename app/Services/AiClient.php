@@ -14,10 +14,19 @@ class AiClient
 
     /**
      * @param  array{messages: array<int, array{role: string, content: string}>, max_tokens?: int, temperature?: float, response_format?: array{type: string}}  $payload
+     * @param  bool  $preferHermes  try Hermes first and fall back to the regular providers when it fails
      * @return array{content: string, provider: string, model: string, total_tokens: int}
      */
-    public function complete(array $payload, bool $allowGroq = false): array
+    public function complete(array $payload, bool $allowGroq = false, bool $preferHermes = false): array
     {
+        if ($preferHermes && config('hermes.token')) {
+            try {
+                return $this->hermes->complete($payload);
+            } catch (Throwable $exception) {
+                Log::warning('Hermes failed; using fallback provider: '.$exception->getMessage());
+            }
+        }
+
         if (! config('ai.openai.api_key')) {
             if (! config('hermes.token') && $allowGroq && config('ai.groq.api_key')) {
                 return $this->normalize($this->request('groq', $payload), 'groq');

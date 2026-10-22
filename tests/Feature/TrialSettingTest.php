@@ -87,4 +87,26 @@ class TrialSettingTest extends TestCase
 
         $this->assertSame('pending', $user->userPackages()->first()->status);
     }
+
+    public function test_confirmed_trial_starts_and_ends_from_confirmation_date(): void
+    {
+        $user = $this->user();
+        $this->travelTo('2026-01-01 10:00:00');
+        $userPackage = $user->userPackages()->create([
+            'package_id' => $this->trialPackage()->id,
+            'type' => 'trial',
+            'status' => 'pending',
+            'trial_ends_at' => now()->addMonth(),
+        ]);
+
+        $this->assertSame('Menunggu Konfirmasi', $userPackage->startDateDisplay());
+        $this->assertSame('Menunggu Konfirmasi', $userPackage->endDateDisplay());
+
+        $this->travelTo('2026-01-10 10:00:00');
+        $this->actingAs($this->admin())->post(route('packages.payment.confirm', $userPackage));
+
+        $userPackage->refresh();
+        $this->assertSame('10 Jan 2026', $userPackage->startDateDisplay());
+        $this->assertSame('10 Feb 2026', $userPackage->endDateDisplay());
+    }
 }

@@ -36,7 +36,7 @@ class UserPackage extends Model
         }
 
         if ($this->type === 'trial') {
-            return $this->created_at;
+            return $this->confirmed_at ?? $this->created_at;
         }
 
         $runningTrial = UserPackage::query()

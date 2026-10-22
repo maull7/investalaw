@@ -39,6 +39,11 @@ return [
         'measurement_id' => env('GOOGLE_ANALYTICS_MEASUREMENT_ID'),
     ],
 
+    'turnstile' => [
+        'site_key' => env('TURNSTILE_SITE_KEY'),
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+    ],
+
     'looker_studio' => [
         'traffic_report_url' => env('LOOKER_STUDIO_TRAFFIC_REPORT_URL'),
     ],

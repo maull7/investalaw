@@ -171,7 +171,7 @@
             </div>
         </x-slot>
 
-        {{-- <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b mt-5 border-[#e7eaf0]">
+        <form method="GET" action="{{ route('index-dash') }}" class="px-6 pb-5 border-b mt-5 border-[#e7eaf0]">
             <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <input type="search" name="search" value="{{ $search }}"
                     placeholder="Cari nomor atau judul regulasi..." class="input-premium">
@@ -199,7 +199,7 @@
                     Cari
                 </x-button>
             </div>
-        </form> --}}
+        </form>
 
         @if ($latestRegulations->isNotEmpty())
             <div class="overflow-x-auto">
@@ -237,7 +237,12 @@
                                     <span class="font-semibold text-[#071833]">{{ $reg->year }}</span>
                                 </td>
                                 <td class="text-right">
-                                    <a href="{{ route('regulations.show', $reg) }}"
+                                    <div class="inline-flex items-center gap-2">
+                                        <a href="{{ request()->fullUrlWithQuery(['related' => $reg->id]) }}#peraturan-terkait"
+                                            class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#c99a3e] bg-[#fdf8ee] ring-1 ring-[#c99a3e]/30 hover:bg-white hover:ring-[#c99a3e]/60 transition">
+                                            Terkait
+                                        </a>
+                                        <a href="{{ route('regulations.show', $reg) }}"
                                         class="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-[#071833] bg-[#f6f8fb] ring-1 ring-[#e7eaf0] hover:bg-white hover:ring-[#c99a3e]/40 transition">
                                         Detail
                                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"
@@ -245,7 +250,8 @@
                                             <path stroke-linecap="round" stroke-linejoin="round"
                                                 d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                                         </svg>
-                                    </a>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
@@ -266,53 +272,64 @@
     </x-card>
 
     {{-- Peraturan Terkait --}}
-    @if ($regulationRelated->isNotEmpty())
-        <x-card :padding="false" class="mt-6">
-            <x-slot name="header">
+    <x-card :padding="false" class="mt-6" id="peraturan-terkait">
+        <x-slot name="header">
+            <div class="flex flex-wrap gap-3 justify-between items-center">
                 <div>
                     <h3 class="text-lg font-bold text-[#071833]">Peraturan Terkait</h3>
-                    <p class="text-xs text-[#667085] mt-0.5">5 peraturan terkait terbaru berdasarkan data linkage
+                    <p class="text-xs text-[#667085] mt-0.5">
+                        {{ $relatedRegulation ? 'Peraturan terkait ' . $relatedRegulation->regulation_number : '5 peraturan terkait terbaru berdasarkan data linkage' }}
                     </p>
                 </div>
-            </x-slot>
-
-            <div class="overflow-x-auto">
-                <table class="table-premium">
-                    <thead>
-                        <tr>
-                            <th class="text-left">Sumber Regulasi</th>
-                            <th class="text-left">Nama Terkait</th>
-                            <th class="text-center">Nomor</th>
-                            <th class="text-center">Tahun</th>
-                            <th class="text-center">Hubungan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($regulationRelated as $ref)
-                            <tr>
-                                <td>
-                                    <a href="{{ route('regulations.show', $ref->regulation) }}"
-                                        class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $ref->regulation->regulation_number }}</a>
-                                </td>
-                                <td class="text-sm font-medium text-[#071833]">{{ $ref->name }}</td>
-                                <td class="text-center text-sm text-[#667085]">{{ $ref->number ?? '-' }}</td>
-                                <td class="text-center">
-                                    <span class="font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</span>
-                                </td>
-                                <td class="text-center">
-                                    <x-badge :color="match ($ref->relationship) {
-                                        'diubah' => 'amber',
-                                        'dicabut' => 'rose',
-                                        default => 'blue',
-                                    }">{{ $ref->relationship }}</x-badge>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                @if ($relatedRegulation)
+                    <x-button href="{{ request()->fullUrlWithoutQuery(['related']) }}#peraturan-terkait" variant="outline" size="sm">
+                        Tampilkan Semua
+                    </x-button>
+                @endif
             </div>
-        </x-card>
-    @endif
+        </x-slot>
+
+        <div class="overflow-x-auto">
+            <table class="table-premium">
+                <thead>
+                    <tr>
+                        <th class="text-left">Sumber Regulasi</th>
+                        <th class="text-left">Nama Terkait</th>
+                        <th class="text-center">Nomor</th>
+                        <th class="text-center">Tahun</th>
+                        <th class="text-center">Hubungan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if ($regulationRelated->isEmpty())
+                        <tr>
+                            <td colspan="5" class="text-center text-sm text-[#667085]">{{ $relatedRegulation ? 'Tidak ada peraturan terkait.' : 'Belum ada data peraturan terkait.' }}</td>
+                        </tr>
+                    @endif
+                    @foreach ($regulationRelated as $ref)
+                        <tr>
+                            <td>
+                                <a href="{{ route('regulations.show', $ref->regulation) }}"
+                                    class="font-semibold text-[#071833] hover:text-[#c99a3e] transition">{{ $ref->regulation->regulation_number }}</a>
+                            </td>
+                            <td class="text-sm font-medium text-[#071833]">{{ $ref->name }}</td>
+                            <td class="text-center text-sm text-[#667085]">{{ $ref->number ?? '-' }}</td>
+                            <td class="text-center">
+                                <span class="font-semibold text-[#071833]">{{ $ref->year ?? '-' }}</span>
+                            </td>
+                            <td class="text-center">
+                                <x-badge :color="match ($ref->relationship) {
+                                    'diubah' => 'amber',
+                                    'dicabut' => 'rose',
+                                    default => 'blue',
+                                }">{{ $ref->relationship }}</x-badge>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </x-card>
 
     {{-- Stat grid --}}
     <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mt-7">

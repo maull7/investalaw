@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Regulation;
 use App\Models\RegulationCategory;
 use App\Models\RegulationDocument;
+use App\Models\RegulationRelatedReference;
 use App\Models\RegulationType;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -142,6 +143,34 @@ class PublicRegulationBrowsingTest extends TestCase
     {
         $this->get(route('regulations.create'))
             ->assertRedirect(route('login'));
+    }
+
+    public function test_landing_related_filter_shows_only_selected_regulation_references(): void
+    {
+        $selected = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+        $other = $this->makeRegulation('POJK/11/2026', 'Pasar Modal Lain');
+        RegulationRelatedReference::create(['regulation_id' => $selected->id, 'name' => 'Undang-Undang Pasar Modal', 'relationship' => 'diubah']);
+        RegulationRelatedReference::create(['regulation_id' => $other->id, 'name' => 'Undang-Undang Perbankan', 'relationship' => 'dicabut']);
+
+        $this->get(route('index-dash'))
+            ->assertOk()
+            ->assertSee('Undang-Undang Pasar Modal')
+            ->assertSee('Undang-Undang Perbankan');
+
+        $this->get(route('index-dash', ['related' => $selected->id]))
+            ->assertOk()
+            ->assertSee('Peraturan terkait POJK/10/2026')
+            ->assertSee('Undang-Undang Pasar Modal')
+            ->assertDontSee('Undang-Undang Perbankan');
+    }
+
+    public function test_landing_related_filter_without_references_shows_empty_state(): void
+    {
+        $selected = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');
+
+        $this->get(route('index-dash', ['related' => $selected->id]))
+            ->assertOk()
+            ->assertSee('Tidak ada peraturan terkait.');
     }
 
     private function makeRegulation(

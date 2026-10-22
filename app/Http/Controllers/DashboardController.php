@@ -23,7 +23,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -37,7 +37,7 @@ class DashboardController extends Controller
             'total_reviews' => $reviewsQuery->count(),
         ];
 
-        if (!$user->isUser()) {
+        if (! $user->isUser()) {
             $recentDocuments = $documentsQuery->with('user')->latest()->take(5)->get();
         } else {
             $recentDocuments = $documentsQuery->with('user')->where('user_id', $user->id)->latest()->take(5)->get();
@@ -51,11 +51,13 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        $relatedRegulation = $this->findRelatedRegulation($request);
         $regulationRelated = RegulationRelatedReference::with('regulation')
             ->join('regulations', 'regulations.id', '=', 'regulation_related_references.regulation_id')
+            ->when($relatedRegulation, fn ($query) => $query->where('regulation_related_references.regulation_id', $relatedRegulation->id))
+            ->when(! $relatedRegulation, fn ($query) => $query->take(5))
             ->orderByDesc('regulations.tanggal_tetapkan')
             ->select('regulation_related_references.*')
-            ->take(5)
             ->get();
 
         $regulationFilterOptions = [
@@ -64,7 +66,7 @@ class DashboardController extends Controller
             'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
         ];
 
-        return view('dashboard.index', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated', 'regulationFilterOptions'));
+        return view('dashboard.index', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated', 'relatedRegulation', 'regulationFilterOptions'));
     }
 
     public function compliance(Request $request): View
@@ -76,7 +78,7 @@ class DashboardController extends Controller
 
         if (! $user->isAdmin() && ! $user->isSubAdmin() && ! $user->isReviewer()) {
             $documentsQuery->where('user_id', $user->id);
-            $reviewsQuery->whereHas('reviewDocument', fn($q) => $q->where('user_id', $user->id));
+            $reviewsQuery->whereHas('reviewDocument', fn ($q) => $q->where('user_id', $user->id));
         }
 
         if ($user->isReviewer()) {
@@ -132,17 +134,19 @@ class DashboardController extends Controller
                         ->orWhere('title', 'like', "%{$search}%");
                 });
             })
-            ->when($categoryId !== '', fn(Builder $query) => $query->where('category_id', $categoryId))
-            ->when($year !== '', fn(Builder $query) => $query->where('year', $year))
+            ->when($categoryId !== '', fn (Builder $query) => $query->where('category_id', $categoryId))
+            ->when($year !== '', fn (Builder $query) => $query->where('year', $year))
             ->orderByDesc('tanggal_tetapkan');
 
         $latestRegulations = $showAllRegulations || $hasFilters
             ? $regulationsQuery->paginate(15)->withQueryString()
             : $regulationsQuery->take(5)->get();
 
+        $relatedRegulation = $this->findRelatedRegulation($request);
         $regulationRelated = RegulationRelatedReference::with('regulation')
+            ->when($relatedRegulation, fn ($query) => $query->where('regulation_id', $relatedRegulation->id))
+            ->when(! $relatedRegulation, fn ($query) => $query->take(5))
             ->latest()
-            ->take(5)
             ->get();
 
         $regulationFilterOptions = [
@@ -154,6 +158,7 @@ class DashboardController extends Controller
             'stats',
             'latestRegulations',
             'regulationRelated',
+            'relatedRegulation',
             'search',
             'categoryId',
             'year',
@@ -161,5 +166,15 @@ class DashboardController extends Controller
             'showAllRegulations',
             'regulationFilterOptions',
         ));
+    }
+
+    /**
+     * Regulation selected via the "Terkait" button on the Peraturan Terkini table.
+     */
+    private function findRelatedRegulation(Request $request): ?Regulation
+    {
+        $regulationId = $request->integer('related');
+
+        return $regulationId > 0 ? Regulation::find($regulationId) : null;
     }
 }

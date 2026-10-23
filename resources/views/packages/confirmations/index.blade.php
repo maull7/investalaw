@@ -64,7 +64,7 @@
                                 <p class="text-xs text-[#667085]">Rp{{ $payment->package->price }}
                                     {{ $payment->package->price_period }}</p>
                             </td>
-                            <td class="py-3.5 px-4 text-[#667085]">{{ $payment->created_at->format('d M Y H:i') }}</td>
+                            <td class="py-3.5 px-4 text-[#667085]">{{ $payment->created_at->timezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</td>
                             <td class="py-3.5 px-4">
                                 <span
                                     class="px-2 py-1 text-[10px] font-bold uppercase rounded-full
@@ -88,7 +88,7 @@
 
                             @unless ($tab === 'pending')
                                 <td class="py-3.5 px-4 text-[#667085]">
-                                    {{ $payment->confirmed_at?->format('d M Y H:i') ?? '-' }}</td>
+                                    {{ $payment->confirmed_at ? $payment->confirmed_at->timezone('Asia/Jakarta')->format('d M Y H:i').' WIB' : '-' }}</td>
                             @endunless
                             @if ($tab === 'pending')
                                 <td class="py-3.5 px-4 text-right">

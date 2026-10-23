@@ -57,24 +57,52 @@ class UserPackage extends Model
     {
         return $this->type === 'trial'
             ? $this->trial_ends_at
-            : $this->startsAt()?->copy()->addMonth();
+            : $this->startsAt()?->copy()->addMonths($this->durationMonths());
+    }
+
+    /**
+     * Package validity in months, read from the package period label
+     * (e.g. "/bulan" = 1, "/ 6 Bulan" = 6, "/ 2 Tahun" = 24).
+     */
+    public function durationMonths(): int
+    {
+        if (! preg_match('/(\d+)?\s*(tahun|bulan)/i', (string) $this->package?->price_period, $matches)) {
+            return 1;
+        }
+
+        $count = max(1, (int) $matches[1]);
+
+        return strtolower($matches[2]) === 'tahun' ? $count * 12 : $count;
+    }
+
+    /**
+     * Pending paid package whose payment proof has not been uploaded yet.
+     */
+    public function awaitingPayment(): bool
+    {
+        return $this->status === 'pending' && $this->type === 'paid' && ! $this->payment_proof;
+    }
+
+    private function pendingLabel(): string
+    {
+        return $this->awaitingPayment() ? 'Menunggu Pembayaran' : 'Menunggu Konfirmasi';
     }
 
     public function startDateDisplay(): string
     {
         if ($this->status === 'pending') {
-            return 'Menunggu Konfirmasi';
+            return $this->pendingLabel();
         }
 
-        return $this->startsAt()?->format('d M Y') ?? '-';
+        return $this->startsAt()?->copy()->timezone('Asia/Jakarta')->format('d M Y') ?? '-';
     }
 
     public function endDateDisplay(): string
     {
         if ($this->status === 'pending') {
-            return 'Menunggu Konfirmasi';
+            return $this->pendingLabel();
         }
 
-        return $this->endsAt()?->format('d M Y') ?? '-';
+        return $this->endsAt()?->copy()->timezone('Asia/Jakarta')->format('d M Y') ?? '-';
     }
 }

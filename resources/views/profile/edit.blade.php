@@ -292,7 +292,7 @@
                                     @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-[#667085]">
-                                    {{ $purchase->created_at->format('d M Y H:i') }}</td>
+                                    {{ $purchase->created_at->timezone('Asia/Jakarta')->format('d M Y H:i') }} WIB</td>
                                 <td class="py-3.5 px-4">
                                     @php
                                         $statusColor = match ($purchase->status) {
@@ -308,6 +308,18 @@
                                         class="px-2 py-1 text-[10px] font-bold uppercase rounded-full {{ $statusColor }}">
                                         {{ $purchase->status }}
                                     </span>
+                                    @if ($purchase->awaitingPayment())
+                                        <p class="mt-1.5 text-[11px] text-rose-600">Belum upload bukti pembayaran</p>
+                                        <a href="{{ route('packages.payment', $purchase) }}"
+                                            class="inline-block mt-1 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-[#071833] text-white hover:bg-[#0d2a55] transition">Upload
+                                            Bukti</a>
+                                        <button type="button"
+                                            @click="$dispatch('open-modal-cancel-purchase-{{ $purchase->id }}')"
+                                            class="mt-1 px-2.5 py-1 text-[11px] font-semibold rounded-md bg-rose-50 text-rose-600 ring-1 ring-rose-200 hover:bg-rose-100 transition">Batalkan</button>
+                                        @include('packages.partials.cancel-modal', ['userPackage' => $purchase])
+                                    @elseif ($purchase->status === 'pending')
+                                        <p class="mt-1.5 text-[11px] text-[#667085]">Menunggu konfirmasi admin</p>
+                                    @endif
                                 </td>
                                 <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->startDateDisplay() }}</td>
                                 <td class="py-3.5 px-4 text-[#667085]">{{ $purchase->endDateDisplay() }}</td>

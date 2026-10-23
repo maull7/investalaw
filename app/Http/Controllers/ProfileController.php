@@ -53,6 +53,7 @@ class ProfileController extends Controller
 
         $latest = $request->user()->userPackages()
             ->with('package')
+            ->where('status', '!=', 'cancelled')
             ->latest()
             ->first();
 

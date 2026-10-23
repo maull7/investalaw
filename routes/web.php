@@ -95,6 +95,7 @@ Route::middleware(['auth', 'verified', 'profile.complete'])->group(function () {
 
     Route::get('/paket/pembayaran/{userPackage}', [PackagePaymentController::class, 'show'])->name('packages.payment');
     Route::post('/paket/pembayaran/{userPackage}/bukti', [PackagePaymentController::class, 'submitProof'])->name('packages.payment.submit');
+    Route::post('/paket/pembayaran/{userPackage}/batal', [PackagePaymentController::class, 'cancel'])->name('packages.payment.cancel');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/compliance-monitoring', [DashboardController::class, 'compliance'])->name('compliance.monitoring');

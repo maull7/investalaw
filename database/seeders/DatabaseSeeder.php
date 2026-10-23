@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RegulationTypeSeeder::class,
             TypePromptSeeder::class,
             AiPromptSeeder::class,
+            PackageSeeder::class,
         ]);
     }
 }

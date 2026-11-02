@@ -45,15 +45,16 @@ Route::get('/landing-page', function () {
     return view('index', compact('packages'));
 })->name('index');
 
-Route::get('/', [DashboardController::class, 'landing'])->name('index-dash');
+Route::get('/', [DashboardController::class, 'landing'])->name('index-dash')->middleware('throttle:60,1');
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
 
 // Public regulation browsing.
-Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search');
+Route::get('/regulations/search', [RegulationController::class, 'search'])->name('regulations.search')->middleware('throttle:60,1');
 Route::get('/regulations/{regulation}', [RegulationController::class, 'show'])
     ->whereNumber('regulation')
-    ->name('regulations.show');
+    ->name('regulations.show')
+    ->middleware('throttle:60,1');
 
 Route::post('/legal-necessities', [LegalNecessityController::class, 'store'])
     ->name('legal-necessities.store')

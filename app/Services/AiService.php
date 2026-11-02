@@ -143,6 +143,7 @@ PROMPT;
     public function refineRegulationSearch(string $query, array $previousIds): array
     {
         $previous = Regulation::query()
+            ->select(['id', 'regulation_number', 'title', 'year'])
             ->whereIn('id', $previousIds)
             ->get()
             ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
@@ -187,7 +188,7 @@ PROMPT;
     {
         $prompt = AiPrompt::active()->where('type', 'kasus_select')->firstOrFail();
 
-        $catalog = Regulation::orderBy('regulation_number')->get()
+        $catalog = Regulation::select(['id', 'regulation_number', 'title', 'year'])->orderBy('regulation_number')->get()
             ->map(fn (Regulation $reg) => "{$reg->id}|{$reg->regulation_number} - {$reg->title} ({$reg->year})")
             ->implode("\n");
 

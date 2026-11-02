@@ -10,11 +10,17 @@ use App\Models\Review;
 use App\Models\ReviewDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /**
+     * Columns needed by the regulation listings; skips the huge parsed_text/parse_stats columns.
+     */
+    private const LISTING_COLUMNS = ['id', 'regulation_number', 'title', 'regulation_type_id', 'category_id', 'year', 'tanggal_tetapkan'];
+
     public function index(Request $request): View
     {
         $user = $request->user();
@@ -45,9 +51,10 @@ class DashboardController extends Controller
         }
 
         $latestRegulations = Regulation::query()
-            ->from(DB::raw('regulations FORCE INDEX (regulations_public_listing_idx)'))
+            ->select(self::LISTING_COLUMNS)
+            ->forceIndex('regulations_public_listing_idx')
             ->with(['type', 'category'])
-            ->whereHas('category.sector', function ($query) {
+            ->whereHas('category', function ($query) {
                 $query->where('sector_id', 1);
             })
             ->orderByDesc('tanggal_tetapkan')
@@ -55,7 +62,7 @@ class DashboardController extends Controller
             ->get();
 
         $relatedRegulation = $this->findRelatedRegulation($request);
-        $regulationRelated = RegulationRelatedReference::with('regulation')
+        $regulationRelated = RegulationRelatedReference::with('regulation:id,regulation_number,title,year')
             ->join('regulations', 'regulations.id', '=', 'regulation_related_references.regulation_id')
             ->when($relatedRegulation, fn ($query) => $query->where('regulation_related_references.regulation_id', $relatedRegulation->id))
             ->when(! $relatedRegulation, fn ($query) => $query->take(5))
@@ -66,7 +73,7 @@ class DashboardController extends Controller
         $regulationFilterOptions = [
             'types' => RegulationType::orderBy('level')->get(),
             'categories' => RegulationCategory::orderBy('name')->get(),
-            'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
+            'years' => $this->regulationYears(),
         ];
 
         return view('dashboard.index', compact('stats', 'recentDocuments', 'latestRegulations', 'regulationRelated', 'relatedRegulation', 'regulationFilterOptions'));
@@ -110,15 +117,12 @@ class DashboardController extends Controller
         $hasFilters = $search !== '' || $categoryId !== '' || $year !== '';
         $showAllRegulations = $request->boolean('all');
 
-        $documentsQuery = ReviewDocument::query();
-        $reviewsQuery = Review::query();
-
-        $stats = [
-            'total_documents' => $documentsQuery->count(),
-            'pending_documents' => (clone $documentsQuery)->where('status', 'submitted')->count(),
-            'approved_documents' => (clone $documentsQuery)->where('status', 'approved')->count(),
-            'total_reviews' => $reviewsQuery->count(),
-        ];
+        $stats = Cache::remember('landing.stats', now()->addMinutes(10), fn (): array => [
+            'total_documents' => ReviewDocument::count(),
+            'pending_documents' => ReviewDocument::where('status', 'submitted')->count(),
+            'approved_documents' => ReviewDocument::where('status', 'approved')->count(),
+            'total_reviews' => Review::count(),
+        ]);
 
         // $recentDocuments = $documentsQuery
         //     ->with('user')
@@ -130,9 +134,10 @@ class DashboardController extends Controller
         //     ->get();
 
         $regulationsQuery = Regulation::query()
-            ->from(DB::raw('regulations FORCE INDEX (regulations_public_listing_idx)'))
+            ->select(self::LISTING_COLUMNS)
+            ->forceIndex('regulations_public_listing_idx')
             ->with(['type', 'category'])
-            ->whereHas('category.sector', function ($query) {
+            ->whereHas('category', function ($query) {
                 $query->where('sector_id', 1);
             })
             ->when($search !== '', function (Builder $query) use ($search) {
@@ -150,7 +155,7 @@ class DashboardController extends Controller
             : $regulationsQuery->take(5)->get();
 
         $relatedRegulation = $this->findRelatedRegulation($request);
-        $regulationRelated = RegulationRelatedReference::with('regulation')
+        $regulationRelated = RegulationRelatedReference::with('regulation:id,regulation_number,title,year')
             ->when($relatedRegulation, fn ($query) => $query->where('regulation_id', $relatedRegulation->id))
             ->when(! $relatedRegulation, fn ($query) => $query->take(5))
             ->latest()
@@ -158,7 +163,7 @@ class DashboardController extends Controller
 
         $regulationFilterOptions = [
             'categories' => RegulationCategory::orderBy('name')->get(),
-            'years' => Regulation::distinct()->orderByDesc('year')->pluck('year'),
+            'years' => $this->regulationYears(),
         ];
 
         return view('index-dashboard', compact(
@@ -176,12 +181,20 @@ class DashboardController extends Controller
     }
 
     /**
+     * @return Collection<int, int>
+     */
+    private function regulationYears(): Collection
+    {
+        return Cache::remember('regulations.years', now()->addHour(), fn () => Regulation::distinct()->orderByDesc('year')->pluck('year'));
+    }
+
+    /**
      * Regulation selected via the "Terkait" button on the Peraturan Terkini table.
      */
     private function findRelatedRegulation(Request $request): ?Regulation
     {
         $regulationId = $request->integer('related');
 
-        return $regulationId > 0 ? Regulation::find($regulationId) : null;
+        return $regulationId > 0 ? Regulation::select(self::LISTING_COLUMNS)->find($regulationId) : null;
     }
 }

@@ -28,7 +28,7 @@ class RegulationRepository
         }
 
         $query = Regulation::with(['type', 'category', 'subCategories', 'documents'])
-            ->whereHas('category.sector', fn(Builder $q) => $q->where('id', 1))
+            ->whereHas('category', fn (Builder $q) => $q->where('sector_id', 1))
             ->withCount('documents');
 
         if (! empty($filters['search'])) {
@@ -96,8 +96,8 @@ class RegulationRepository
             'type',
             'category',
             'subCategories',
-            'relatedRegulations.type',
-            'documents',
+            'relatedRegulations' => fn ($q) => $q->select(['regulations.id', 'regulation_number', 'title', 'year', 'regulation_type_id'])->with('type'),
+            'documents' => fn ($q) => $q->select(['id', 'regulation_id', 'name', 'document_type', 'file_path', 'parsed_at', 'parse_status', 'parse_progress', 'parse_error', 'created_at', 'updated_at']),
             'relatedReferences',
             'aiResults',
         ])->findOrFail($id);
@@ -105,12 +105,12 @@ class RegulationRepository
 
     public function search(string $query, ?int $excludeId = null): Collection
     {
-        return Regulation::where(function (Builder $q) use ($query) {
+        return Regulation::select(['id', 'regulation_number', 'title', 'year', 'regulation_type_id'])->where(function (Builder $q) use ($query) {
             $q->where('regulation_number', 'like', "%{$query}%")
                 ->orWhere('title', 'like', "%{$query}%")
                 ->orWhere('year', 'like', "%{$query}%");
         })
-            ->when($excludeId, fn(Builder $q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId, fn (Builder $q) => $q->where('id', '!=', $excludeId))
             ->with('type')
             ->orderByDesc('year')
             ->limit(20)
@@ -134,7 +134,7 @@ class RegulationRepository
         return [
             'types' => RegulationType::where('is_active', true)->orderBy('level')->get(),
             'categories' => RegulationCategory::with([
-                'subCategories' => fn($q) => $q->where('is_active', true),
+                'subCategories' => fn ($q) => $q->where('is_active', true),
             ])
                 ->where('sector_id', 1)
                 ->orderBy('name')
@@ -199,12 +199,12 @@ class RegulationRepository
         }
 
         if ($pos === false) {
-            return mb_substr($text, 0, $length) . '...';
+            return mb_substr($text, 0, $length).'...';
         }
 
         $start = max(0, $pos - 100);
         $snippet = mb_substr($text, $start, $length);
 
-        return ($start > 0 ? '...' : '') . $snippet . '...';
+        return ($start > 0 ? '...' : '').$snippet.'...';
     }
 }

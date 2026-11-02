@@ -145,6 +145,12 @@ class PublicRegulationBrowsingTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
+    public function test_landing_rejects_unreasonably_deep_pagination_before_querying(): void
+    {
+        $this->get(route('index-dash', ['all' => 1, 'page' => 101]))
+            ->assertNotFound();
+    }
+
     public function test_landing_related_filter_shows_only_selected_regulation_references(): void
     {
         $selected = $this->makeRegulation('POJK/10/2026', 'Pasar Modal Digital');

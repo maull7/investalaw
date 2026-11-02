@@ -10,6 +10,7 @@ use App\Models\Review;
 use App\Models\ReviewDocument;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -43,7 +44,9 @@ class DashboardController extends Controller
             $recentDocuments = $documentsQuery->with('user')->where('user_id', $user->id)->latest()->take(5)->get();
         }
 
-        $latestRegulations = Regulation::with(['type', 'category'])
+        $latestRegulations = Regulation::query()
+            ->from(DB::raw('regulations FORCE INDEX (regulations_public_listing_idx)'))
+            ->with(['type', 'category'])
             ->whereHas('category.sector', function ($query) {
                 $query->where('sector_id', 1);
             })
@@ -99,6 +102,8 @@ class DashboardController extends Controller
 
     public function landing(Request $request): View
     {
+        abort_if($request->integer('page', 1) > 100, 404);
+
         $search = trim((string) $request->query('search', ''));
         $categoryId = trim((string) $request->query('category_id', ''));
         $year = trim((string) $request->query('year', ''));
@@ -124,7 +129,9 @@ class DashboardController extends Controller
         //     ->take(5)
         //     ->get();
 
-        $regulationsQuery = Regulation::with(['type', 'category'])
+        $regulationsQuery = Regulation::query()
+            ->from(DB::raw('regulations FORCE INDEX (regulations_public_listing_idx)'))
+            ->with(['type', 'category'])
             ->whereHas('category.sector', function ($query) {
                 $query->where('sector_id', 1);
             })

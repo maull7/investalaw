@@ -185,7 +185,7 @@ class DashboardController extends Controller
      */
     private function regulationYears(): Collection
     {
-        return Cache::remember('regulations.years', now()->addHour(), fn () => Regulation::distinct()->orderByDesc('year')->pluck('year'));
+        return collect(Cache::remember('regulations.years.v2', now()->addHour(), fn (): array => Regulation::distinct()->orderByDesc('year')->pluck('year')->all()));
     }
 
     /**

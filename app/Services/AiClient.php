@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiTokenLog;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -18,6 +19,20 @@ class AiClient
      * @return array{content: string, provider: string, model: string, total_tokens: int}
      */
     public function complete(array $payload, bool $allowGroq = false, bool $preferHermes = false): array
+    {
+        $result = $this->dispatch($payload, $allowGroq, $preferHermes);
+        if ($result['provider'] !== 'hermes') {
+            AiTokenLog::recordResult($result);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{content: string, provider: string, model: string, total_tokens: int}
+     */
+    private function dispatch(array $payload, bool $allowGroq, bool $preferHermes): array
     {
         if ($preferHermes && config('hermes.token')) {
             try {

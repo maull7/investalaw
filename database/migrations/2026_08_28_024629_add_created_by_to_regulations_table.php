@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('regulations', 'created_by')) {
+            return;
+        }
+
         Schema::table('regulations', function (Blueprint $table) {
             $table->foreignId('created_by')->nullable()->after('id')->constrained('users')->nullOnDelete();
         });

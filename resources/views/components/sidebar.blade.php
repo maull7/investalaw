@@ -380,6 +380,28 @@
                                     <span>Monitor Traffic</span>
                                 </a>
                             </li>
+                            <li>
+                                <a href="{{ route('token-monitor.index') }}"
+                                    class="nav-item {{ request()->routeIs('token-monitor.*') ? 'is-active' : '' }}">
+                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M12 3v18M8.5 7h7M8.5 17h7M6 12a6 6 0 0 1 6-6m6 6a6 6 0 0 1-6 6" />
+                                    </svg>
+                                    <span>Monitoring Token AI</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('storage-r2.index') }}"
+                                    class="nav-item {{ request()->routeIs('storage-r2.*') ? 'is-active' : '' }}">
+                                    <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                        stroke-width="1.6">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                    </svg>
+                                    <span>Storage R2</span>
+                                </a>
+                            </li>
                         @endif
                         <li>
                             <a href="{{ route('consultations.index') }}"

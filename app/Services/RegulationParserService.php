@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Helpers\DocumentStorage;
 use App\Models\Regulation;
 use App\Models\RegulationDocument;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpWord\IOFactory;
 use Smalot\PdfParser\Parser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
@@ -16,7 +16,7 @@ class RegulationParserService
 
     public function parseRegulationChunk(Regulation $regulation, int $fromPage, ?callable $progress = null): array
     {
-        $fullPath = Storage::disk('public')->path($regulation->file_path);
+        $fullPath = DocumentStorage::localPath($regulation->file_path);
 
         if (! file_exists($fullPath)) {
             return ['success' => false, 'message' => 'File tidak ditemukan.'];
@@ -124,7 +124,7 @@ class RegulationParserService
 
     public function parseDocumentChunk(RegulationDocument $document, int $fromPage, ?callable $progress = null): array
     {
-        $fullPath = Storage::disk('public')->path($document->file_path);
+        $fullPath = DocumentStorage::localPath($document->file_path);
 
         if (! file_exists($fullPath)) {
             return ['success' => false, 'message' => 'File tidak ditemukan.'];
@@ -222,7 +222,7 @@ class RegulationParserService
 
     public function extractTextPages(RegulationDocument|Regulation $model, string $pdfType): bool
     {
-        $fullPath = Storage::disk('public')->path($model->file_path);
+        $fullPath = DocumentStorage::localPath($model->file_path);
         $parser = new Parser;
 
         try {

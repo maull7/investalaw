@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\DocumentStorage;
 use App\Http\Requests\Regulation\StoreRegulationRequest;
 use App\Http\Requests\Regulation\UpdateRegulationRequest;
 use App\Jobs\ExtractRegulationReferences;
@@ -26,7 +27,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -80,7 +80,7 @@ class RegulationController extends Controller
 
         $data = $request->validated();
 
-        $filePath = $request->file('file')->store('regulations', 'public');
+        $filePath = $request->file('file')->store('regulations', DocumentStorage::diskName());
 
         $regulation = Regulation::create([
             'created_by' => $request->user()->id,
@@ -107,7 +107,7 @@ class RegulationController extends Controller
         foreach ($documentsInput as $i => $docData) {
             $file = $request->file("documents.{$i}.file");
             if ($file) {
-                $docPath = $file->store('regulation-documents', 'public');
+                $docPath = $file->store('regulation-documents', DocumentStorage::diskName());
                 RegulationDocument::create([
                     'regulation_id' => $regulation->id,
                     'name' => $docData['name'],
@@ -184,8 +184,8 @@ class RegulationController extends Controller
         ];
 
         if ($request->hasFile('file')) {
-            Storage::disk('public')->delete($regulation->file_path);
-            $updateData['file_path'] = $request->file('file')->store('regulations', 'public');
+            DocumentStorage::disk()->delete($regulation->file_path);
+            $updateData['file_path'] = $request->file('file')->store('regulations', DocumentStorage::diskName());
         }
 
         $regulation->update($updateData);
@@ -308,10 +308,10 @@ class RegulationController extends Controller
         abort_unless(request()->user()->hasPermission('upload_regulations'), 403);
         $this->authorize('delete', $regulation);
 
-        Storage::disk('public')->delete($regulation->file_path);
+        DocumentStorage::disk()->delete($regulation->file_path);
 
         foreach ($regulation->documents as $document) {
-            Storage::disk('public')->delete($document->file_path);
+            DocumentStorage::disk()->delete($document->file_path);
         }
 
         $number = $regulation->regulation_number;
@@ -449,7 +449,7 @@ class RegulationController extends Controller
             'file' => ['required', 'file', 'mimes:pdf,docx,doc,xlsx,xls,pptx,ppt', 'max:20480'],
         ]);
 
-        $filePath = $request->file('file')->store('regulation-documents', 'public');
+        $filePath = $request->file('file')->store('regulation-documents', DocumentStorage::diskName());
 
         RegulationDocument::create([
             'regulation_id' => $regulation->id,
@@ -470,7 +470,7 @@ class RegulationController extends Controller
 
         $regulation = $document->regulation;
 
-        Storage::disk('public')->delete($document->file_path);
+        DocumentStorage::disk()->delete($document->file_path);
         $document->delete();
 
         UserActivityLog::log('deleted', Regulation::class, $regulation->id, "Menghapus dokumen {$document->name} dari regulasi {$regulation->regulation_number}");
@@ -495,8 +495,8 @@ class RegulationController extends Controller
         ];
 
         if ($request->hasFile('file')) {
-            Storage::disk('public')->delete($document->file_path);
-            $updateData['file_path'] = $request->file('file')->store('regulation-documents', 'public');
+            DocumentStorage::disk()->delete($document->file_path);
+            $updateData['file_path'] = $request->file('file')->store('regulation-documents', DocumentStorage::diskName());
         }
 
         $document->update($updateData);
@@ -519,7 +519,7 @@ class RegulationController extends Controller
             default => 'application/octet-stream',
         };
 
-        return Storage::disk('public')->response($document->file_path, null, [
+        return DocumentStorage::disk()->response($document->file_path, null, [
             'Content-Type' => $contentType,
             'Content-Disposition' => 'inline',
         ]);
@@ -534,7 +534,7 @@ class RegulationController extends Controller
 
     public function viewFile(Regulation $regulation): StreamedResponse
     {
-        return Storage::disk('public')->response($regulation->file_path, null, [
+        return DocumentStorage::disk()->response($regulation->file_path, null, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'inline',
         ]);
